@@ -1,0 +1,329 @@
+<section id="sec-7" class="content-section">
+<section id="sec-7" class="content-section">
+  <article id="sec-7-article" class="technical-specification">
+    <header>
+      <h1 id="sec-7-title" class="ace-heading ace-heading--1">Complex Arrhythmias: Re-entry, Blocks, and Channelopathies</h1>
+    </header>
+
+    <p id="sec-7-p1" class="ace-body">The previous sections established the heart as a finely tuned biophysical engine, where microscopic ion kinetics <a href="#sec-2" class="ace-link" title="Reference to Section 2: Ion Kinetics">[REF:sec-2]</a> are orchestrated by a macroscopic conduction hierarchy <a href="#sec-4" class="ace-link" title="Reference to Section 4: Conduction System">[REF:sec-4]</a> to produce a predictable cardiac dipole <a href="#sec-3" class="ace-link" title="Reference to Section 3: The Cardiac Dipole">[REF:sec-3]</a>. However, when the timing, geometry, or molecular integrity of this system fails, the result is an arrhythmia—a state of electrical chaos that ranges from benign palpitations to sudden cardiac death (SCD).</p>
+
+    <p id="sec-7-p2" class="ace-body">In this section, we move beyond the "pattern recognition" of rhythm strips to a <span class="ace-text--bold">first-principles analysis</span> of complex arrhythmias. We will explore how re-entry circuits emerge from the interplay of conduction velocity and refractoriness, how accessory pathways bypass the physiological sentries of the heart, and how genetic mutations in ion channels—the channelopathies—distort the action potential (AP) curve to create lethal substrates.</p>
+
+    <aside id="sec-7-axiom" class="ace-callout ace-callout--axiom">
+      <span class="ace-callout__title ace-text--bold">The Arrhythmia Axiom</span>
+      <p id="sec-7-p-axiom" class="ace-body">Every arrhythmia is fundamentally a failure of either <span class="ace-text--bold">Impulse Formation</span> (automaticity/triggered activity) or <span class="ace-text--bold">Impulse Propagation</span> (conduction block/re-entry). On the ECG, these failures manifest as deviations in the temporal intervals (PR, QRS, QT) or spatial shifts in the cardiac vector $\vec{M}$.</p>
+    </aside>
+
+    <section id="sec-7-reentry">
+      <h2 id="sec-7-reentry-title" class="ace-heading ace-heading--2">The Topology of Re-entry: Wavelength and Circus Movements</h2>
+      <p id="sec-7-p3" class="ace-body">Re-entry is the most common mechanism underlying clinically significant tachyarrhythmias, including atrial fibrillation, atrial flutter, and ventricular tachycardia. Unlike automaticity, which is a failure of a single cell to remain quiet, re-entry is a <span class="ace-text--bold">geometric failure</span> of a circuit.</p>
+
+      <section id="sec-7-mines-model">
+        <h3 id="sec-7-mines-title" class="ace-heading ace-heading--3">The Mines Model: Three Requirements for Re-entry</h3>
+        <p id="sec-7-p4" class="ace-body">For a self-sustaining "circus movement" to occur, three biophysical conditions must be met:</p>
+        <ul id="sec-7-mines-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-mines-li1"><strong>A Unidirectional Block</strong>: The impulse must be unable to travel down one path but able to travel down another.</li>
+          <li id="sec-7-mines-li2"><strong>An Anatomical or Functional Circuit</strong>: A loop must exist around an inexcitable obstacle (e.g., a scar, a valve annulus, or a core of refractory tissue).</li>
+          <li id="sec-7-mines-li3"><strong>The Wavelength Criterion</strong>: The time it takes for the impulse to travel around the loop must be longer than the refractory period of the tissue.</li>
+        </ul>
+      </section>
+
+      <section id="sec-7-wavelength-equation">
+        <h3 id="sec-7-wavelength-title" class="ace-heading ace-heading--3">The Wavelength Equation</h3>
+        <p id="sec-7-p5" class="ace-body">The <span class="ace-text--bold">Wavelength ($\lambda$)</span> of an electrical impulse is defined as the product of the conduction velocity ($\theta$) and the effective refractory period ($ERP$):</p>
+        <div id="sec-7-eq-lambda" class="ace-math-block">
+          $$\lambda = \theta \times ERP$$
+        </div>
+        <p id="sec-7-p6" class="ace-body">For re-entry to be sustained, the path length ($L$) of the circuit must be greater than the wavelength:</p>
+        <div id="sec-7-eq-length" class="ace-math-block">
+          $$L > \lambda$$
+        </div>
+        <p id="sec-7-p7" class="ace-body">If $L < \lambda$, the moving wavefront will hit its own "tail" (refractory tissue) and extinguish itself. Tachyarrhythmias are therefore promoted by factors that <span class="ace-text--bold">shorten the wavelength</span>:</p>
+        <ul id="sec-7-shorten-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-shorten-li1"><span class="ace-text--bold">Slowing Conduction ($\downarrow \theta$)</span>: Ischemia, hyperkalemia, or Class IC antiarrhythmics <a href="#sec-8" class="ace-link" title="Reference to Section 8: Pharmacological Integration">[REF:sec-8]</a>.</li>
+          <li id="sec-7-shorten-li2"><span class="ace-text--bold">Shortening Refractoriness ($\downarrow ERP$)</span>: Sympathetic stimulation or certain genetic mutations.</li>
+        </ul>
+      </section>
+
+      <div id="sec-7-interactive-reentry" class="ace-card ace-card--interactive">
+        <figure class="svg-container" id="reentry-circuit-simulator">
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" aria-label="Visualization of Cardiac Re-entry Mechanism" role="img">
+  <title>Advanced Cardiovascular Electrophysiology: Re-entry Circuit</title>
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="scar-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feFlood flood-color="#ef4444" flood-opacity="0.5" result="color" />
+      <feComposite in="color" in2="blur" operator="in" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <linearGradient id="pulse-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0" />
+      <stop offset="50%" stop-color="#22d3ee" stop-opacity="1" />
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+    </linearGradient>
+    <clipPath id="ecg-clip">
+      <rect x="100" y="420" width="600" height="120" rx="8" />
+    </clipPath>
+  </defs>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Inter:wght@600&amp;display=swap');
+
+    .bg { fill: #0f172a; }
+    .grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }
+    .circuit-path { fill: none; stroke: rgba(34, 211, 238, 0.1); stroke-width: 12; stroke-linecap: round; }
+    .scar { fill: rgba(30, 41, 59, 0.8); stroke: #ef4444; stroke-width: 2; filter: url(#scar-glow); }
+    
+    .pulse {
+      fill: none;
+      stroke: #22d3ee;
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 80 400;
+      animation: re-entry-loop 2s linear infinite;
+      filter: url(#glow);
+    }
+
+    .ecg-line {
+      fill: none;
+      stroke: #22d3ee;
+      stroke-width: 2;
+      animation: ecg-scroll 2s linear infinite;
+    }
+
+    .label-text { fill: #94a3b8; font-family: 'Inter', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .math-text { fill: #22d3ee; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .warning-text { fill: #ef4444; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; }
+
+    @keyframes re-entry-loop {
+      from { stroke-dashoffset: 480; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes ecg-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-120px); }
+    }
+
+    .glass-panel { fill: rgba(30, 41, 59, 0.7); stroke: rgba(255, 255, 255, 0.1); }
+  </style>
+
+  <!-- Background and Grid -->
+  <rect class="bg" width="800" height="600" />
+  <g class="grid">
+    <path d="M 0 100 H 800 M 0 200 H 800 M 0 300 H 800 M 0 400 H 800 M 0 500 H 800" />
+    <path d="M 100 0 V 600 M 200 0 V 600 M 300 0 V 600 M 400 0 V 600 M 500 0 V 600 M 600 0 V 600 M 700 0 V 600" />
+  </g>
+
+  <!-- Header -->
+  <text x="40" y="50" class="label-text" style="fill: #f8fafc; font-size: 18px;">Electrophysiological Re-entry Model</text>
+  <text x="40" y="75" class="label-text">Condition: Decreased Conduction Velocity (θ) &amp; Shortened λ</text>
+
+  <!-- Conduction Circuit -->
+  <g transform="translate(400, 240)">
+    <!-- Central Scar -->
+    <ellipse class="scar" cx="0" cy="0" rx="50" ry="80" />
+    <text x="-25" y="5" class="warning-text">SCAR</text>
+    
+    <!-- Anatomical Paths -->
+    <path id="circuit" class="circuit-path" d="M 0 -120 C 100 -120 100 120 0 120 C -100 120 -100 -120 0 -120" />
+    
+    <!-- Animated Pulse -->
+    <path class="pulse" d="M 0 -120 C 100 -120 100 120 0 120 C -100 120 -100 -120 0 -120" />
+    
+    <!-- Vectors and Labels -->
+    <line x1="110" y1="-50" x2="110" y2="50" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="120" y="0" class="math-text" style="fill: #fbbf24;">λ = θ × ERP</text>
+  </g>
+
+  <!-- ECG Monitor Panel -->
+  <g transform="translate(0, 20)">
+    <rect class="glass-panel" x="100" y="400" width="600" height="140" rx="12" />
+    <text x="115" y="425" class="label-text" style="font-size: 10px;">Lead II - Monotonous Tachycardia</text>
+    
+    <g clip-path="url(#ecg-clip)">
+      <g class="ecg-line-group">
+        <!-- Repeating Tachycardia Pattern -->
+        <path class="ecg-line" d="M 100 490 L 120 490 L 125 470 L 130 510 L 135 440 L 140 490 L 160 490 L 165 470 L 170 510 L 175 440 L 180 490 L 200 490 L 205 470 L 210 510 L 215 440 L 220 490 L 240 490 L 245 470 L 250 510 L 255 440 L 260 490 L 280 490 L 285 470 L 290 510 L 295 440 L 300 490 L 320 490 L 325 470 L 330 510 L 335 440 L 340 490 L 360 490 L 365 470 L 370 510 L 375 440 L 380 490 L 400 490 L 405 470 L 410 510 L 415 440 L 420 490 L 440 490 L 445 470 L 450 510 L 455 440 L 460 490 L 480 490 L 485 470 L 490 510 L 495 440 L 500 490 L 520 490 L 525 470 L 530 510 L 535 440 L 540 490 L 560 490 L 565 470 L 570 510 L 575 440 L 580 490 L 600 490 L 605 470 L 610 510 L 615 440 L 620 490 L 640 490 L 645 470 L 650 510 L 655 440 L 660 490 L 680 490 L 685 470 L 690 510 L 695 440 L 700 490 L 720 490 L 725 470 L 730 510 L 735 440 L 740 490 L 760 490 L 765 470 L 770 510 L 775 440 L 780 490 L 800 490 L 805 470 L 810 510 L 815 440 L 820 490" />
+      </g>
+    </g>
+    
+    <!-- Baseline -->
+    <line x1="100" y1="490" x2="700" y2="490" stroke="rgba(255,255,255,0.1)" stroke-dasharray="4 4" />
+  </g>
+
+  <!-- UI Controls Simulation -->
+  <g transform="translate(550, 50)">
+    <rect class="glass-panel" width="210" height="80" rx="8" />
+    <text x="15" y="25" class="label-text" style="font-size: 10px;">Conduction Velocity (θ)</text>
+    <rect x="15" y="35" width="180" height="4" rx="2" fill="#1e293b" />
+    <rect x="15" y="35" width="60" height="4" rx="2" fill="#22d3ee" />
+    <circle cx="75" cy="37" r="6" fill="#f8fafc" />
+    
+    <text x="15" y="60" class="math-text" style="font-size: 12px;">θ = 0.45 m/s</text>
+    <text x="120" y="60" class="warning-text" style="font-size: 10px;">CRITICAL BLOCK</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(40, 560)">
+    <circle cx="0" cy="0" r="4" fill="#22d3ee" />
+    <text x="12" y="4" class="label-text" style="font-size: 9px;">Depolarization Wavefront</text>
+    
+    <circle cx="180" cy="0" r="4" fill="#ef4444" />
+    <text x="192" y="4" class="label-text" style="font-size: 9px;">Inexcitable Fibrosis</text>
+  </g>
+
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24" />
+  </marker>
+</svg>
+<figcaption>A high-tech dark visualization of a bifurcating conduction path around a central scar. A cyan pulse moves through the system. Users can adjust a "Conduction Velocity" slider. As velocity decreases, th...</figcaption>
+</figure>
+      </div>
+    </section>
+
+    <section id="sec-7-blocks">
+      <h2 id="sec-7-blocks-title" class="ace-heading ace-heading--2">Conduction Blocks: Spatial and Temporal Dissociation</h2>
+      <p id="sec-7-p8" class="ace-body">Conduction blocks represent a failure of the H.P.A.V. hierarchy <a href="#sec-4" class="ace-link" title="Reference to Section 4: Conduction System">[REF:sec-4]</a>. They occur when the impulse encounters tissue that is either permanently inexcitable (scar) or functionally refractory due to metabolic stress.</p>
+
+      <section id="sec-7-av-blocks">
+        <h3 id="sec-7-av-title" class="ace-heading ace-heading--3">Atrioventricular (AV) Blocks: The Failing Sentry</h3>
+        <p id="sec-7-p9" class="ace-body">As discussed in <a href="#sec-4" class="ace-link" title="Reference to Section 4: Conduction System">[REF:sec-4]</a>, the AV node is the bottleneck of the heart.</p>
+        <ul id="sec-7-av-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-av-li1"><span class="ace-text--bold">First-Degree AV Block</span>: A purely temporal delay ($\uparrow PR > 200 \, ms$). The dipole is normal, but the timing is shifted.</li>
+          <li id="sec-7-av-li2"><span class="ace-text--bold">Second-Degree, Mobitz I (Wenckebach)</span>: A biophysical fatigue of the $Ca^{2+}$-dependent nodal cells. As the $ERP$ of the node progressively lengthens with each beat, the PR interval increases until the impulse hits the absolute refractory period and fails to propagate ("Drop").</li>
+          <li id="sec-7-av-li3"><span class="ace-text--bold">Second-Degree, Mobitz II</span>: A failure of the $Na^+$-dependent His-Purkinje system. This is a "spatial" block; the "expressway" is broken. Because the Purkinje system is "all-or-nothing," there is no PR prolongation—only sudden failure.</li>
+        </ul>
+      </section>
+
+      <section id="sec-7-bbb">
+        <h3 id="sec-7-bbb-title" class="ace-heading ace-heading--3">Bundle Branch Blocks (BBB): The Vector Shift</h3>
+        <p id="sec-7-p10" class="ace-body">When a bundle branch is blocked, the ventricles no longer depolarize synchronously. The impulse must travel cell-to-cell through the working myocardium, which is significantly slower than the Purkinje system.</p>
+        <ol id="sec-7-bbb-list" class="ace-list ace-list--ordered">
+          <li id="sec-7-bbb-li1"><span class="ace-text--bold">Temporal Effect</span>: The QRS complex widens ($>120 \, ms$) because the total time for the "Tug-of-War" <a href="#sec-3" class="ace-link" title="Reference to Section 3: The Cardiac Dipole">[REF:sec-3]</a> to complete is increased.</li>
+          <li id="sec-7-bbb-li2"><span class="ace-text--bold">Spatial Effect</span>: The cardiac vector $\vec{M}$ is profoundly distorted. In a <span class="ace-text--bold">Right Bundle Branch Block (RBBB)</span>, the last part of the heart to depolarize is the right ventricle. This creates a late vector pointing toward the right ($V_1$), producing the characteristic $rsR'$ "rabbit ear" morphology.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section id="sec-7-preexcitation">
+      <h2 id="sec-7-preexcitation-title" class="ace-heading ace-heading--2">Pre-excitation: The Biophysics of the Delta Wave</h2>
+      <p id="sec-7-p11" class="ace-body">In Wolff-Parkinson-White (WPW) syndrome, the heart possesses an "illegal" shortcut: an <span class="ace-text--bold">Accessory Pathway (Bundle of Kent)</span>. This pathway is composed of working myocardium that lacks the slow-conducting properties of the AV node.</p>
+
+      <section id="sec-7-fusion-logic">
+        <h3 id="sec-7-fusion-title" class="ace-heading ace-heading--3">The Fusion Beat Logic</h3>
+        <p id="sec-7-p12" class="ace-body">The QRS complex in WPW is a <span class="ace-text--bold">fusion beat</span>—a hybrid of two competing wavefronts:</p>
+        <ol id="sec-7-fusion-list" class="ace-list ace-list--ordered">
+          <li id="sec-7-fusion-li1"><span class="ace-text--bold">The Pre-excitation Wavefront</span>: The signal travels rapidly through the accessory pathway and begins depolarizing the ventricular muscle slowly (cell-to-cell).</li>
+          <li id="sec-7-fusion-li2"><span class="ace-text--bold">The Normal Wavefront</span>: The signal travels through the AV node (delayed) and then rapidly through the Purkinje system.</li>
+        </ol>
+      </section>
+
+      <section id="sec-7-delta-wave">
+        <h3 id="sec-7-delta-title" class="ace-heading ace-heading--3">The Delta Wave ($\delta$)</h3>
+        <p id="sec-7-p13" class="ace-body">Because the accessory pathway has no delay, ventricular activation begins <span class="ace-text--bold">immediately</span> after atrial activation. This results in:</p>
+        <ul id="sec-7-delta-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-delta-li1"><span class="ace-text--bold">Shortened PR Interval</span>: The "waiting time" at the AV node is bypassed.</li>
+          <li id="sec-7-delta-li2"><span class="ace-text--bold">The Delta Wave</span>: A slow, slurred upstroke at the beginning of the QRS. This represents the initial, slow cell-to-cell conduction through the muscle before the Purkinje system "takes over" and finishes the job.</li>
+        </ul>
+      </section>
+
+      <aside id="sec-7-wpw-warning" class="ace-callout ace-callout--warning">
+        <span class="ace-callout__title ace-text--bold">The Danger of AV Nodal Blockers</span>
+        <p id="sec-7-p-warning" class="ace-body">In patients with WPW and atrial fibrillation, giving $Ca^{2+}$ channel blockers or $\beta$-blockers is potentially lethal. By blocking the AV node, you force <span class="ace-text--bold">all</span> impulses (up to 600 bpm) through the accessory pathway, which lacks the "filtering" property of the node, potentially precipitating ventricular fibrillation.</p>
+      </aside>
+    </section>
+
+    <section id="sec-7-channelopathies">
+      <h2 id="sec-7-channel-title" class="ace-heading ace-heading--2">Channelopathies: Genetic Disruptions of the AP Curve</h2>
+      <p id="sec-7-p14" class="ace-body">Channelopathies are primary electrical diseases caused by mutations in the genes encoding ion channel proteins. They represent the ultimate "micro-to-macro" translation in electrophysiology.</p>
+
+      <section id="sec-7-lqts">
+        <h3 id="sec-7-lqts-title" class="ace-heading ace-heading--3">Long QT Syndrome (LQTS): The Repolarization Deficit</h3>
+        <p id="sec-7-p15" class="ace-body">LQTS is characterized by a prolongation of the QT interval, representing a delay in ventricular repolarization (Phase 3 of the AP <a href="#sec-2" class="ace-link" title="Reference to Section 2: Ion Kinetics">[REF:sec-2]</a>).</p>
+        <ul id="sec-7-lqts-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-lqts-li1"><span class="ace-text--bold">LQT1 & LQT2 (Loss of Function)</span>: Mutations in $K^+$ channels ($I_{Ks}$ and $I_{Kr}$). If $K^+$ cannot leave the cell efficiently, Phase 3 is prolonged.</li>
+          <li id="sec-7-lqts-li2"><span class="ace-text--bold">LQT3 (Gain of Function)</span>: Mutations in the $Na^+$ channel ($SCN5A$) that prevent complete inactivation. A "late" $Na^+$ current continues to leak into the cell during the plateau, fighting against repolarization.</li>
+        </ul>
+      </section>
+
+      <section id="sec-7-abcde">
+        <h3 id="sec-7-abcde-title" class="ace-heading ace-heading--3">The ABCDE Framework for Acquired Long QT</h3>
+        <p id="sec-7-p16" class="ace-body">While genetic LQTS is rare, acquired LQTS is a common clinical pitfall. The mnemonic <span class="ace-text--bold">ABCDE</span> identifies the primary pharmacological culprits:</p>
+        <ul id="sec-7-abcde-list" class="ace-list ace-list--unordered">
+          <li id="sec-7-abcde-li1"><span class="ace-text--bold">A</span>: <span class="ace-text--bold">A</span>nti-arrhythmics (Class IA and III).</li>
+          <li id="sec-7-abcde-li2"><span class="ace-text--bold">B</span>: Anti-<span class="ace-text--bold">B</span>iotics (Macrolides, Fluoroquinolones).</li>
+          <li id="sec-7-abcde-li3"><span class="ace-text--bold">C</span>: Anti-psy<span class="ace-text--bold">C</span>hotics (Haloperidol).</li>
+          <li id="sec-7-abcde-li4"><span class="ace-text--bold">D</span>: Anti-<span class="ace-text--bold">D</span>epressants (TCAs).</li>
+          <li id="sec-7-abcde-li5"><span class="ace-text--bold">E</span>: Anti-<span class="ace-text--bold">E</span>metics (Ondansetron).</li>
+        </ul>
+      </section>
+    </section>
+
+    <section id="sec-7-torsades">
+      <h2 id="sec-7-torsades-title" class="ace-heading ace-heading--2">The T-Wave Paradox and Torsades de Pointes</h2>
+      <p id="sec-7-p17" class="ace-body">Why is a long QT interval dangerous? It creates the substrate for <span class="ace-text--bold">Early Afterdepolarizations (EADs)</span>.</p>
+      <p id="sec-7-p18" class="ace-body">When Phase 3 is prolonged, the membrane potential remains in the "window" where L-type $Ca^{2+}$ channels can recover from inactivation and reopen <a href="#sec-2" class="ace-link" title="Reference to Section 2: Ion Kinetics">[REF:sec-2]</a>. This creates a secondary "hump" or trigger during the T-wave. If this trigger occurs in the presence of a shortened wavelength $\lambda$, it initiates a polymorphic ventricular tachycardia known as <span class="ace-text--bold">Torsades de Pointes</span> ("Twisting of the Points").</p>
+
+      <section id="sec-7-torsades-vector">
+        <h3 id="sec-7-torsades-vector-title" class="ace-heading ace-heading--3">The Vectorial Shift in Torsades</h3>
+        <p id="sec-7-p19" class="ace-body">On the ECG, Torsades appears as a QRS complex that continuously shifts its axis, "twisting" around the isoelectric line. This is a macroscopic record of a <span class="ace-text--bold">wandering re-entry circuit</span> that is constantly changing its anatomical path within the ventricles.</p>
+
+        <pre id="sec-7-code-torsades" class="ace-code-block"><code>/**
+ * Torsades de Pointes Simulation
+ * Dynamically shifts the cardiac vector M(t) in 3D space.
+ */
+function simulateTorsadesVector(time) {
+    // The vector twists over time
+    const frequency = 0.5; // Hz
+    const angle = time * Math.PI * 2 * frequency;
+    
+    const Mx = Math.cos(angle) * Math.sin(time);
+    const My = Math.sin(angle) * Math.sin(time);
+    const Mz = Math.cos(time);
+    
+    return { Mx, My, Mz };
+}</code></pre>
+      </section>
+    </section>
+
+    <section id="sec-7-brugada">
+      <h2 id="sec-7-brugada-title" class="ace-heading ace-heading--2">Brugada Syndrome: The Transmural Gradient</h2>
+      <p id="sec-7-p20" class="ace-body">Brugada Syndrome is a "sodium channelopathy" primarily affecting the right ventricular outflow tract (RVOT). It is characterized by a "shark-fin" ST-elevation in leads $V_1-V_2$.</p>
+
+      <section id="sec-7-brugada-mechanism">
+        <h3 id="sec-7-brugada-mech-title" class="ace-heading ace-heading--3">The Mechanism: Transmural Dispersion</h3>
+        <p id="sec-7-p21" class="ace-body">The mutation (usually a loss of function in $SCN5A$) reduces the $Na^+$ current. This effect is most pronounced in the <span class="ace-text--bold">epicardium</span> of the RVOT, where the transient outward current ($I_{to}$) is strongest <a href="#sec-5" class="ace-link" title="Reference to Section 5: Waveform Morphology">[REF:sec-5]</a>.</p>
+        <ol id="sec-7-brugada-list" class="ace-list ace-list--ordered">
+          <li id="sec-7-brugada-li1"><span class="ace-text--bold">The Gradient</span>: The epicardial AP loses its plateau and repolarizes prematurely, while the endocardial AP remains normal.</li>
+          <li id="sec-7-brugada-li2"><span class="ace-text--bold">The Vector</span>: This massive transmural voltage gradient creates a persistent injury vector pointing toward the epicardium, resulting in the characteristic ST-elevation.</li>
+        </ol>
+      </section>
+
+      <aside id="sec-7-brugada-axiom" class="ace-callout ace-callout--axiom">
+        <span class="ace-callout__title ace-text--bold">The Brugada Pattern vs. STEMI</span>
+        <p id="sec-7-p-brugada-axiom" class="ace-body">Unlike an acute MI <a href="#sec-6" class="ace-link" title="Reference to Section 6: Clinical Localization">[REF:sec-6]</a>, the Brugada pattern is a <span class="ace-text--bold">functional</span> rather than ischemic injury. It is often "unmasked" by fever or sodium channel blockers, which further reduce the already compromised $Na^+$ current.</p>
+      </aside>
+    </section>
+
+    <section id="sec-7-summary">
+      <h2 id="sec-7-summary-title" class="ace-heading ace-heading--2">Summary: The Logic of Chaos</h2>
+      <p id="sec-7-p22" class="ace-body">Complex arrhythmias are not random; they are the logical consequences of disrupted biophysics:</p>
+      <ul id="sec-7-summary-list" class="ace-list ace-list--unordered">
+        <li id="sec-7-sum-li1"><span class="ace-text--bold">Re-entry</span> occurs when the circuit length exceeds the wavelength ($\lambda = \theta \times ERP$).</li>
+        <li id="sec-7-sum-li2"><span class="ace-text--bold">Blocks</span> occur when the H.P.A.V. hierarchy is severed, leading to spatial vector shifts.</li>
+        <li id="sec-7-sum-li3"><span class="ace-text--bold">Pre-excitation</span> creates a fusion beat by introducing a fast-conducting accessory pathway.</li>
+        <li id="sec-7-sum-li4"><span class="ace-text--bold">Channelopathies</span> distort the AP curve, creating EADs (Long QT) or transmural gradients (Brugada).</li>
+      </ul>
+      <p id="sec-7-p23" class="ace-body">By understanding these mechanisms, the clinician moves from memorizing "rabbit ears" and "shark fins" to visualizing the underlying shifts in the cardiac dipole and ion channel states. This mechanical intuition is the foundation for the final integration: <span class="ace-text--bold">Pharmacological Integration</span> <a href="#sec-8" class="ace-link" title="Reference to Section 8: Pharmacological Integration">[REF:sec-8]</a>, where we use drugs to intentionally manipulate these very same biophysical parameters.</p>
+    </section>
+  </article>
+</section>
+</section>

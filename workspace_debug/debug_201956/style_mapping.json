@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "element_mapping",
+      "css_selector": "ecg-h1 ecg-h2 ecg-h3 ecg-body-text ecg-u-bold ecg-u-italic",
+      "description": null
+    },
+    {
+      "markdown_pattern": "container_mapping",
+      "css_selector": "div.ecg-callout.ecg-callout--important div.ecg-callout.ecg-callout--warning div.ecg-formula section.ecg-sim-card div.ecg-math-display span.ecg-math-inline",
+      "description": null
+    },
+    {
+      "markdown_pattern": "visual_pattern_mapping",
+      "css_selector": "svg line.ecg-svg-lead-axis svg line.ecg-svg-vector svg line.ecg-svg-projection span.ecg-u-pulse figure.ecg-sim-card",
+      "description": null
+    },
+    {
+      "markdown_pattern": "ui_controls",
+      "css_selector": "input[type='range'].ecg-slider button.ecg-toggle-switch",
+      "description": null
+    }
+  ]
+}

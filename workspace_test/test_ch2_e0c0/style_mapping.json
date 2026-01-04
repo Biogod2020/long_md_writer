@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "markdown_mapping",
+      "css_selector": "ecg-article__h1 ecg-article__h2 ecg-article__h3 ecg-article__paragraph ecg-callout--clinical ecg-code--inline ecg-math-block ecg-table ecg-viz__image",
+      "description": null
+    },
+    {
+      "markdown_pattern": "custom_container_mapping",
+      "css_selector": "div.ecg-callout.ecg-callout--important div.ecg-callout.ecg-callout--warning div.ecg-callout.ecg-callout--clinical div.ecg-math-block div.ecg-viz-container span.ecg-viz__label--glass",
+      "description": null
+    },
+    {
+      "markdown_pattern": "svg_element_mapping",
+      "css_selector": "line.ecg-viz__vector line.ecg-viz__vector--active path.animate-pulse-heart path.animate-draw-in",
+      "description": null
+    }
+  ]
+}

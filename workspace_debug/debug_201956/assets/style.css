@@ -1,0 +1,216 @@
+/* 
+ * ECG-Logic: From Electrodes to Leads
+ * Production Stylesheet v1.0.0
+ */
+
+:root {
+  /* Color Palette - Primary */
+  --color-primary-main: #0ea5e9;
+  --color-primary-light: #e0f2fe;
+  --color-primary-dark: #0369a1;
+  
+  /* Color Palette - Accent */
+  --color-accent-main: #e11d48;
+  --color-accent-light: #fff1f2;
+  --color-accent-dark: #9f1239;
+
+  /* Neutral Scale */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  /* Semantic */
+  --color-important: #3b82f6;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-math: #8b5cf6;
+
+  /* Typography */
+  --font-heading: 'Noto Serif SC', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+
+  /* Spacing & Layout */
+  --container-max-width: 800px;
+  --section-gap: 4rem;
+  --radius-lg: 0.75rem;
+  --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+;
+}
+
+/* --- Base Styles --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  line-height: 1.75;
+  margin: 0;
+  padding: 2rem 1rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ecg-container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+}
+
+/* --- Typography --- */
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.ecg-h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 2rem;
+}
+
+.ecg-h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-top: var(--section-gap);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.ecg-h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-top: 2rem;
+  color: var(--color-text-primary);
+}
+
+/* --- Components --- */
+
+/* Formula Blocks */
+.ecg-formula {
+  background-color: #f1f5f9;
+  border-left: 4px solid var(--color-primary-main);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  font-family: var(--font-mono);
+  overflow-x: auto;
+}
+
+.ecg-math-inline {
+  color: var(--color-math);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+/* Callouts (Important/Warning) */
+.ecg-callout {
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0.5rem;
+  border-left: 4px solid transparent;
+}
+
+.ecg-callout--important {
+  background-color: #eff6ff;
+  border-color: var(--color-important);
+}
+
+.ecg-callout--warning {
+  background-color: #fffbeb;
+  border-color: var(--color-warning);
+}
+
+.ecg-callout__title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.ecg-callout--important .ecg-callout__title { color: var(--color-important); }
+.ecg-callout--warning .ecg-callout__title { color: var(--color-warning); }
+
+/* Interactive Simulator Cards */
+.ecg-sim-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin: 3rem 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: box-shadow var(--transition-base);
+}
+
+.ecg-sim-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+/* SVG Graphic Styles */
+.ecg-svg-lead-axis { stroke-width: 3px; stroke: var(--color-primary-main); }
+.ecg-svg-vector { stroke-width: 4px; stroke: var(--color-accent-main); }
+.ecg-svg-projection { stroke-dasharray: 4; stroke: var(--color-text-muted); }
+
+/* Animations */
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.ecg-u-pulse {
+  animation: pulse-opacity 2s infinite ease-in-out;
+}
+
+/* --- Interactive Elements --- */
+.ecg-slider {
+  width: 100%;
+  height: 0.5rem;
+  background: var(--color-border);
+  border-radius: 1rem;
+  appearance: none;
+  accent-color: var(--color-primary-main);
+}
+
+/* --- Accessibility & Print --- */
+@media (max-width: 640px) {
+  .ecg-h1 { font-size: 2rem; }
+  .ecg-h2 { font-size: 1.5rem; }
+  body { padding: 1rem; }
+}
+
+@media print {
+  body { background: white; color: black; padding: 0; }
+  .ecg-container { max-width: 100%; }
+  .ecg-sim-card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; }
+  .ecg-formula { background: #eee; border-left: 2pt solid black; }
+  a { text-decoration: none; color: black; }
+}
+
+/* Focus States */
+:focus-visible {
+  outline: 2px solid var(--color-primary-main);
+  outline-offset: 4px;
+}
+
+/* Summary Box Component */
+.ecg-summary-box {
+  background-color: #f1f5f9;
+  border-left: 4px solid var(--color-text-muted);
+  padding: 1.5rem;
+  margin: 3rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.ecg-summary-box .ecg-h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}

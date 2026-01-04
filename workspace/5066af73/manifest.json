@@ -1,0 +1,100 @@
+{
+  "project_title": "电生理架构：基于第一性原理的心电图演绎讲义 (The Electrophysiological Blueprint: A First-Principles Guide to ECG)",
+  "author": "Magnum Opus AI",
+  "description": "本书旨在彻底颠覆传统医学教育中对心电图（ECG）的机械化记忆模式。我们不要求读者背诵图形，而是通过“电生理建模”的方法，从微观离子流向（Ion Flux）出发，推导动作电位（Action Potential）的产生，进而利用物理向量分析（Vector Analysis）构建体表电位的投影模型。通过这种演绎法，读者将理解心电图波形背后的生物物理本质。本书特别针对 USMLE 考生设计，将复杂的临床病理（如心肌梗死的演变、折返激动机制、电解质紊乱）还原为底层的电生理扰动，实现从微观机制到宏观诊断的认知闭环。这不仅是一份讲义，更是一套关于心脏电活动的逻辑推演系统。",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "微观电源：离子动力学与细胞动作电位",
+      "summary": "本章是全书的逻辑起点，旨在建立心脏电活动的“底层电池模型”。我们将首先探讨 Gibbs-Donnan 平衡与 Nernst 方程，解释心肌细胞静息电位的物理来源。接着，深度对比“快反应细胞”（工作心肌）与“慢反应细胞”（起搏细胞）在离子通道门控机制上的本质差异。重点分析 Phase 0 至 Phase 4 的离子流向，特别是 L-型钙通道与有效不应期（ERP）的生理意义。通过本章，读者将理解为什么心电图上的每一个偏转都对应着特定的跨膜离子流动，为后续推导 P-QRS-T 波群奠定分子基础。",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-2",
+      "title": "生物电路：心脏传导系统的拓扑结构与速度矢量",
+      "summary": "本章将微观电位引入宏观解剖结构，构建心脏的“高速公路系统”。我们将分析窦房结（SA Node）作为主起搏点的物理优势，以及房室结（AV Node）生理性延搁的进化意义（房室同步化）。重点探讨希氏束-普肯野系统（His-Purkinje System）的高速传导特性如何确保心室同步收缩。通过对比不同组织的传导速度，我们将推导出 PR 间期和 QRS 宽度的正常阈值。本章建立的传导逻辑将直接解释后续章节中预激综合征（WPW）和房室传导阻滞的物理本质。",
+      "estimated_words": 2000,
+      "file_path": null
+    },
+    {
+      "id": "sec-3",
+      "title": "观测者视角：偶极子理论与 12 导联物理投影",
+      "summary": "本章引入物理学中的“偶极子（Dipole）”概念，将心脏抽象为一个在容积导体中运动的电压向量。我们将详细解析爱因托芬三角（Einthoven's Triangle）的数学原理，说明 10 个物理电极如何通过 Wilson 中央电端（WCT）计算出 12 个维度的空间视角。本章将重点通过 3D 建模方式解释额面（六轴参考系统）与横面（胸前导联）的投影逻辑，使读者能够直观地在脑海中定位心脏的下壁、前壁和侧壁，彻底解决导联定位的记忆难题。",
+      "estimated_words": 3000,
+      "file_path": null
+    },
+    {
+      "id": "sec-4",
+      "title": "波形合成：从向量环到心电图纸的形态演变",
+      "summary": "本章是理论转化为实践的关键。我们将演示如何将心房去极化、心室去极化和心室复极化的动态向量环（Vector Loop）投影到特定的导联轴上。我们将深度剖析一个经典的电生理难题：为什么复极化的 T 波方向通常与去极化的 QRS 波一致？（从心外膜到心内膜的复极顺序解释）。通过建立“向量投影模型”，读者将能够根据心脏电轴的偏移预测波形振幅的变化，从而理解左心室肥厚（LVH）等形态学改变的必然性。",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-5",
+      "title": "缺血与梗死：损伤电流的物理本质与定位诊断",
+      "summary": "本章将病理状态引入模型，探讨心肌缺血如何改变细胞膜电位。我们将详细解释“损伤电流（Injury Current）”理论，说明 ST 段抬高的本质实际上是舒张期基线（TQ 段）压低在交流耦合放大器中的视觉表现。通过冠状动脉解剖与导联投影的叠加，我们将建立 STEMI 的定位坐标系（如 LAD 对应 V1-V4）。此外，还将分析病理性 Q 波的形成原理（电窗效应），使读者能通过心电图推断心肌受损的深度与时间演变。",
+      "estimated_words": 3500,
+      "file_path": null
+    },
+    {
+      "id": "sec-6",
+      "title": "节奏的坍塌：折返机制、触发活动与心律失常",
+      "summary": "本章探讨心律失常的物理模型。我们将重点分析“折返激动（Reentry）”的三要素：单向阻滞、传导减慢和临界路径。通过构建折返环模型，推导房颤（AFib）、房扑（AFlutter）和室上速（SVT）的波形特征。同时，我们将探讨后除极（EAD/DAD）引发的触发活动，解释长 QT 间期如何导致尖端扭转室速（TdP）。本章的目标是让读者看到心律失常时，脑中浮现的是电信号在心肌间的异常路径，而非孤立的波形名称。",
+      "estimated_words": 4000,
+      "file_path": null
+    },
+    {
+      "id": "sec-7",
+      "title": "系统性扰动：电解质、药物与代谢的电生理印记",
+      "summary": "最后一章关注全身环境对心脏电活动的调制。我们将分析高钾血症如何通过改变细胞外 $K^+$ 浓度来影响静息电位和传导速度（从帐篷状 T 波到正弦波的演变）。同时，我们将引入 Vaughan Williams 分类法，详细解释各类抗心律失常药物（如 $Na^+$ 通道阻滞剂、$K^+$ 通道阻滞剂）如何改变动作电位的斜率和时长，并最终在心电图上表现为 QRS 增宽或 QT 延长。这将为临床用药安全性评估提供坚实的理论支撑。",
+      "estimated_words": 2500,
+      "file_path": null
+    }
+  ],
+  "knowledge_map": {
+    "sec-1": [
+      "Nernst Equation",
+      "Fast/Slow Response Action Potentials",
+      "Ion Channels (Na, K, Ca, If)",
+      "Refractory Periods (ERP/RRP)"
+    ],
+    "sec-2": [
+      "SA/AV Node Physiology",
+      "His-Purkinje System Efficiency",
+      "Conduction Velocity Hierarchy",
+      "AV Delay Mechanism"
+    ],
+    "sec-3": [
+      "Dipole Theory",
+      "Einthoven's Law",
+      "Hexaxial Reference System",
+      "Wilson Central Terminal"
+    ],
+    "sec-4": [
+      "Vectorcardiography",
+      "T-wave Paradox (Epicardial-to-Endocardial Repolarization)",
+      "Axis Deviation Logic",
+      "Hypertrophy Criteria"
+    ],
+    "sec-5": [
+      "Ischemic Injury Current",
+      "ST-segment Shift Physics",
+      "Coronary Anatomy Correlation",
+      "Reciprocal Changes"
+    ],
+    "sec-6": [
+      "Reentry Circuit Model",
+      "Unidirectional Block",
+      "Early/Delayed Afterdepolarizations (EAD/DAD)",
+      "Vaughan Williams Mechanism"
+    ],
+    "sec-7": [
+      "Hyperkalemia/Hypokalemia ECG Signatures",
+      "Calcium Effect on QT Interval",
+      "Pharmacological Modulation of Phase 0/3",
+      "Torsades de Pointes Pathophysiology"
+    ]
+  }
+}

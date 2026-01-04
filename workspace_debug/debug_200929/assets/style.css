@@ -1,0 +1,211 @@
+/* 
+ * ECG Vector Physics - Academic Document System
+ * Version: 1.0.0
+ * Methodology: BEM (Block Element Modifier)
+ */
+
+:root {
+  /* Color Palette - Primary */
+  --color-primary-deep: #0c4a6e;
+  --color-primary-main: #0ea5e9;
+  --color-primary-light: #e0f2fe;
+
+  /* Color Palette - Accents */
+  --color-accent-red: #e11d48;
+  --color-accent-gold: #f59e0b;
+
+  /* Color Palette - Neutrals */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text-main: #1e293b;
+  --color-text-muted: #64748b;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Noto Serif SC', serif;
+  --font-mono: 'Roboto Mono', monospace;
+
+  /* Spacing & Layout */
+  --spacing-unit: 4px;
+  --container-max-width: 900px;
+  --border-radius: 8px;
+  --transition-speed: 0.3s;
+}
+
+/* --- Base Styles --- */
+html {
+  scroll-behavior: smooth;
+  background-color: var(--color-bg);
+}
+
+body {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: var(--color-text-main);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Typography --- */
+.heading {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: var(--color-primary-deep);
+  line-height: 1.2;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.heading--h1 { font-size: 2.25rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem; }
+.heading--h2 { font-size: 1.5rem; margin-top: 2rem; }
+.heading--h3 { font-size: 1.25rem; }
+
+.text-mono {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+/* --- Layout Components --- */
+.document-container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  background: var(--color-surface);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Specialized Components --- */
+
+/* Formula Block */
+.formula-block {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin: 2rem 0;
+  overflow-x: auto;
+}
+
+.formula-block__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+
+/* Callouts */
+.callout {
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.callout--important {
+  background-color: #f0f9ff;
+  border-color: var(--color-primary-main);
+}
+
+.callout--warning {
+  background-color: #fffbeb;
+  border-color: var(--color-accent-gold);
+}
+
+.callout__title {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* --- Interactive SVG Components --- */
+.diagram-container {
+  margin: 2.5rem 0;
+  text-align: center;
+}
+
+.diagram-container__wrapper {
+  background: rgba(248, 250, 252, 0.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.diagram-container__caption {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* SVG Specific Classes */
+.svg-vector-p { stroke: var(--color-accent-red); fill: var(--color-accent-red); transition: transform var(--transition-speed); }
+.svg-lead-axis { stroke: var(--color-primary-deep); stroke-dasharray: 4; }
+.svg-projection { stroke: var(--color-primary-main); stroke-width: 4; }
+.svg-text-label { font-family: var(--font-sans); font-size: 12px; }
+
+/* --- Animations --- */
+@keyframes pulse-vector {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.is-animating .svg-vector-p {
+  animation: pulse-vector 2s infinite ease-in-out;
+}
+
+/* --- Accessibility --- */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* --- Print Styles --- */
+@media print {
+  body {
+    background: white;
+    font-size: 11pt;
+  }
+  .document-container {
+    box-shadow: none;
+    max-width: 100%;
+    padding: 0;
+  }
+  .formula-block, .callout {
+    break-inside: avoid;
+  }
+  a { text-decoration: none; color: black; }
+  .interactive-hint { display: none; }
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  :root {
+    --container-max-width: 100%;
+  }
+  body { font-size: 1rem; }
+  .heading--h1 { font-size: 1.75rem; }
+  .document-container { padding: 2rem 1rem; }
+}

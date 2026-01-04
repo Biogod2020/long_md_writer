@@ -1,0 +1,230 @@
+<section id="sec-6" class="content-section">
+<section id="sec-6" class="content-section">
+  <article id="sec-6-article" class="ecg-article-container">
+    <header>
+      <h1 class="ecg-h1">向量投影定律：波形极性的数学真理</h1>
+    </header>
+
+    <p class="ecg-body-text">
+      在前面的章节中，我们已经完成了心电图观测系统的全方位构建：从爱因托芬的双极肢体导联 <a href="#sec-2" title="查看第二节：双极肢体导联">[REF:sec-2]</a>，到威尔逊的单极加压导联 <a href="#sec-3" title="查看第三节：加压肢体导联">[REF:sec-3]</a>，再到横跨胸壁的胸前导联 <a href="#sec-5" title="查看第五节：胸前导联">[REF:sec-5]</a>。我们现在拥有了 12 个分布在三维空间中的“相机机位”。
+    </p>
+
+    <p class="ecg-body-text">
+      然而，掌握了机位分布只是第一步。临床医生面临的真正挑战是：<span class="ecg-u-bold">给定一个心脏电向量，如何准确预判它在特定导联上产生的波形形态？</span> 为什么同样的电活动，在导联 II 表现为高耸的 R 波，而在 aVR 却表现为深邃的倒置波？
+    </p>
+
+    <p class="ecg-body-text">
+      本节将揭示心电图最核心的物理本质——<span class="ecg-u-bold">向量投影定律（Vector Projection Law）</span>。我们将通过严谨的矢量点积（Dot Product）推导，将解剖学的除极过程转化为数学上的函数波动，从而赋予你一种“透视”能力：无需死记硬背，只需通过几何直觉即可推导出任何导联的波形极性。
+    </p>
+
+    <section id="sec-6-modeling">
+      <h2 class="ecg-h2">物理建模：心脏向量与导联轴的矢量表达</h2>
+      <p class="ecg-body-text">在物理学中，任何在空间中具有大小和方向的物理量都可以表示为矢量。</p>
+
+      <ol>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">瞬时心脏向量（Instantaneous Cardiac Vector, $\vec{P}$）</span>：在心动周期的某一时刻 $t$，全心心肌除极产生的电偶极矩总和。它是一个动态变化的矢量，其末端在空间中描绘出一道复杂的轨迹。
+        </li>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">导联轴单位矢量（Lead Axis Unit Vector, $\hat{L}$）</span>：每一个导联（如导联 II）在空间中定义了一个固定的观测方向。为了简化计算，我们将导联轴视为一个从负极指向正极的单位矢量 $\hat{L}$。
+        </li>
+      </ol>
+
+      <div class="ecg-callout ecg-callout--important">
+        <p class="ecg-body-text"><span class="ecg-u-bold">投影公理：心电信号的标量化</span></p>
+        <p class="ecg-body-text">
+          心电图机记录到的电压 $V(t)$，本质上是瞬时心脏向量 $\vec{P}(t)$ 在导联轴 $\hat{L}$ 上的<span class="ecg-u-bold">标量投影</span>。在向量代数中，这一过程由<span class="ecg-u-bold">点积（Dot Product）</span>定义：
+        </p>
+        <div class="ecg-math-display">
+          $$ V(t) = \vec{P}(t) \cdot \hat{L} = |\vec{P}(t)| \cdot |\hat{L}| \cdot \cos \theta $$
+        </div>
+        <p class="ecg-body-text">
+          由于 $\hat{L}$ 是单位矢量（$|\hat{L}| = 1$），公式简化为：
+        </p>
+        <div class="ecg-math-display">
+          $$ V(t) = |\vec{P}(t)| \cos \theta $$
+        </div>
+        <p class="ecg-body-text">其中 $\theta$ 是心脏向量与导联轴正向之间的夹角。</p>
+      </div>
+    </section>
+
+    <section id="sec-6-criteria">
+      <h2 class="ecg-h2">投影定律的三大基本判据</h2>
+      <p class="ecg-body-text">根据余弦函数 $\cos \theta$ 的性质，我们可以推导出决定波形极性的三大物理判据。这不仅是数学练习，更是心电图判读的“第一性原理”。</p>
+
+      <h3 class="ecg-h3">1. 正向波判据：$\theta < 90^\circ$（趋向正极）</h3>
+      <p class="ecg-body-text">当心脏向量的方向落在以导联轴正极为中心的 $180^\circ$ 半圆内时，$\cos \theta > 0$。</p>
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">物理现象</span>：除极波正在“跑向”正电极。</li>
+        <li><span class="ecg-u-bold">ECG 表现</span>：描记线向上波动，产生<span class="ecg-u-bold">正向波（Positive Deflection）</span>，如 R 波。</li>
+        <li><span class="ecg-u-bold">振幅极值</span>：当 $\theta = 0^\circ$ 时，$\cos 0^\circ = 1$，此时波形振幅达到该向量所能产生的最大值。</li>
+      </ul>
+
+      <h3 class="ecg-h3">2. 负向波判据：$\theta > 90^\circ$（背离正极）</h3>
+      <p class="ecg-body-text">当心脏向量的方向落在导联轴负极一侧的 $180^\circ$ 半圆内时，$\cos \theta < 0$。</p>
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">物理现象</span>：除极波正在“远离”正电极（或趋向负电极）。</li>
+        <li><span class="ecg-u-bold">ECG 表现</span>：描记线向下波动，产生<span class="ecg-u-bold">负向波（Negative Deflection）</span>，如 S 波或倒置的 T 波。</li>
+        <li><span class="ecg-u-bold">振幅极值</span>：当 $\theta = 180^\circ$ 时，$\cos 180^\circ = -1$，波形呈现最大的负向振幅。</li>
+      </ul>
+
+      <h3 class="ecg-h3">3. 等电位判据：$\theta = 90^\circ$（垂直切割）</h3>
+      <p class="ecg-body-text">当心脏向量的方向与导联轴完全垂直时，$\cos 90^\circ = 0$。</p>
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">物理现象</span>：除极波既不趋向也不背离正电极，它在导联轴上的分量为零。</li>
+        <li><span class="ecg-u-bold">ECG 表现</span>：描记线处于<span class="ecg-u-bold">等电位线（Isoelectric Line）</span>，或呈现正负振幅完全相等的<span class="ecg-u-bold">双相波（Biphasic Wave）</span>。</li>
+      </ul>
+
+      <figure class="ecg-sim-card">
+        <svg viewBox="0 0 800 400" width="100%" xmlns="http://www.w3.org/2000/svg">
+          <title>向量投影定律几何示意图</title>
+          <!-- Background Grid -->
+          <defs>
+            <pattern id="grid-sec6" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid-sec6)" />
+          
+          <!-- Lead Axis -->
+          <line x1="100" y1="200" x2="700" y2="200" class="ecg-svg-lead-axis" stroke="#0ea5e9" stroke-width="3" stroke-dasharray="8,4" />
+          <text x="710" y="205" fill="#0ea5e9" font-family="Roboto Mono" font-weight="bold">+ Lead Axis (L)</text>
+          <text x="40" y="205" fill="#64748b" font-family="Roboto Mono">-</text>
+
+          <!-- Vector P1 (Positive) -->
+          <line x1="400" y1="200" x2="550" y2="100" class="ecg-svg-vector" stroke="#e11d48" stroke-width="4" marker-end="url(#arrowhead-red)" />
+          <line x1="550" y1="100" x2="550" y2="200" class="ecg-svg-projection" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,2" />
+          <text x="560" y="90" fill="#e11d48" font-family="Roboto Mono" font-weight="bold">P (θ < 90°)</text>
+          <rect x="400" y="200" width="150" height="4" fill="#0ea5e9" opacity="0.6" />
+          <text x="440" y="230" fill="#0ea5e9" font-size="12">Positive Projection</text>
+
+          <!-- Vector P2 (Negative) -->
+          <line x1="400" y1="200" x2="250" y2="100" class="ecg-svg-vector" stroke="#e11d48" stroke-width="4" marker-end="url(#arrowhead-red)" opacity="0.5" />
+          <line x1="250" y1="100" x2="250" y2="200" class="ecg-svg-projection" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,2" />
+          <text x="180" y="90" fill="#e11d48" font-family="Roboto Mono" opacity="0.5">P (θ > 90°)</text>
+          
+          <!-- Marker Definitions -->
+          <defs>
+            <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#e11d48" />
+            </marker>
+          </defs>
+        </svg>
+        <figcaption class="ecg-body-text ecg-u-italic" style="text-align: center;">图 2-8：向量投影定律示意图。显示了不同夹角 $\theta$ 下，同一向量在导联轴上产生的投影形态。</figcaption>
+      </figure>
+    </section>
+
+    <section id="sec-6-qrs-dynamics">
+      <h2 class="ecg-h2">深度解构：QRS 复合波形态的动力学起源</h2>
+      <p class="ecg-body-text">为什么一个简单的室间隔除极加心室除极过程，会产生 Q、R、S 三个连续的波动？利用投影定律，我们可以通过追踪心脏向量的轨迹来解释这一过程。</p>
+
+      <p class="ecg-body-text">以<span class="ecg-u-bold">导联 II（轴向 $+60^\circ$）</span>为例：</p>
+
+      <ol>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">室间隔除极（向量指向右上方）</span>：向量与导联 II 轴向的夹角通常大于 $90^\circ$（约 $150^\circ$）。此时 $\cos \theta$ 为负，产生一个小而窄的下跳波——<span class="ecg-u-bold">Q 波</span>。
+        </li>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">左心室主除极（向量指向左下方）</span>：这是心脏电能量最强的时刻，向量方向约为 $+45^\circ$ 至 $+60^\circ$。由于向量几乎与导联 II 平行，$\cos \theta \approx 1$，产生一个高耸的向上波动——<span class="ecg-u-bold">R 波</span>。
+        </li>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">心室基底部除极（向量指向右上方/后方）</span>：最后除极的部位使向量再次转向远离导联 II 正极的方向。夹角再次大于 $90^\circ$，产生一个下跳波——<span class="ecg-u-bold">S 波</span>。
+        </li>
+      </ol>
+
+      <div class="ecg-callout ecg-callout--important">
+        <p class="ecg-body-text"><span class="ecg-u-bold">结论：形态即路径</span></p>
+        <p class="ecg-body-text">心电图上的每一个波形转折，本质上都是心脏向量在旋转过程中，不断跨越导联轴的“垂直中线”所导致的投影正负切换。</p>
+      </div>
+    </section>
+
+    <section id="sec-6-clinical">
+      <h2 class="ecg-h2">临床应用：利用投影定律判定电轴</h2>
+      <p class="ecg-body-text">掌握了投影定律，你就可以进行逆向推理：通过观察各个导联的波形振幅，反推心脏总向量 $\vec{P}$ 的角度。</p>
+
+      <h3 class="ecg-h3">垂直判定法（The Quadrant Method）</h3>
+      <p class="ecg-body-text">如果某个导联的波形是<span class="ecg-u-bold">等电位双相波</span>（即正负面积相等），那么心脏电轴必然垂直于该导联轴。</p>
+
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">练习</span>：如果在心电图上看到导联 aVL（$-30^\circ$）呈现双相波，那么电轴指向哪里？</li>
+        <li><span class="ecg-u-bold">推导</span>：垂直于 $-30^\circ$ 的方向有两个：$+60^\circ$ 和 $-120^\circ$。</li>
+        <li><span class="ecg-u-bold">验证</span>：查看导联 II（$+60^\circ$）。如果导联 II 的 R 波极高，则电轴指向 $+60^\circ$；如果导联 II 也是负向波，则电轴指向 $-120^\circ$。</li>
+      </ul>
+
+      <div class="ecg-callout ecg-callout--warning">
+        <p class="ecg-body-text"><span class="ecg-u-bold">病理陷阱：低电压的物理误区</span></p>
+        <p class="ecg-body-text">当所有肢体导联的波形振幅都小于 0.5mV 时，称为“肢体导联低电压”。从投影定律分析，这可能有两个原因：</p>
+        <ol class="ecg-body-text">
+          <li><span class="ecg-u-bold">信号源减弱</span>：心脏产生的 $|\vec{P}|$ 变小（如心肌病、粘液性水肿）。</li>
+          <li><span class="ecg-u-bold">传输介质阻碍</span>：心脏与电极之间的阻抗增加（如肺气肿、心包积液），导致到达体表的投影能量衰减。</li>
+          <li><span class="ecg-u-bold">空间垂直</span>：心脏电轴与额面垂直（指向前后），导致在额面所有肢体导联上的投影分量都极小。</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="sec-6-simulator" class="ecg-sim-card">
+      <h2 class="ecg-h2">向量投影模拟器：逻辑验证</h2>
+      <p class="ecg-body-text">为了直观理解这一过程，请想象一个交互式实验：</p>
+
+      <div style="background-color: #f8fafc; padding: 24px; border-radius: 12px; border: 2px dashed #cbd5e1; margin: 20px 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <span class="ecg-u-bold">心脏向量角度控制</span>
+          <input type="range" class="ecg-slider" min="0" max="360" value="60" style="width: 60%;">
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-around; margin: 20px 0; background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <svg id="vector-sim-svg" width="200" height="200" viewBox="0 0 200 200" style="cursor: crosshair; touch-action: none;">
+            <circle cx="100" cy="100" r="90" fill="#f8fafc" stroke="#e2e8f0" />
+            <line x1="10" y1="100" x2="190" y2="100" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2" />
+            <line x1="100" y1="10" x2="100" y2="190" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2" />
+            <g id="cardiac-vector">
+              <line x1="100" y1="100" x2="180" y2="100" stroke="#e11d48" stroke-width="4" marker-end="url(#arrowhead-sim)" />
+            </g>
+            <defs>
+              <marker id="arrowhead-sim" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#e11d48" />
+              </marker>
+            </defs>
+          </svg>
+          <div style="text-align: center;">
+            <div style="width: 30px; height: 100px; background: #f1f5f9; border-radius: 4px; display: flex; align-items: flex-end; margin: 0 auto;">
+              <div id="projection-amplitude-bar" style="width: 100%; height: 0; background: #0ea5e9; transition: height 0.1s;"></div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 12px; margin-top: 10px; color: var(--color-text-secondary);">投影强度</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="ecg-toggle-switch">显示垂直线</button>
+          <button class="ecg-toggle-switch">显示余弦值</button>
+        </div>
+      </div>
+
+      <p class="ecg-body-text">
+        这种<span class="ecg-u-bold">动态投影</span>的思维方式，是区分“死记硬背型医生”与“物理直觉型医生”的分水岭。
+      </p>
+    </section>
+
+    <section id="sec-6-summary">
+      <h2 class="ecg-h2">总结：从几何到诊断</h2>
+      <p class="ecg-body-text">向量投影定律将复杂的临床现象简化为了一个优美的余弦公式。它告诉我们，心电图不是心脏电活动的直接写照，而是<span class="ecg-u-bold">心脏电活动在特定维度的侧影</span>。</p>
+
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">极性</span>取决于夹角的余弦符号（趋向 vs. 背离）。</li>
+        <li><span class="ecg-u-bold">振幅</span>取决于向量的大小及其与导联轴的平行程度。</li>
+        <li><span class="ecg-u-bold">形态</span>取决于向量在空间中移动的轨迹。</li>
+      </ul>
+
+      <p class="ecg-body-text">理解了投影定律后，我们已经掌握了分析单一导联波形的数学真理。在接下来的 <a href="#sec-7" title="查看第七节：12导联临床应用">[REF:sec-7]</a> 中，我们将把这一真理应用到解剖学实践中，看 12 个导联如何通过各自的投影，共同勾勒出心脏不同部位（如前壁、下壁、侧壁）的健康蓝图。</p>
+    </section>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+      <h3 class="ecg-h3">本节要点小结</h3>
+      <ul class="ecg-body-text">
+        <li><span class="ecg-u-bold">ECG 电压 $V = \vec{P} \cdot \hat{L}$</span>，是心脏向量在导联轴上的标量点积。</li>
+        <li><span class="ecg-u-bold">$\cos \theta$</span> 决定了波形的所有特征：正向（$<90^\circ$）、负向（$>90^\circ$）或等电位（$=90^\circ$）。</li>
+        <li><span class="ecg-u-bold">QRS 复合波</span>的起伏反映了心脏除极向量在空间轨迹上的旋转。</li>
+        <li><span class="ecg-u-bold">等电位导联</span>是判定平均电轴的最佳几何切入点。</li>
+      </ul>
+    </footer>
+  </article>
+</section>
+</section>

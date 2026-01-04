@@ -1,0 +1,123 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive 3D Heart Model with LAD Occlusion and ST-Segment Elevation">
+  <title>Advanced Cardiovascular Electrophysiology: Ischemic Injury Vector</title>
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="smallGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(34, 211, 238, 0.05)" stroke-width="0.5"/>
+    </pattern>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <rect width="50" height="50" fill="url(#smallGrid)"/>
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(34, 211, 238, 0.1)" stroke-width="1"/>
+    </pattern>
+
+    <!-- Gradients -->
+    <radialGradient id="heartGradient" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </radialGradient>
+    
+    <radialGradient id="ischemicGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="vectorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+      }
+      @keyframes flow {
+        from { stroke-dashoffset: 100; }
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes ecgTrace {
+        0% { stroke-dashoffset: 1000; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes vectorOscillate {
+        0%, 100% { transform: translate(0,0); }
+        50% { transform: translate(5px, -5px); }
+      }
+      .ischemic-zone { animation: pulse 3s ease-in-out infinite; transform-origin: 300px 250px; }
+      .artery-flow { stroke-dasharray: 10, 30; animation: flow 2s linear infinite; }
+      .ecg-path { stroke-dasharray: 1000; animation: ecgTrace 4s linear infinite; }
+      .vector-arrow { animation: vectorOscillate 2s ease-in-out infinite; }
+      .glass-panel { backdrop-filter: blur(10px); }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="#0f172a" />
+  <rect width="800" height="500" fill="url(#grid)" />
+
+  <!-- Heart Silhouette (3D Stylized) -->
+  <g transform="translate(100, 50)">
+    <path d="M200,100 C100,100 50,200 50,300 C50,400 150,450 250,450 C350,450 450,400 450,300 C450,150 350,100 250,100 Z" 
+          fill="url(#heartGradient)" stroke="#334155" stroke-width="2" />
+    
+    <!-- Ischemic Zone (LAD Territory) -->
+    <path class="ischemic-zone" d="M180,150 Q250,250 220,430 Q150,400 120,300 Z" fill="url(#ischemicGlow)" />
+
+    <!-- Coronary Arteries -->
+    <!-- RCA -->
+    <path d="M250,120 Q350,150 380,300" fill="none" stroke="#22d3ee" stroke-width="3" opacity="0.4" />
+    <!-- LCX -->
+    <path d="M250,120 Q150,130 100,200" fill="none" stroke="#22d3ee" stroke-width="3" opacity="0.4" />
+    <!-- LAD (Occluded) -->
+    <path d="M250,120 Q260,250 230,440" fill="none" stroke="#22d3ee" stroke-width="4" filter="url(#glow)" />
+    <circle cx="255" cy="180" r="6" fill="#ef4444" filter="url(#glow)">
+      <animate attributeName="r" values="5;8;5" dur="1s" repeatCount="indefinite" />
+    </circle>
+    
+    <!-- Injury Vector -->
+    <g class="vector-arrow">
+      <line x1="255" y1="180" x2="350" y2="80" stroke="url(#vectorGradient)" stroke-width="5" marker-end="url(#arrowhead)" />
+      <path d="M340,90 L355,75 L345,70" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round" />
+      <text x="360" y="70" fill="#ef4444" font-family="JetBrains Mono" font-size="14" font-weight="bold">Σ ST Vector</text>
+    </g>
+  </g>
+
+  <!-- Side Panel: ECG Grid -->
+  <g transform="translate(550, 50)">
+    <rect width="220" height="400" rx="10" fill="rgba(30, 41, 59, 0.7)" stroke="#334155" class="glass-panel" />
+    <text x="110" y="30" fill="#22d3ee" font-family="Inter" font-size="16" text-anchor="middle" font-weight="600">LEAD V2 (Anterior)</text>
+    
+    <!-- ECG Grid Background -->
+    <rect x="10" y="50" width="200" height="330" fill="#0f172a" />
+    <path d="M10 215 L210 215" stroke="rgba(34, 211, 238, 0.2)" stroke-width="1" />
+    
+    <!-- ST Elevation Trace -->
+    <path class="ecg-path" d="M10,215 L40,215 L50,150 L65,280 L75,215 L85,140 L140,140 C160,140 170,180 180,215 L210,215" 
+          fill="none" stroke="#ef4444" stroke-width="3" filter="url(#glow)" />
+    
+    <!-- Annotations -->
+    <text x="90" y="130" fill="#ef4444" font-family="JetBrains Mono" font-size="12">ST Elevation</text>
+    <path d="M110,145 L110,210" stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2" />
+    <text x="115" y="185" fill="#fbbf24" font-family="JetBrains Mono" font-size="10">Injury Current</text>
+  </g>
+
+  <!-- Legend / Status -->
+  <g transform="translate(50, 430)">
+    <rect width="450" height="50" rx="8" fill="rgba(30, 41, 59, 0.5)" />
+    <circle cx="20" cy="25" r="5" fill="#ef4444" />
+    <text x="35" y="30" fill="#cbd5e1" font-family="Inter" font-size="12">Occlusion: Proximal LAD</text>
+    <circle cx="180" cy="25" r="5" fill="#22d3ee" />
+    <text x="195" y="30" fill="#cbd5e1" font-family="Inter" font-size="12">Depolarization Front</text>
+    <path d="M340,25 L370,25" stroke="url(#vectorGradient)" stroke-width="3" />
+    <text x="380" y="30" fill="#cbd5e1" font-family="Inter" font-size="12">Injury Vector (J-Point)</text>
+  </g>
+</svg>

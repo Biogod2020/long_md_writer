@@ -1,0 +1,17 @@
+{
+  "img_id": "gz2-campus-gate-history",
+  "description": "广州市第二中学应元校区的正门，黑色大理石建筑与金色校名题字，体现百年名校的历史底蕴。",
+  "strategy": {
+    "thinking": "The strategy focuses on the specific campus (Yingyuan) and the primary architectural subject (the gate) using both the official Chinese name and the English designation to capture professional institutional photography.",
+    "queries": [
+      "广州二中 应元 校门",
+      "'Guangzhou No.2 High School' Yingyuan gate"
+    ],
+    "guidance": "Select a high-resolution photograph that clearly displays the black marble texture and the golden calligraphy of the school name to reflect its historical prestige."
+  },
+  "selected": "img_1.jpg",
+  "reasoning": "img_1.jpg clearly depicts the black marble wall and the golden calligraphy of the school name '广州市第二中学' at the Yingyuan Road campus, as requested. It is a high-resolution, professional-looking photograph that captures the historical prestige of the institution without distracting elements like the cyclist in img_3.",
+  "selected_image_description": "广州市第二中学应元路校区正门，黑色大理石墙面上镶嵌着金色的校名题字。",
+  "total_attempts": 1,
+  "all_failed_queries": []
+}

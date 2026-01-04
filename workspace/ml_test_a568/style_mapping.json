@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "mappings",
+      "css_selector": "t-h1 t-h2 t-h3 t-body t-math t-math--inline c-card--glass t-math c-code-block c-callout c-callout c-callout--important c-callout c-callout--warning c-card--glass c-interactive-canvas c-slider u-animate-draw u-animate-glow l-section l-container",
+      "description": null
+    },
+    {
+      "markdown_pattern": "usage_notes",
+      "css_selector": "Apply .t-math to MathJax/KaTeX output containers for consistent JetBrains Mono styling. Use .c-card--glass for high-level summaries or 'Key Theorems'. Wrap the entire document in .l-container for centered readability.",
+      "description": null
+    }
+  ]
+}

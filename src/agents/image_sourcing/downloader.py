@@ -1,0 +1,232 @@
+"""
+ImageDownloader: Robust multi-layer download strategy for image candidates.
+"""
+
+import os
+import requests
+import random
+import time
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import List, Dict, Optional
+import urllib3
+from .browser import BrowserManager
+
+# Disable insecure request warnings for proxy/SSL issues
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class ImageDownloader:
+    """Downloads images using requests with browser fallback."""
+
+    def __init__(self, browser_manager: BrowserManager, debug: bool = False):
+        self.browser_manager = browser_manager
+        self.debug = debug
+
+    def download_candidates(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
+        """
+        Download a list of candidate images using a 3-layer strategy.
+        
+        Args:
+            candidates: List of {'url', 'desc'} dicts
+            target_dir: Directory to save images
+            
+        Returns:
+            List of Path objects for successfully downloaded images
+        """
+        if not candidates:
+            return []
+            
+        session = requests.Session()
+        local_paths = [None] * len(candidates)
+        failed_indices = []
+
+        # 1. LAYER 1: Parallel Requests
+        if self.debug:
+            print(f"    - Starting parallel download of {len(candidates)} images...")
+            
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(
+                    self._download_single_requests, 
+                    candidates[i]['url'], 
+                    i, 
+                    target_dir, 
+                    session, 
+                    candidates[i]['desc']
+                ): i for i in range(len(candidates))
+            }
+            for future in concurrent.futures.as_completed(futures):
+                idx = futures[future]
+                try:
+                    path = future.result()
+                    if path:
+                        local_paths[idx] = path
+                    else:
+                        failed_indices.append(idx)
+                except:
+                    failed_indices.append(idx)
+
+        # 2. LAYER 2: Browser Fallback (Anti-bot Bypass + Session Injection)
+        if failed_indices:
+            if self.debug:
+                print(f"    - {len(failed_indices)} failed simple download. Trying Browser-based fallback...")
+            
+            # Use the shared browser instance
+            page = self.browser_manager.page
+            from DrissionPage import SessionPage
+
+            try:
+                downloader_tab = page.new_tab()
+                for i in failed_indices:
+                    url = candidates[i]['url']
+                    desc = candidates[i]['desc']
+                    try:
+                        if self.debug:
+                            print(f"      - Fallback trying {i+1} via Browser...")
+                        
+                        # A. Navigate to bypass checks (Cloudflare/hotlink protection)
+                        downloader_tab.get(url, timeout=12)
+                        
+                        # Wait briefly for challenges
+                        if "cloudflare" in downloader_tab.title.lower() or "just a moment" in downloader_tab.title.lower():
+                            if self.debug: print(f"        [!] Anti-bot challenge detected, waiting...")
+                            time.sleep(3)
+                            downloader_tab.wait.doc_loaded(timeout=5)
+
+                        # B. INJECT COOKIES into a fast requests Session
+                        # This avoids the slow browser download UI causing bottlenecks
+                        try:
+                            # Robust cookie extraction
+                            try:
+                                raw_cookies = downloader_tab.cookies(as_dict=True)
+                            except:
+                                # Fallback for older DrissionPage
+                                raw_c_list = downloader_tab.cookies
+                                raw_cookies = {}
+                                if isinstance(raw_c_list, list):
+                                    for c in raw_c_list:
+                                        if isinstance(c, dict): raw_cookies[c.get('name')] = c.get('value')
+                                
+                        except:
+                            raw_cookies = {}
+                        
+                        ua = downloader_tab.user_agent
+                        
+                        # Create lightweight requests session
+                        fast_session = requests.Session()
+                        fast_session.headers.update({
+                            "User-Agent": ua, 
+                            "Referer": "https://www.google.com/",
+                            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+                        })
+                        fast_session.cookies.update(raw_cookies)
+                        
+                        # C. Fast Download
+                        target_path = target_dir / f"img_{i+1}"
+                        download_success = False
+                        
+                        try:
+                            # Stream download to avoid memory issues
+                            resp = fast_session.get(url, stream=True, timeout=12, verify=False)
+                            if resp.status_code == 200:
+                                c_type = resp.headers.get('Content-Type', '').lower()
+                                ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
+                                final_path = target_path.with_suffix(ext)
+                                
+                                with open(final_path, 'wb') as f:
+                                    for chunk in resp.iter_content(chunk_size=8192):
+                                        f.write(chunk)
+                                        
+                                downloaded_path = final_path
+                                if self.debug: print(f"        [+] Fast session download success: {downloaded_path.name}")
+                                
+                                if desc:
+                                    (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
+                                self._resize_image(downloaded_path)
+                                local_paths[i] = downloaded_path
+                                download_success = True
+                            else:
+                                if self.debug: print(f"        [-] Fast session download failed: {resp.status_code}")
+                        except Exception as e:
+                            if self.debug: print(f"        [-] Fast session error: {e}")
+
+                        # D. Slow Browser Download (Last Resort for TLS/Complex checks)
+                        if not download_success:
+                            if self.debug: print(f"        [!] Reverting to slow browser download for {i+1}...")
+                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{i+1}")
+                            if res and res[0]:
+                                downloaded_path = Path(res[1])
+                                if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
+                                self._resize_image(downloaded_path)
+                                local_paths[i] = downloaded_path
+
+                    except Exception as e:
+                        if self.debug:
+                            print(f"      - Fallback {i+1} failed: {e}")
+                
+                # Close the fallback tab
+                try:
+                    downloader_tab.close()
+                except: pass
+
+            except Exception as e:
+                if self.debug:
+                    print(f"    - Browser fallback error: {e}")
+            
+        return [p for p in local_paths if p is not None]
+
+    def _download_single_requests(self, url: str, index: int, target_dir: Path, session, desc: str) -> Optional[Path]:
+        """Layer 1: Download using requests with headers."""
+        try:
+            # Handle unicode escapes and unquote
+            if '\\u' in url:
+                url = url.encode().decode('unicode_escape')
+            from urllib.parse import unquote
+            url = unquote(url)
+            
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+                'Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0'
+            ]
+            
+            headers = {
+                'User-Agent': random.choice(user_agents),
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.google.com/',
+                'Sec-Fetch-Dest': 'image',
+                'Sec-Fetch-Mode': 'no-cors',
+                'Sec-Fetch-Site': 'cross-site'
+            }
+            
+            time.sleep(random.uniform(0.1, 0.4))
+            resp = session.get(url, headers=headers, timeout=10, verify=False, allow_redirects=True)
+            
+            if resp.status_code == 200 and len(resp.content) > 2000:
+                c_type = resp.headers.get('Content-Type', '').lower()
+                ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
+                path = target_dir / f"img_{index+1}{ext}"
+                path.write_bytes(resp.content)
+                if desc:
+                    (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
+                self._resize_image(path)
+                return path
+        except:
+            pass
+        return None
+
+    def _resize_image(self, path: Path):
+        """Resize image to 768px max side and convert to JPEG for Gemini Vision."""
+        try:
+            from PIL import Image
+            with Image.open(path) as img:
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                if max(img.size) > 768:
+                    img.thumbnail((768, 768), Image.Resampling.LANCZOS)
+                    img.save(path, "JPEG", quality=80)
+        except:
+            pass

@@ -1,0 +1,255 @@
+/* 
+ * SOTA Cardiovascular Physics Interactive Guide 
+ * Design System: Modern Medical Dashboard
+ * Framework: BEM (Block Element Modifier)
+ */
+
+:root {
+  /* Color Palette - Backgrounds */
+  --color-bg-base: #0f172a;
+  --color-bg-surface: rgba(30, 41, 59, 0.7);
+  --color-bg-overlay: rgba(15, 23, 42, 0.8);
+  
+  /* Color Palette - Text */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-accent: #38bdf8;
+
+  /* Functional Colors */
+  --color-electric: #10b981;
+  --color-pathology: #ef4444;
+  --color-warning: #f59e0b;
+  --color-vector: #3b82f6;
+  --color-ion-ca: #fbbf24;
+  --color-ion-k: #8b5cf6;
+  --color-ion-na: #ec4899;
+
+  /* Borders & Glassmorphism */
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-active: rgba(56, 189, 248, 0.5);
+  --glass-blur: blur(12px);
+  --glass-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+
+  /* Spacing */
+  --unit: 4px;
+  --space-m: 24px;
+  --space-l: 48px;
+  --space-xl: 64px;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Montserrat', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Base Styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  margin: 0;
+  padding: var(--space-xl) 5%;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography Components */
+.heading-1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 2.5rem;
+  margin-bottom: var(--space-l);
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, #fff, var(--color-text-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.heading-2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-top: var(--space-xl);
+  color: var(--color-text-accent);
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: var(--unit);
+}
+
+.paragraph {
+  margin-bottom: var(--space-m);
+  color: var(--color-text-secondary);
+}
+
+/* Glassmorphism Card */
+.card {
+  background: var(--color-bg-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: var(--space-m);
+  margin: var(--space-m) 0;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.card:hover {
+  border-color: var(--border-active);
+}
+
+/* Callouts (BEM) */
+.callout {
+  border-left-width: 4px;
+  border-left-style: solid;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.callout--important {
+  border-left-color: var(--color-electric);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.callout--important::before {
+  content: "CORE AXIOM";
+  display: block;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--color-electric);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+.callout--warning {
+  border-left-color: var(--color-pathology);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.callout--warning::before {
+  content: "PATHOLOGICAL DEDUCTION";
+  display: block;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: var(--color-pathology);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+/* Math & Code Blocks */
+.math-block {
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  text-align: center;
+  color: var(--color-text-accent);
+  margin: 1.5rem 0;
+}
+
+.code-block {
+  font-family: var(--font-mono);
+  background: #000;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-glass);
+  position: relative;
+}
+
+.code-block::before {
+  content: "•••";
+  display: block;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+  letter-spacing: 4px;
+}
+
+/* SVG Animations */
+.ion-flow-path {
+  stroke-dasharray: 5, 5;
+  animation: dash-move 2s linear infinite;
+}
+
+.ion-flow-path--inward { stroke: var(--color-electric); }
+.ion-flow-path--outward { stroke: var(--color-pathology); }
+
+.pulse-electric {
+  animation: pulse-electric 2s ease-in-out infinite;
+}
+
+@keyframes dash-move {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-electric {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 2px var(--color-electric)); }
+  50% { opacity: 0.6; filter: drop-shadow(0 0 8px var(--color-electric)); }
+}
+
+/* Interactive Components */
+.parameter-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  outline: none;
+}
+
+.parameter-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--color-text-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color-text-accent);
+}
+
+.parameter-slider:focus::-webkit-slider-thumb {
+  border: 2px solid white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  body {
+    padding: var(--space-m);
+  }
+  .heading-1 { font-size: 1.8rem; }
+  .heading-2 { font-size: 1.4rem; }
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .ion-flow-path, .pulse-electric {
+    animation: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+    padding: 0;
+  }
+  .card, .callout {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    break-inside: avoid;
+  }
+  .heading-1, .heading-2 {
+    color: black !important;
+    -webkit-text-fill-color: black;
+  }
+  .parameter-slider, .animation-container {
+    display: none;
+  }
+}

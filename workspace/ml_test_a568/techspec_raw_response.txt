@@ -1,0 +1,31 @@
+### Technical Specification: The Geometric Engine (SOTA-01)
+
+#### 1. Content Guidelines
+The Writer must adopt a **first-principles deductive reasoning style**. The narrative arc must begin with the geometric "why" (topography) before moving into the algebraic "how" (derivation). 
+- **Mathematical Rigor:** Use LaTeX for all notation. Do not simplify the multivariable calculus; maintain formal rigor for partial derivatives ($\partial$), gradients ($\nabla$), and the chain rule expansion. 
+- **Structure:** Each section must follow a "Visual Intuition $\rightarrow$ Formal Definition $\rightarrow$ Proof" sequence. 
+- **Evidence:** Use standard notation consistent with Goodfellow’s *Deep Learning*. Explicitly link the Mean Squared Error (MSE) derivation to the gradient update rule to ensure the student sees the direct pipeline from error to adjustment.
+
+#### 2. Visual Design System
+The aesthetic is **"SOTA High-Tech Dark"**—clean, high-contrast, and immersive.
+- **Color Palette:** 
+    - *Background:* Deep Slate (`#0f172a`).
+    - *Primary Accent:* Electric Cyan (`#22d3ee`) for gradients and forward-pass flow.
+    - *Secondary Accent:* Vivid Purple (`#a855f7`) for backpropagation and error signals.
+    - *Warning/Error:* Rose (`#f43f5e`) for visualizing high-loss regions.
+- **Typography:** Use **Inter** for body text (readability) and **JetBrains Mono** for mathematical variables and code snippets.
+- **Component Styles:** 
+    - **Glassmorphism:** Use semi-transparent cards (`backdrop-filter: blur`) with subtle 1px borders for "Key Theorems."
+    - **Code Blocks:** Syntax highlighting should favor a "Night Owl" or "One Dark" theme.
+    - **Callouts:** Use "Glow" effects (box-shadow) to highlight the Gradient Descent update rule.
+
+#### 3. Interactive Elements
+The Transformer must implement high-performance, lightweight interactions that bridge math and visuals.
+- **SVG Loss Landscape:** A 3D-rendered SVG surface plot in Section 1. Users should be able to click any point to see the gradient vector $\nabla J(\theta)$ rendered as a directional arrow pointing toward the local minimum.
+- **Learning Rate Slider:** In Section 4, provide a slider for $\alpha$. Adjusting the slider should dynamically update an animation of a "ball" descending the loss curve, demonstrating convergence, oscillation, or divergence.
+- **Progressive Disclosure (Backprop):** In Section 6, use a "Step-through" interaction. As the user clicks "Next Step," the multivariable chain rule should expand across a computational graph, highlighting the specific nodes being differentiated.
+- **CSS Transitions:** Implement smooth `ease-in-out` transitions for all hover states and mathematical expansions to maintain the "high-tech" feel.
+
+#### 4. Accessibility & Performance
+- **Accessibility:** All SVG elements must include `<title>` and `<desc>` tags. Ensure a contrast ratio of at least 4.5:1 for neon accents against the dark background. Math symbols must be screen-reader accessible via MathJax or equivalent.
+- **Performance:** Avoid heavy WebGL libraries; stick to optimized SVG and CSS hardware acceleration for animations. Assets must be lazy-loaded to ensure the "SOTA" experience remains fluid on student-grade hardware.

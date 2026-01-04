@@ -1,0 +1,17 @@
+{
+  "img_id": "gz2-classroom-atmosphere",
+  "description": "广州二中教室内的教学场景，学生们穿着整齐的白绿校服，在现代化的多媒体教室中专注听讲。",
+  "strategy": {
+    "thinking": "The strategy focuses on the specific institutional identity (Guangzhou No. 2 High School) and its unique visual markers, such as the white-and-green uniforms and modern classroom environment, to ensure authenticity and relevance to the article's professional tone.",
+    "queries": [
+      "广州二中 教室 课堂",
+      "广州二中 校服 学生"
+    ],
+    "guidance": "Select a high-resolution photograph that clearly displays the school's signature white-and-green uniforms within a modern, well-lit multimedia classroom setting."
+  },
+  "selected": "img_1.png",
+  "reasoning": "该图片准确展示了广州二中的教学场景。画面中，学生们穿着该校标志性的白绿领口校服，在配备有大型多媒体交互屏幕的现代化教室内专注听讲。图片来源也明确指向广州二中的‘法治第一课’活动，符合所有检索标准。",
+  "selected_image_description": "广州二中教室内，学生们身着白绿校服，在多媒体教学环境下专注聆听法治课讲座。",
+  "total_attempts": 1,
+  "all_failed_queries": []
+}

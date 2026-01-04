@@ -1,0 +1,99 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "document_root",
+      "css_selector": "div.doc-container",
+      "description": null
+    },
+    {
+      "markdown_pattern": "main_heading",
+      "css_selector": "h1.heading--primary",
+      "description": null
+    },
+    {
+      "markdown_pattern": "section_heading",
+      "css_selector": "h2.heading--secondary",
+      "description": null
+    },
+    {
+      "markdown_pattern": "subsection_heading",
+      "css_selector": "h3.heading--tertiary",
+      "description": null
+    },
+    {
+      "markdown_pattern": "paragraph",
+      "css_selector": "p.text--body",
+      "description": null
+    },
+    {
+      "markdown_pattern": "important_concept_card",
+      "css_selector": "div.callout.callout--important",
+      "description": null
+    },
+    {
+      "markdown_pattern": "warning_callout",
+      "css_selector": "div.callout.callout--warning",
+      "description": null
+    },
+    {
+      "markdown_pattern": "callout_title",
+      "css_selector": "div.callout__title",
+      "description": null
+    },
+    {
+      "markdown_pattern": "data_table",
+      "css_selector": "table.data-table",
+      "description": null
+    },
+    {
+      "markdown_pattern": "data_table_header",
+      "css_selector": "thead.data-table__header",
+      "description": null
+    },
+    {
+      "markdown_pattern": "data_table_row",
+      "css_selector": "tr.data-table__row",
+      "description": null
+    },
+    {
+      "markdown_pattern": "code_block",
+      "css_selector": "pre.code-block",
+      "description": null
+    },
+    {
+      "markdown_pattern": "math_block",
+      "css_selector": "div.math-block",
+      "description": null
+    },
+    {
+      "markdown_pattern": "horizontal_rule",
+      "css_selector": "hr.hr",
+      "description": null
+    },
+    {
+      "markdown_pattern": "reference_tag",
+      "css_selector": "span.ref-link",
+      "description": null
+    },
+    {
+      "markdown_pattern": "ecg_visual_container",
+      "css_selector": "div.ecg-background",
+      "description": null
+    },
+    {
+      "markdown_pattern": "emphasis_strong",
+      "css_selector": "strong.text--highlight-red",
+      "description": null
+    },
+    {
+      "markdown_pattern": "ordered_list",
+      "css_selector": "ol.list--ordered",
+      "description": null
+    },
+    {
+      "markdown_pattern": "unordered_list",
+      "css_selector": "ul.list--unordered",
+      "description": null
+    }
+  ]
+}

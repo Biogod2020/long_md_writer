@@ -1,0 +1,325 @@
+<section id="sec-3" class="content-section">
+<section id="sec-3" class="content-section">
+  <article id="sec-3-article" class="technical-specification">
+    <header>
+      <h1 id="sec-3-title">The Cardiac Dipole: Vector Calculus and Einthoven’s Framework</h1>
+    </header>
+
+    <p id="sec-3-p1">The transition from the microscopic kinetics of ion channels <a href="#sec-2" title="Reference to Section 2: Ion Channels">[REF:sec-2]</a> to the macroscopic interpretation of a 12-lead ECG requires a fundamental shift in perspective. We must move from the scalar world of transmembrane voltages to the vector world of spatial electrodynamics. In this section, we formalize the concept of the <strong>Cardiac Dipole</strong>—the singular mathematical entity that summarizes the heart's total electrical activity at any given instant—and explore the geometric framework of Einthoven’s Triangle, which allows us to project this 3D vector onto 2D clinical traces.</p>
+
+    <section id="sec-3-dipole-abstraction">
+      <h2 id="sec-3-dipole-abstraction-title">The Dipole as a Mathematical Abstraction</h2>
+      <p id="sec-3-p2">In the biophysical bedrock <a href="#sec-1" title="Reference to Section 1: The Biophysical Bedrock">[REF:sec-1]</a>, we established that the heart acts as a distributed current source within a volume conductor. However, at a distance, the complex distribution of millions of individual cellular sinks and sources can be approximated via <strong>multipole expansion</strong>. For the human torso, the higher-order terms (quadrupoles, octupoles) attenuate rapidly with distance ($1/r^3$ and $1/r^4$), leaving the <strong>dipole term</strong> ($1/r^2$) as the dominant contributor to the surface potential.</p>
+
+      <section id="sec-3-elementary-dipole">
+        <h3 id="sec-3-elementary-dipole-title">The Elementary Dipole</h3>
+        <p id="sec-3-p3">An electric dipole consists of two point charges, $+q$ and $-q$, separated by a displacement vector $\vec{d}$. The dipole moment $\vec{p}$ is defined as:</p>
+        <p id="sec-3-eq-p">$$\vec{p} = q\vec{d}$$</p>
+        <p id="sec-3-p4">In electrophysiology, we are concerned with <strong>current dipoles</strong>. When a cardiac wavefront propagates, it creates a region of depolarized tissue (negative extracellular potential) and a region of resting tissue (positive extracellular potential). This spatial gradient creates a current dipole moment density $\vec{J}_i$ (amperes per square meter), which integrated over the volume of the heart $V$, yields the <strong>Net Cardiac Vector</strong> $\vec{M}$:</p>
+        <p id="sec-3-eq-m">$$\vec{M}(t) = \int_{V} \vec{J}_i(x, y, z, t) \, dV$$</p>
+      </section>
+
+      <aside class="important_card" id="sec-3-metaphor">
+        <h2 id="sec-3-metaphor-title">The "Tug of War" Metaphor</h2>
+        <p id="sec-3-p5">The net cardiac vector $\vec{M}$ is the result of a continuous, three-dimensional "tug of war" between all depolarizing myocytes. Because the left ventricle (LV) possesses significantly greater muscle mass than the right ventricle (RV), its "pull" dominates the summation. Consequently, during the peak of the QRS complex, the net vector $\vec{M}$ points downward and to the left, reflecting the LV's massive contribution to the total dipole moment.</p>
+      </aside>
+    </section>
+
+    <section id="sec-3-einthoven-triangle">
+      <h2 id="sec-3-einthoven-triangle-title">Einthoven’s Triangle: The Frontal Plane Projection</h2>
+      <p id="sec-3-p6">In 1901, Willem Einthoven conceptualized the human torso as a flat, equilateral triangle with the heart at its center. While anatomically simplistic, this geometric framework provides the first-principles basis for the standard limb leads.</p>
+
+      <section id="sec-3-equilateral-assumption">
+        <h3 id="sec-3-equilateral-assumption-title">The Equilateral Assumption</h3>
+        <p id="sec-3-p7">Einthoven’s framework assumes:</p>
+        <ul id="sec-3-assumption-list">
+          <li id="sec-3-assumption-1">The heart is a point source (the dipole) located at the center of an equilateral triangle.</li>
+          <li id="sec-3-assumption-2">The limbs (Right Arm, Left Arm, Left Leg) act as long electrodes extending from the vertices of this triangle.</li>
+          <li id="sec-3-assumption-3">The body is a homogeneous, spherical volume conductor.</li>
+        </ul>
+      </section>
+
+      <section id="sec-3-deriving-leads">
+        <h3 id="sec-3-deriving-leads-title">Deriving the Bipolar Leads</h3>
+        <p id="sec-3-p8">The three bipolar limb leads (I, II, and III) measure the potential difference between two vertices. We define the lead vectors $\vec{L}_I, \vec{L}_{II}, \vec{L}_{III}$ as the axes connecting these points:</p>
+        <ul id="sec-3-lead-list">
+          <li id="sec-3-lead-1"><strong>Lead I</strong>: Left Arm (LA) - Right Arm (RA) $\rightarrow \vec{L}_I$ points at $0^\circ$.</li>
+          <li id="sec-3-lead-2"><strong>Lead II</strong>: Left Leg (LL) - Right Arm (RA) $\rightarrow \vec{L}_{II}$ points at $60^\circ$.</li>
+          <li id="sec-3-lead-3"><strong>Lead III</strong>: Left Leg (LL) - Left Arm (LA) $\rightarrow \vec{L}_{III}$ points at $120^\circ$.</li>
+        </ul>
+        <p id="sec-3-p9">The voltage recorded in any lead is the dot product of the cardiac vector $\vec{M}$ and the specific lead vector $\vec{L}$:</p>
+        <p id="sec-3-eq-vlead">$$V_{lead} = \vec{M} \cdot \vec{L} = |\vec{M}| |\vec{L}| \cos \theta$$</p>
+      </section>
+
+      <section id="sec-3-einthoven-law">
+        <h3 id="sec-3-einthoven-law-title">Einthoven’s Law: A Consequence of Kirchoff</h3>
+        <p id="sec-3-p10">Because the leads form a closed circuit, the sum of the potential differences must equal zero according to Kirchoff’s Voltage Law. Specifically:</p>
+        <p id="sec-3-eq-law">$$V_I + V_{III} = V_{II}$$</p>
+        <p id="sec-3-eq-law-proof">$$(LA - RA) + (LL - LA) = LL - RA$$</p>
+        <p id="sec-3-p11">This law is used by ECG algorithms to detect lead reversals; if $V_I + V_{III} \neq V_{II}$, the electrodes are likely misplaced.</p>
+      </section>
+
+      <figure class="svg-container" id="sec-3-dynamic-projection">
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" aria-labelledby="title desc" role="img">
+  <title id="title">Einthoven's Triangle and Cardiac Vector Dynamics</title>
+  <desc id="desc">An interactive-style visualization of the cardiac vector M rotating within Einthoven's Triangle, showing scalar projections on Leads I, II, and III.</desc>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&family=JetBrains+Mono&display=swap');
+
+    .bg { fill: #0f172a; }
+    .grid { stroke: #1e293b; stroke-width: 1; }
+    .triangle-path { fill: none; stroke: #475569; stroke-width: 2; stroke-dasharray: 8 4; opacity: 0.5; }
+    .lead-label { fill: #94a3b8; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; }
+    .vector-m { stroke: #22d3ee; stroke-width: 4; stroke-linecap: round; filter: url(#glow); }
+    .vector-head { fill: #22d3ee; filter: url(#glow); }
+    .projection-line { stroke: #fbbf24; stroke-width: 1.5; stroke-dasharray: 4 2; opacity: 0.8; }
+    .meter-bg { fill: rgba(30, 41, 59, 0.7); stroke: #334155; }
+    .meter-fill { fill: #22d3ee; }
+    .meter-text { fill: #f8fafc; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .math-text { fill: #fbbf24; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+
+    @keyframes rotateVector {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulseLeadI {
+      0%, 100% { transform: scaleX(1); }
+      25% { transform: scaleX(0); }
+      50% { transform: scaleX(-1); }
+      75% { transform: scaleX(0); }
+    }
+
+    @keyframes pulseLeadII {
+      0% { transform: scaleX(0.5); }
+      16.6% { transform: scaleX(1); }
+      41.6% { transform: scaleX(0); }
+      66.6% { transform: scaleX(-1); }
+      91.6% { transform: scaleX(0); }
+      100% { transform: scaleX(0.5); }
+    }
+
+    @keyframes pulseLeadIII {
+      0% { transform: scaleX(-0.5); }
+      8.3% { transform: scaleX(0); }
+      33.3% { transform: scaleX(1); }
+      58.3% { transform: scaleX(0); }
+      83.3% { transform: scaleX(-1); }
+      100% { transform: scaleX(-0.5); }
+    }
+
+    .rotating-group {
+      transform-origin: 350px 300px;
+      animation: rotateVector 10s linear infinite;
+    }
+
+    .bar-i { animation: pulseLeadI 10s linear infinite; transform-origin: center; }
+    .bar-ii { animation: pulseLeadII 10s linear infinite; transform-origin: center; }
+    .bar-iii { animation: pulseLeadIII 10s linear infinite; transform-origin: center; }
+  </style>
+
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" class="bg" />
+  
+  <!-- Subtle Grid -->
+  <g class="grid">
+    <path d="M 0 100 H 800 M 0 200 H 800 M 0 300 H 800 M 0 400 H 800 M 0 500 H 800" />
+    <path d="M 100 0 V 600 M 200 0 V 600 M 300 0 V 600 M 400 0 V 600 M 500 0 V 600 M 600 0 V 600 M 700 0 V 600" />
+  </g>
+
+  <!-- Einthoven's Triangle -->
+  <g transform="translate(50, 50)">
+    <path d="M 100 50 L 500 50 L 300 400 Z" class="triangle-path" />
+    
+    <!-- Electrodes -->
+    <circle cx="100" cy="50" r="6" fill="#ef4444" /> <!-- RA -->
+    <circle cx="500" cy="50" r="6" fill="#22d3ee" /> <!-- LA -->
+    <circle cx="300" cy="400" r="6" fill="#fbbf24" /> <!-- LL -->
+    
+    <text x="70" y="40" class="lead-label">RA (-)</text>
+    <text x="510" y="40" class="lead-label">LA (+)</text>
+    <text x="285" y="430" class="lead-label">LL (+)</text>
+
+    <!-- Lead Labels -->
+    <text x="300" y="30" class="lead-label" text-anchor="middle">LEAD I</text>
+    <text x="160" y="250" class="lead-label" transform="rotate(-60 160 250)">LEAD II</text>
+    <text x="440" y="250" class="lead-label" transform="rotate(60 440 250)">LEAD III</text>
+  </g>
+
+  <!-- Central Vector M -->
+  <g class="rotating-group">
+    <line x1="350" y1="300" x2="450" y2="300" class="vector-m" marker-end="url(#arrowhead)" />
+    <text x="460" y="295" class="math-text" font-weight="bold">M⃗</text>
+  </g>
+
+  <!-- Dashboard UI -->
+  <g transform="translate(580, 80)">
+    <rect width="200" height="440" rx="12" class="meter-bg" />
+    <text x="100" y="30" class="lead-label" text-anchor="middle" fill="#f8fafc">SCALAR DEFLECTIONS</text>
+    
+    <!-- Lead I Meter -->
+    <g transform="translate(20, 80)">
+      <text x="0" y="-10" class="meter-text">LEAD I (0°)</text>
+      <rect x="0" y="0" width="160" height="40" rx="4" fill="#1e293b" />
+      <line x1="80" y1="0" x2="80" y2="40" stroke="#475569" />
+      <rect x="80" y="10" width="60" height="20" class="meter-fill bar-i" />
+    </g>
+
+    <!-- Lead II Meter -->
+    <g transform="translate(20, 180)">
+      <text x="0" y="-10" class="meter-text">LEAD II (60°)</text>
+      <rect x="0" y="0" width="160" height="40" rx="4" fill="#1e293b" />
+      <line x1="80" y1="0" x2="80" y2="40" stroke="#475569" />
+      <rect x="80" y="10" width="60" height="20" class="meter-fill bar-ii" />
+    </g>
+
+    <!-- Lead III Meter -->
+    <g transform="translate(20, 280)">
+      <text x="0" y="-10" class="meter-text">LEAD III (120°)</text>
+      <rect x="0" y="0" width="160" height="40" rx="4" fill="#1e293b" />
+      <line x1="80" y1="0" x2="80" y2="40" stroke="#475569" />
+      <rect x="80" y="10" width="60" height="20" class="meter-fill bar-iii" />
+    </g>
+
+    <!-- Mathematical Formula -->
+    <g transform="translate(20, 380)">
+      <text x="0" y="0" class="math-text" font-size="11">V_L = |M| cos(θ - α_L)</text>
+      <text x="0" y="20" class="meter-text" font-size="10" fill="#94a3b8">WCT = (RA + LA + LL) / 3</text>
+    </g>
+  </g>
+
+  <!-- Center Pivot Point -->
+  <circle cx="350" cy="300" r="4" fill="#f8fafc" />
+  
+  <!-- Clinical Correlation Note -->
+  <rect x="50" y="520" width="480" height="50" rx="4" fill="rgba(34, 211, 238, 0.1)" stroke="#22d3ee" stroke-width="1" />
+  <text x="70" y="550" class="meter-text" fill="#22d3ee">CLINICAL CORRELATION:</text>
+  <text x="215" y="550" class="meter-text" fill="#f8fafc">Vertical vector (90°) → Lead I isoelectric.</text>
+</svg>
+<figcaption>An interactive SVG showing a rotating 3D heart vector $\vec{M}$ in the center of Einthoven's Triangle. As the user rotates the vector, the projected scalar deflections on Leads I, II, and III update i...</figcaption>
+</figure>
+    </section>
+
+    <section id="sec-3-wct-augmented">
+      <h2 id="sec-3-wct-augmented-title">Wilson Central Terminal (WCT) and Augmented Leads</h2>
+      <p id="sec-3-p12">The bipolar leads only provide three "views" of the cardiac dipole. To increase spatial resolution, we require <strong>unipolar leads</strong>, which measure the potential at one point relative to a "zero" reference.</p>
+
+      <section id="sec-3-search-zero">
+        <h3 id="sec-3-search-zero-title">The Search for "Zero"</h3>
+        <p id="sec-3-p13">In a volume conductor, there is no absolute ground. Frank Wilson proposed that the average of the three limb potentials would remain relatively constant throughout the cardiac cycle, acting as a virtual reference point. This is the <strong>Wilson Central Terminal (WCT)</strong>:</p>
+        <p id="sec-3-eq-wct">$$V_{WCT} = \frac{RA + LA + LL}{3}$$</p>
+        <p id="sec-3-p14">In a perfectly symmetrical system, the sum of the vectors from the center to the vertices of an equilateral triangle is zero. Thus, $V_{WCT} \approx 0$. All precordial leads ($V_1$ through $V_6$) use the WCT as the negative terminal.</p>
+      </section>
+
+      <section id="sec-3-goldberger">
+        <h3 id="sec-3-goldberger-title">Goldberger’s Augmented Leads</h3>
+        <p id="sec-3-p15">In the 1940s, Emanuel Goldberger realized that using the WCT as a reference for the limb electrodes themselves resulted in very small signals. He discovered that by removing the limb being measured from the WCT calculation, the signal could be "augmented" by 50%.</p>
+        <p id="sec-3-p16">For example, the <strong>aVL</strong> (augmented Vector Left) lead is calculated as:</p>
+        <p id="sec-3-eq-avl">$$V_{aVL} = LA - \frac{RA + LL}{2}$$</p>
+        <p id="sec-3-p17">Substituting the relationship $RA + LA + LL = 0$:</p>
+        <p id="sec-3-eq-avl-proof">$$V_{aVL} = LA - \frac{-LA}{2} = \frac{3}{2} LA$$</p>
+        <p id="sec-3-p18">This $1.5\times$ gain is why these leads are termed "augmented." They provide three additional vectors ($aVR$ at $-150^\circ$, $aVL$ at $-30^\circ$, and $aVF$ at $+90^\circ$), completing the <strong>Hexaxial Reference System</strong>.</p>
+      </section>
+    </section>
+
+    <section id="sec-3-lead-field">
+      <h2 id="sec-3-lead-field-title">The Lead Field and Geometric Projection</h2>
+      <p id="sec-3-p19">To understand why a specific lead looks the way it does, we must invoke <strong>Lead Field Theory</strong>. Every lead has a "sensitivity map" or <strong>Lead Vector</strong> $\vec{L}$ that defines how it "sees" the cardiac dipole.</p>
+
+      <section id="sec-3-dot-product-logic">
+        <h3 id="sec-3-dot-product-logic-title">The Dot Product Logic</h3>
+        <p id="sec-3-p20">If the cardiac vector $\vec{M}$ is:</p>
+        <p id="sec-3-eq-m-vec">$$\vec{M} = M_x \hat{i} + M_y \hat{j} + M_z \hat{k}$$</p>
+        <p id="sec-3-p21">And the lead vector for Lead II is $\vec{L}_{II}$, the scalar voltage $V_{II}$ is:</p>
+        <p id="sec-3-eq-dot">$$V_{II} = \vec{M} \cdot \vec{L}_{II}$$</p>
+        <ul id="sec-3-dot-list">
+          <li id="sec-3-dot-parallel"><strong>Parallel ($\theta = 0^\circ$):</strong> Maximum positive deflection.</li>
+          <li id="sec-3-dot-perpendicular"><strong>Perpendicular ($\theta = 90^\circ$):</strong> The lead is "blind" to the vector; the result is <strong>isoelectric</strong>.</li>
+          <li id="sec-3-dot-antiparallel"><strong>Antiparallel ($\theta = 180^\circ$):</strong> Maximum negative deflection (inverted wave).</li>
+        </ul>
+      </section>
+
+      <aside class="warning_callout" id="sec-3-flat-line-warning">
+        <h2 id="sec-3-warning-title">The Pitfall of the "Flat" Line</h2>
+        <p id="sec-3-p22">An isoelectric line on an ECG (e.g., a flat P-wave in Lead III) does not mean there is no electrical activity in the atria. It simply means the atrial depolarization vector is currently perpendicular to the Lead III axis. This is why a 12-lead ECG is mandatory: an event "hidden" in one lead will be prominently visible in another.</p>
+      </aside>
+    </section>
+
+    <section id="sec-3-mea">
+      <h2 id="sec-3-mea-title">The Mean Electrical Axis (MEA)</h2>
+      <p id="sec-3-p23">The <strong>Mean Electrical Axis</strong> refers to the average direction of the ventricular depolarization vector ($\vec{M}$) in the frontal plane.</p>
+
+      <section id="sec-3-calculating-axis">
+        <h3 id="sec-3-calculating-axis-title">Calculating the Axis</h3>
+        <p id="sec-3-p24">By comparing the net amplitude of the QRS complex in two leads (usually I and aVF), we can triangulate the MEA:</p>
+        <ol id="sec-3-axis-list">
+          <li id="sec-3-axis-normal"><strong>Lead I (+), aVF (+):</strong> Normal Axis ($0^\circ$ to $+90^\circ$).</li>
+          <li id="sec-3-axis-lad"><strong>Lead I (+), aVF (-):</strong> Left Axis Deviation (LAD).</li>
+          <li id="sec-3-axis-rad"><strong>Lead I (-), aVF (+):</strong> Right Axis Deviation (RAD).</li>
+        </ol>
+      </section>
+
+      <section id="sec-3-clinical-induction">
+        <h3 id="sec-3-clinical-induction-title">Clinical Induction from Vectors</h3>
+        <ul id="sec-3-clinical-list">
+          <li id="sec-3-clinical-lad"><strong>Left Axis Deviation (LAD):</strong> Often caused by <strong>Left Ventricular Hypertrophy (LVH)</strong>. The increased muscle mass of the LV creates a larger dipole moment that "pulls" the MEA toward the left ($-30^\circ$ or more).</li>
+          <li id="sec-3-clinical-rad"><strong>Right Axis Deviation (RAD):</strong> Often seen in <strong>Pulmonary Hypertension</strong> or <strong>Right Ventricular Hypertrophy (RVH)</strong>. The RV mass increases, shifting the "tug of war" balance toward the right ($+90^\circ$ to $+180^\circ$).</li>
+        </ul>
+      </section>
+
+      <pre class="code-block" id="sec-3-code-mea"><code>/**
+ * Algorithm: Frontal Plane Axis Calculation
+ * Calculates the MEA angle based on the net QRS amplitude in Lead I and aVF.
+ */
+function calculateMEA(amplitudeI, amplitudeAVF) {
+    // atan2 returns the angle in radians between the x-axis and the vector (I, aVF)
+    const radians = Math.atan2(amplitudeAVF, amplitudeI);
+    const degrees = radians * (180 / Math.PI);
+    
+    let classification = "";
+    if (degrees >= -30 &amp;&amp; degrees &lt;= 90) classification = "Normal Axis";
+    else if (degrees &lt; -30 &amp;&amp; degrees &gt;= -90) classification = "Left Axis Deviation";
+    else if (degrees &gt; 90 &amp;&amp; degrees &lt;= 180) classification = "Right Axis Deviation";
+    else classification = "Extreme Axis (Northwest)";
+    
+    return { angle: degrees.toFixed(2), status: classification };
+}</code></pre>
+    </section>
+
+    <section id="sec-3-horizontal-plane">
+      <h2 id="sec-3-horizontal-plane-title">Transitioning to 3D: The Horizontal Plane</h2>
+      <p id="sec-3-p25">While Einthoven’s Triangle handles the frontal plane (up/down, left/right), the <strong>Precordial Leads</strong> ($V_1$ - $V_6$) provide a horizontal "cross-section" of the cardiac dipole.</p>
+      <ul id="sec-3-precordial-list">
+        <li id="sec-3-precordial-septal"><strong>$V_1, V_2$ (Septal):</strong> Positioned over the right heart and septum. They "see" the early septal depolarization moving toward them (initial $r$ wave) and the subsequent LV depolarization moving away (deep $S$ wave).</li>
+        <li id="sec-3-precordial-anterior"><strong>$V_3, V_4$ (Anterior):</strong> Positioned over the anterior wall of the LV.</li>
+        <li id="sec-3-precordial-lateral"><strong>$V_5, V_6$ (Lateral):</strong> Positioned over the lateral wall of the LV.</li>
+      </ul>
+      <p id="sec-3-p26">The <strong>R-wave progression</strong> from $V_1$ to $V_6$ is a spatial record of the cardiac vector rotating from the right-posterior toward the left-anterior as the wave of depolarization sweeps through the ventricular mass.</p>
+    </section>
+
+    <section id="sec-3-summary">
+      <h2 id="sec-3-summary-title">Summary: The Geometric Bridge</h2>
+      <p id="sec-3-p27">The cardiac dipole is the unifying concept of electrocardiography. By treating the heart’s complex electrical field as a single, time-varying vector $\vec{M}$, we can apply the rules of linear algebra and geometry to decipher the ECG:</p>
+      <ul id="sec-3-summary-list">
+        <li id="sec-3-sum-1"><strong>Micro-to-Macro:</strong> Millions of cellular dipoles <a href="#sec-2" title="Reference to Section 2: Ion Channels">[REF:sec-2]</a> summate into one cardiac vector.</li>
+        <li id="sec-3-sum-2"><strong>Projection:</strong> Clinical leads are lead vectors $\vec{L}$ that capture a 1D projection of $\vec{M}$ via the dot product.</li>
+        <li id="sec-3-sum-3"><strong>Reference:</strong> The WCT provides a mathematical "zero" for unipolar exploration.</li>
+        <li id="sec-3-sum-4"><strong>Localization:</strong> Shifts in the vector's axis or magnitude provide direct evidence of structural changes (hypertrophy) or conduction defects (blocks) <a href="#sec-4" title="Reference to Section 4: Conduction Defects">[REF:sec-4]</a>.</li>
+      </ul>
+      <p id="sec-3-p28">Understanding the dipole is the difference between memorizing a pattern and calculating a diagnosis. As the cardiac vector moves through space, it leaves a trail in each lead—a scalar history of a three-dimensional journey.</p>
+    </section>
+  </article>
+</section>
+</section>

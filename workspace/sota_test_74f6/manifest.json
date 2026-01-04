@@ -1,0 +1,86 @@
+{
+  "project_title": "Heart Logic: A First-Principles Synthesis of Cardiovascular Dynamics and Electrocardiography",
+  "author": "Magnum Opus AI",
+  "description": "本项目旨在重新定义医学教育中循环系统与心电图（ECG）的学习范式。不同于传统教材侧重于形态描述与记忆口诀，本讲义坚持“第一性原理（First Principles）”，从跨膜离子流动的微观物理化学本质出发，通过严密的逻辑推演，构建出宏观心电向量与临床血流动力学的完整认知图谱。本书的核心宗旨是消除临床表现与基础科学之间的断层，让学生从“背诵图形”转变为“推导图形”。\n\n对于内容创作者（Writer），本讲义要求极高的学术严谨性：每一个生理现象必须追溯至其物理根源（如达南平衡、泊肃叶定律），严禁使用“通常如此”等模糊表述。对于技术实现（Designer/Transformer），本项目定位为 SOTA 级别的交互式 HTML 讲义。视觉风格应采用深色医疗科技感（Deep Space Blue/Neon Cyan），利用 CSS 玻璃拟态（Glassmorphism）处理悬浮卡片。核心交互需通过高性能 SVG 动画实现：例如，利用 CSS @keyframes 模拟 Na+/K+ 离子的布朗运动与定向流动；使用 WebGL 或 Three.js 构建 12 导联的空间向量投影模型，允许用户实时拖动心脏偶极子向量并观察体表电位波形的瞬时演变。交互式 Slide 应支持参数化调节，如手动增加后负荷（Afterload）以观察 PV Loop 的实时变形，实现真正的“在模拟中理解”。",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "Morphogenetic Logic: Spatial Orientation and Fetal Shunts",
+      "summary": "本章通过形态发生学解释心脏复杂的空间解剖结构。首先，我们将探讨心脏扭转（Cardiac Looping）的物理机制，解释为何左心室处于后方而右心室处于前方，这为后续理解 12 导联的“相机机位”奠定解剖学基础。接着，本章将重点分析胎儿循环的“分流逻辑”：从流体力学压力差的角度，推导卵圆孔与动脉导管在出生前后的功能闭合机制。通过第一性原理，我们将揭示先天性心脏病（如 ASD, VSD, PDA）并非随机的解剖缺陷，而是压力平衡被打破后的必然物理结果。本章旨在让学生建立起三维空间感，理解心脏不仅仅是一个器官，而是一个在压力驱动下不断演化的拓扑结构。",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-2",
+      "title": "The Biomechanical Pump: Hemodynamics and Pressure-Volume Loops",
+      "summary": "本章将心脏还原为一个纯粹的机械泵系统。我们将从心肌收缩的微观滑行学说出发，推导出 Frank-Starling 定律的物理本质——即肌节长度与产生张力的函数关系。核心内容将聚焦于压力-容积环（PV Loop）的深度解析：我们将分步骤剖析等容收缩、射血、等容舒张及充盈四个阶段，并引入微积分模型讨论心室顺应性（Compliance）。随后，本章将演示如何通过改变前负荷、后负荷及心肌收缩力来操控 PV Loop 的形态。最后，我们将应用这一工具推导瓣膜性心脏病（如 AS, MR）的血流动力学代偿与失代偿过程，证明所有复杂的临床杂音和症状都是压力与容量失衡的必然产物。",
+      "estimated_words": 4000,
+      "file_path": null
+    },
+    {
+      "id": "sec-3",
+      "title": "Electrophysiological Foundations: From Ion Channels to Action Potentials",
+      "summary": "本章是电生理模块的微观基石。我们将利用 Nernst 方程和 Goldman-Hodgkin-Katz 方程，从离子浓度梯度和膜通透性的第一性原理出发，推导出静息膜电位的形成。重点解析心肌快反应细胞与慢反应细胞（起搏细胞）动作电位的相位差异及其离子通道动力学（Na+, Ca2+, K+ 通道的时间依赖性）。我们将深入探讨“有效不应期（ERP）”的生物学意义及其在防止环形折返中的关键作用。本章不仅解释“是什么”，更重点解释“为什么”：例如，为什么 K+ 通道阻滞剂会延长 QT 间期？这种微观电位的改变如何通过缝隙连接（Gap Junctions）在合胞体中传导，从而形成宏观的去极化波阵面。",
+      "estimated_words": 3500,
+      "file_path": null
+    },
+    {
+      "id": "sec-4",
+      "title": "The Vector Field: Volume Conduction and 12-Lead ECG Logic",
+      "summary": "这是本讲义最具创新性的核心章节。我们将引入“容积导体理论（Volume Conductor Theory）”，解释心脏电偶极子（Dipole）如何在人体这个导电介质中产生远场电位。本章将详细建模 Einthoven 三角，将 12 个导联视作包围心脏的 12 台“摄像机”，每一个心电波形都是心脏总去极化向量在特定导联轴上的投影。我们将重点推导 QRS 电轴的计算逻辑，并解释为什么心室肥大或束支传导阻滞会导致电轴偏移。通过 SVG 交互交互动画，学生可以实时观察心房去极化向量如何合成 P 波，以及心室复极化向量如何逆向产生正向的 T 波（从第一性原理推导心内膜与心外膜复极顺序的差异）。",
+      "estimated_words": 5000,
+      "file_path": null
+    },
+    {
+      "id": "sec-5",
+      "title": "Pathological Synthesis: Ischemia, Infarction, and Arrhythmia Mechanisms",
+      "summary": "本章将前述的电生理与解剖逻辑应用于病理诊断。我们将深入探讨心肌缺血导致的“损伤电流（Current of Injury）”，从细胞膜电位偏移的角度严密推导 ST 段抬高与压低的物理本质，而非死记硬背。针对心肌梗死，我们将建立“责任血管-解剖区域-导联表现”的逻辑矩阵。在心律失常部分，我们将重点分析折返（Re-entry）、触发活动（Triggered Activity）和自律性增高的电生理机制。通过逻辑推演，我们将展示抗心律失常药物（Vaughan Williams 分类）如何通过精准干预特定相位的离子流来恢复电生理平衡。本章是全书的最高潮，将理论推导转化为解决临床问题的实战武器。",
+      "estimated_words": 4500,
+      "file_path": null
+    },
+    {
+      "id": "sec-6",
+      "title": "Calculus Appendix: The Mathematical Rigor of Cardiology",
+      "summary": "本附录为追求极致深度的读者设计，提供循环系统中核心定律的数学证明。内容包括：利用微积分推导泊肃叶定律（Poiseuille's Law），证明阻力与半径四次方的关系；利用拉普拉斯定律（Law of Laplace）证明室壁张力与心室半径及压力的定量关系，从而解释心衰时的心室扩大逻辑；以及使用电磁场势函数证明体表电势与偶极子距离平方成反比的数学模型。本章旨在证明，医学并非经验的集合，而是建立在严密数学与物理基础上的精密科学。",
+      "estimated_words": 2000,
+      "file_path": null
+    }
+  ],
+  "knowledge_map": {
+    "sec-1": [
+      "Cardiac Looping",
+      "Fetal Circulation",
+      "Pressure Gradients",
+      "Shunt Logic"
+    ],
+    "sec-2": [
+      "PV Loops",
+      "Frank-Starling Law",
+      "Preload/Afterload",
+      "Valvular Hemodynamics"
+    ],
+    "sec-3": [
+      "Nernst Equation",
+      "Ion Channel Kinetics",
+      "Action Potential Phases",
+      "Refractory Period"
+    ],
+    "sec-4": [
+      "Dipole Vector",
+      "Einthoven's Triangle",
+      "Volume Conduction",
+      "Axis Deviation"
+    ],
+    "sec-5": [
+      "Current of Injury",
+      "ST-segment Logic",
+      "Re-entry Mechanisms",
+      "Ion Channel Pharmacology"
+    ],
+    "sec-6": [
+      "Poiseuille's Law Derivation",
+      "Laplace Law",
+      "Dipole Potential Physics"
+    ]
+  }
+}

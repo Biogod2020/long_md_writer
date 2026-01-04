@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "mappings",
+      "css_selector": "cv-heading cv-heading--1 cv-heading cv-heading--2 cv-heading cv-heading--3 cv-text--body cv-callout cv-callout--axiom cv-code-inline cv-code-block cv-math-inline cv-math-block cv-callout cv-callout--axiom cv-callout cv-callout--clinical cv-card cv-text--muted cv-wavefront-svg cv-animate--pulse cv-vector-arrow",
+      "description": null
+    },
+    {
+      "markdown_pattern": "custom_patterns",
+      "css_selector": "[{'markdown': ':::important', 'html_tag': 'aside', 'class': 'cv-callout cv-callout--axiom', 'label_class': 'cv-callout__title'}, {'markdown': ':::clinical', 'html_tag': 'aside', 'class': 'cv-callout cv-callout--clinical', 'label_class': 'cv-callout__title'}, {'markdown': '($...$)', 'class': 'cv-math-inline'}, {'markdown': '$$ ... $$', 'html_tag': 'div', 'class': 'cv-math-block'}]",
+      "description": null
+    }
+  ]
+}

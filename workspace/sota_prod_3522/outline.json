@@ -1,0 +1,105 @@
+{
+  "project_title": "Advanced Cardiovascular Electrophysiology: From Dipoles to Clinical ECG",
+  "author": "Magnum Opus AI",
+  "description": "",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "The Biophysical Bedrock: Poisson Equations and Volume Conduction",
+      "summary": "This section establishes the mathematical and physical foundations of cardiac electrophysiology. By introducing the Poisson equation for electric fields and the concept of volume conduction, we move beyond simple pulse-counting to understand how ionic movement generates detectable potential differences. This foundational approach is critical for graduate-level learners to conceptualize the heart not just as a pump, but as a dynamic dipole submerged in a conductive medium, setting the stage for all subsequent vector-based interpretations of the electrocardiogram.",
+      "estimated_words": 2000,
+      "file_path": null
+    },
+    {
+      "id": "sec-2",
+      "title": "Microscopic Kinetics: Ion Channels and the Action Potential Curve",
+      "summary": "Transitioning from general field theory to specific cellular mechanics, this section dissects the ionic currents (INa, ICa, IK) that drive myocardial and pacemaker action potentials. We explore the 'funny current' (If) and transient outward current (Ito), explaining how these microscopic fluxes aggregate into the macroscopic signals seen on an ECG. Understanding these kinetics is essential for predicting how electrolyte imbalances and pharmacological agents will later alter the cardiac rhythm at a systemic level, bridging the gap between biochemistry and physics.",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-3",
+      "title": "The Cardiac Dipole: Vector Calculus and Einthoven’s Framework",
+      "summary": "This section bridges the gap between cellular action potentials and the surface ECG. We introduce the concept of the cardiac dipole and apply vector calculus to explain how electrical wavefronts project onto Einthoven’s Triangle. By deriving the Wilson Central Terminal (WCT) and exploring the 'Tug of War' metaphor for vector summation, students learn to visualize the heart's electrical axis. This provides the geometric framework necessary for localizing pathology and understanding lead-specific 'camera angles' in clinical practice.",
+      "estimated_words": 2200,
+      "file_path": null
+    },
+    {
+      "id": "sec-4",
+      "title": "Macroscopic Conduction: The H.P.A.V. Hierarchy and Timing",
+      "summary": "Focusing on the structural hierarchy of electrical transit, this section details the conduction velocities across the His-Purkinje system, atria, ventricles, and the AV node (H.P.A.V.). We examine the critical physiological delay at the AV node and the rapid distribution via Purkinje fibers. This sequence is vital for understanding the timing of the PR interval and QRS complex, allowing learners to identify where conduction fails in various degrees of heart block or pre-excitation syndromes based on the speed of the signal.",
+      "estimated_words": 1800,
+      "file_path": null
+    },
+    {
+      "id": "sec-5",
+      "title": "Waveform Morphology: The Logic of the Upright T-Wave",
+      "summary": "Here, we synthesize biophysics and anatomy to explain the standard ECG waveforms: P, QRS, T, and U waves. A major focus is the 'Double Negation' logic, explaining why the T-wave is normally upright despite representing repolarization, by analyzing the endocardial-to-epicardial activation sequence. This section moves the student from rote pattern recognition to a first-principles understanding of waveform morphology, ensuring they can explain the 'why' behind every deflection seen on the paper, even when standard patterns are absent.",
+      "estimated_words": 2000,
+      "file_path": null
+    },
+    {
+      "id": "sec-6",
+      "title": "Clinical Localization: Vector Shifts in Myocardial Infarction",
+      "summary": "This section applies vector theory to the diagnosis of myocardial ischemia and infarction. We utilize the 'Window Theory' to explain pathologic Q-waves and use lead-specific localization to identify the culprit vessels (LAD, RCA, LCX) in STEMI. By understanding how 'electrical silence' or 'injury currents' shift the mean cardiac vector, students gain the ability to pinpoint the anatomical site of injury with high precision, transitioning from basic ECG reading to advanced clinical synthesis and diagnostic reasoning.",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-7",
+      "title": "Complex Arrhythmias: Re-entry, Blocks, and Channelopathies",
+      "summary": "Addressing complex rhythm disturbances, this section covers conduction blocks, Delta waves in WPW, and the Brugada pattern. We use the 'ABCDE' framework for Long QT and explore the biophysical triggers of Torsades de pointes. By framing these pathologies as deviations from the normal dipole progression and ion channel kinetics discussed in earlier sections, students can logically deduce the presence of accessory pathways or genetic channelopathies without relying solely on memorized diagnostic criteria, promoting a deeper mechanical understanding.",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-8",
+      "title": "Pharmacological Integration: Vaughan-Williams and the AP Curve",
+      "summary": "The final section integrates pharmacology with electrophysiology by examining Class I-IV antiarrhythmics. We analyze how these drugs specifically shift the Phase 0-4 action potential curves and affect the refractory period. By connecting molecular mechanisms (like Potassium channel blockade) to ECG changes (like QT prolongation), this section provides a comprehensive conclusion that ties cellular biophysics back to clinical management, preparing students for high-level decision-making in cardiology and emergency medicine by understanding the 'why' behind the treatment.",
+      "estimated_words": 2000,
+      "file_path": null
+    }
+  ],
+  "knowledge_map": {
+    "sec-1": [
+      "Poisson Equation",
+      "Volume Conductor",
+      "Ohm's Law"
+    ],
+    "sec-2": [
+      "Ion Kinetics",
+      "Funny Current (If)",
+      "Phase 0-4 Action Potentials"
+    ],
+    "sec-3": [
+      "Cardiac Dipole",
+      "Einthoven’s Triangle",
+      "Wilson Central Terminal"
+    ],
+    "sec-4": [
+      "H.P.A.V. Sequence",
+      "AV Node Delay",
+      "Purkinje Velocity"
+    ],
+    "sec-5": [
+      "Double Negation Logic",
+      "Repolarization Sequence",
+      "Waveform Genesis"
+    ],
+    "sec-6": [
+      "STEMI Localization",
+      "Window Theory",
+      "Vector Summation"
+    ],
+    "sec-7": [
+      "Re-entry Circuits",
+      "Delta Waves",
+      "Channelopathies"
+    ],
+    "sec-8": [
+      "Class I-IV Antiarrhythmics",
+      "Phase 3 Shift",
+      "Refractory Period Modulation"
+    ]
+  }
+}

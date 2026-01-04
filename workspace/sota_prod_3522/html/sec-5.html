@@ -1,0 +1,366 @@
+<section id="sec-5" class="content-section">
+<section id="sec-5" class="content-section">
+  <article id="sec-5-article" class="technical-specification">
+    <header>
+      <h1 id="sec-5-title" class="header--main">Waveform Morphology: The Logic of the Upright T-Wave</h1>
+    </header>
+
+    <p id="sec-5-p1" class="text--body">The interpretation of the electrocardiogram (ECG) is frequently taught as a series of pattern-matching exercises. Students are told that a P-wave represents atrial activity, a QRS complex represents ventricular activity, and a T-wave represents ventricular recovery. However, to the advanced electrophysiologist, these waveforms are not merely "labels"; they are the scalar projections of a three-dimensional vector moving through a non-homogeneous volume conductor <a href="#sec-1" class="link--muted" title="Reference to Section 1: The Biophysical Bedrock">[REF:sec-1]</a>.</p>
+
+    <p id="sec-5-p2" class="text--body">This section deconstructs the morphology of each waveform from first principles, culminating in the resolution of the "T-wave Paradox"—the biophysical logic explaining why ventricular recovery produces a deflection in the same direction as ventricular activation.</p>
+
+    <section id="sec-5-genesis">
+      <h2 id="sec-5-genesis-title" class="header--section">The Genesis of Deflection: A Vector Calculus Perspective</h2>
+      <p id="sec-5-p3" class="text--body">Before analyzing specific waves, we must formalize the relationship between the electrical wavefront and the scalar deflection on the ECG paper. As established in the dipole model <a href="#sec-3" class="link--muted" title="Reference to Section 3: The Cardiac Dipole">[REF:sec-3]</a>, the potential <span class="math-inline">$\phi$</span> at a lead electrode is proportional to the dot product of the cardiac vector <span class="math-inline">$\vec{M}$</span> and the lead vector <span class="math-inline">$\vec{L}$</span>:</p>
+
+      <div id="sec-5-eq1" class="math-block">
+        $$V_{lead}(t) = \vec{M}(t) \cdot \vec{L}$$
+      </div>
+
+      <p id="sec-5-p4" class="text--body">Where:</p>
+      <ul class="list--technical">
+        <li><strong>Positive Deflection (<span class="math-inline">$V > 0$</span>):</strong> Occurs when the net dipole <span class="math-inline">$\vec{M}$</span> points toward the positive electrode (angle <span class="math-inline">$\theta < 90^\circ$</span>).</li>
+        <li><strong>Negative Deflection (<span class="math-inline">$V < 0$</span>):</strong> Occurs when the net dipole <span class="math-inline">$\vec{M}$</span> points away from the positive electrode (angle <span class="math-inline">$\theta > 90^\circ$</span>).</li>
+      </ul>
+
+      <aside id="sec-5-wavefront-axiom" class="callout callout--important">
+        <h3 id="sec-5-wavefront-title" class="header--subsection">The "Wavefront" Convention</h3>
+        <p id="sec-5-p5" class="text--body">A depolarization wavefront is a boundary between negative (depolarized) extracellular space and positive (resting) extracellular space. By convention, the dipole vector <span class="math-inline">$\vec{M}$</span> points from the negative region toward the positive region—essentially, in the direction of the wave's travel.</p>
+      </aside>
+    </section>
+
+    <section id="sec-5-pwave">
+      <h2 id="sec-5-pwave-title" class="header--section">The P-Wave: Atrial Dipole Dynamics</h2>
+      <p id="sec-5-p6" class="text--body">The P-wave is the first deflection of the cardiac cycle, representing the sequential activation of the right and left atria.</p>
+
+      <section id="sec-5-p-trajectory">
+        <h3 id="sec-5-p-trajectory-title" class="header--subsection">The Vector Trajectory</h3>
+        <p id="sec-5-p7" class="text--body">Atrial activation begins at the SA node, located in the superior-posterior aspect of the right atrium. The wavefront propagates radially, but its net vector <span class="math-inline">$\vec{M}_P$</span> follows a predictable path: <strong>Right-to-Left, Superior-to-Inferior, and Posterior-to-Anterior.</strong></p>
+        <ol class="list--technical">
+          <li><strong>Right Atrial Component:</strong> The first half of the P-wave reflects RA depolarization, moving primarily inferiorly toward the AV node.</li>
+          <li><strong>Left Atrial Component:</strong> The second half reflects LA depolarization, moving toward the left via Bachmann’s bundle.</li>
+        </ol>
+      </section>
+
+      <section id="sec-5-p-frontal">
+        <h3 id="sec-5-p-frontal-title" class="header--subsection">Morphology in Frontal Leads</h3>
+        <p id="sec-5-p8" class="text--body">Because the net <span class="math-inline">$\vec{M}_P$</span> points toward <span class="math-inline">$+60^\circ$</span>, the P-wave is most prominent in <strong>Lead II</strong>. In <strong>aVR</strong>, which sits at <span class="math-inline">$-150^\circ$</span>, the vector is moving almost directly away, resulting in a mandatory P-wave inversion in a normal sinus rhythm.</p>
+      </section>
+
+      <figure class="svg-container" id="atrial-vector-sweep">
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" aria-labelledby="title desc" role="img">
+  <title id="title">Atrial Depolarization and P-Wave Formation</title>
+  <desc id="desc">An interactive-style visualization showing the SA node firing, the atrial depolarization wavefront, the resulting mean electrical vector, and the synchronized Lead II P-wave trace.</desc>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&family=JetBrains+Mono&display=swap');
+
+    .bg { fill: #0f172a; }
+    .grid-line { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }
+    .grid-line-bold { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1.5; }
+    
+    .atria-outline { fill: rgba(30, 41, 59, 0.7); stroke: rgba(226, 232, 240, 0.2); stroke-width: 2; }
+    
+    .sa-node { fill: #22d3ee; filter: blur(2px); }
+    .sa-glow { fill: #22d3ee; opacity: 0.5; }
+
+    .wavefront {
+      fill: none;
+      stroke: #22d3ee;
+      stroke-width: 4;
+      stroke-linecap: round;
+      opacity: 0;
+      filter: drop-shadow(0 0 8px #22d3ee);
+    }
+
+    .p-vector {
+      stroke: #22d3ee;
+      stroke-width: 4;
+      fill: #22d3ee;
+      opacity: 0;
+    }
+
+    .ecg-path-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 2; }
+    .ecg-trace {
+      fill: none;
+      stroke: #22d3ee;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      filter: drop-shadow(0 0 4px #22d3ee);
+    }
+
+    .label-text { fill: #94a3b8; font-family: 'Inter', sans-serif; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    .math-text { fill: #22d3ee; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    /* Animations */
+    @keyframes pulse-sa {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.5); opacity: 1; }
+    }
+
+    @keyframes wave-expand {
+      0% { transform: scale(0.1); opacity: 0; stroke-width: 10; }
+      20% { opacity: 0.8; }
+      70% { transform: scale(1.5); opacity: 0; stroke-width: 2; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    @keyframes vector-grow {
+      0% { transform: scale(0) rotate(0deg); opacity: 0; }
+      15% { transform: scale(0.2) rotate(10deg); opacity: 0.5; }
+      40% { transform: scale(1) rotate(45deg); opacity: 1; }
+      70% { transform: scale(0.2) rotate(60deg); opacity: 0; }
+      100% { transform: scale(0) rotate(60deg); opacity: 0; }
+    }
+
+    @keyframes trace-draw {
+      0% { stroke-dashoffset: 1000; }
+      10% { stroke-dashoffset: 1000; }
+      70% { stroke-dashoffset: 750; }
+      90% { stroke-dashoffset: 750; opacity: 1; }
+      100% { stroke-dashoffset: 750; opacity: 0; }
+    }
+
+    .anim-sa { animation: pulse-sa 3s infinite; transform-origin: 480px 140px; }
+    .anim-wave { animation: wave-expand 3s infinite; transform-origin: 480px 140px; }
+    .anim-vector { animation: vector-grow 3s infinite; transform-origin: 400px 220px; }
+    .anim-trace { animation: trace-draw 3s infinite; }
+  </style>
+
+  <defs>
+    <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#22d3ee;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    
+    <clipPath id="atria-clip">
+      <path d="M 400 120 C 320 120 280 180 280 240 C 280 320 360 360 400 360 C 440 360 520 320 520 240 C 520 180 480 120 400 120 Z" />
+    </clipPath>
+
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+    </marker>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="800" height="600" class="bg" />
+  
+  <!-- Grid -->
+  <g id="grid">
+    <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" class="grid-line" />
+    </pattern>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="url(#smallGrid)" />
+      <path d="M 100 0 L 0 0 0 100" fill="none" class="grid-line-bold" />
+    </pattern>
+    <rect width="800" height="600" fill="url(#grid)" />
+  </g>
+
+  <!-- Atrial Anatomy -->
+  <g id="anatomy" transform="translate(0, -20)">
+    <path class="atria-outline" d="M 400 120 C 320 120 280 180 280 240 C 280 320 360 360 400 360 C 440 360 520 320 520 240 C 520 180 480 120 400 120 Z" />
+    
+    <!-- Internal Septum hint -->
+    <path d="M 400 120 L 400 360" stroke="rgba(255,255,255,0.05)" stroke-width="2" stroke-dasharray="4 4" />
+
+    <!-- Wavefront Animation -->
+    <g clip-path="url(#atria-clip)">
+      <circle class="wavefront anim-wave" cx="480" cy="140" r="200" />
+      <circle class="wavefront anim-wave" cx="480" cy="140" r="200" style="animation-delay: 0.2s" />
+      <circle class="wavefront anim-wave" cx="480" cy="140" r="200" style="animation-delay: 0.4s" />
+    </g>
+
+    <!-- SA Node -->
+    <circle class="sa-glow anim-sa" cx="480" cy="140" r="8" />
+    <circle class="sa-node" cx="480" cy="140" r="4" />
+    
+    <!-- Mean P-Vector -->
+    <line class="p-vector anim-vector" x1="400" y1="220" x2="340" y2="300" marker-end="url(#arrowhead)" />
+    
+    <text x="500" y="130" class="label-text" style="font-size: 10px;">SA Node</text>
+    <text x="310" y="280" class="math-text anim-vector">Σ p&#8407;</text>
+  </g>
+
+  <!-- ECG Dashboard -->
+  <g transform="translate(100, 450)">
+    <rect width="600" height="120" rx="8" fill="rgba(30, 41, 59, 0.5)" stroke="rgba(255,255,255,0.1)" />
+    <text x="20" y="30" class="label-text">Lead II Trace</text>
+    <text x="520" y="30" class="math-text">II = LL - RA</text>
+    
+    <!-- Baseline -->
+    <line x1="50" y1="80" x2="550" y2="80" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+    
+    <!-- P-Wave Path -->
+    <!-- We define a path that includes the P-wave -->
+    <path id="p-wave-path" class="ecg-trace anim-trace" d="M 50 80 L 200 80 Q 250 30 300 80 L 550 80" />
+    
+    <!-- Indicator for peak -->
+    <circle r="3" fill="#fbbf24" class="anim-trace">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="0s">
+            <mpath href="#p-wave-path"/>
+        </animateMotion>
+    </circle>
+  </g>
+
+  <!-- Labels -->
+  <text x="400" y="50" class="label-text" text-anchor="middle" style="font-size: 18px; fill: #fff;">Atrial Depolarization Dynamics</text>
+  <text x="400" y="75" class="math-text" text-anchor="middle">∇²Φ = -Iᵥ / σ</text>
+
+  <!-- Legend -->
+  <g transform="translate(620, 100)">
+    <circle cx="0" cy="0" r="5" fill="#22d3ee" />
+    <text x="15" y="5" class="label-text" style="font-size: 10px;">Depolarization</text>
+    
+    <line x1="-5" y1="25" x2="10" y2="25" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrowhead)" />
+    <text x="15" y="30" class="label-text" style="font-size: 10px;">Mean Vector</text>
+  </g>
+</svg>
+<figcaption>A high-tech dark SVG showing the atria. A cyan "glow" starts at the SA node and sweeps across the atria. A dynamic arrow (the P-vector) tracks the mean direction. Below, a synchronized Lead II trace d...</figcaption>
+</figure>
+    </section>
+
+    <section id="sec-5-qrs">
+      <h2 id="sec-5-qrs-title" class="header--section">The QRS Complex: Ventricular Vector History</h2>
+      <p id="sec-5-p9" class="text--body">The QRS complex is a high-frequency signal representing the rapid, coordinated depolarization of the ventricular mass via the His-Purkinje system <a href="#sec-4" class="link--muted" title="Reference to Section 4: Macroscopic Conduction">[REF:sec-4]</a>. Its morphology is a record of the changing orientation of the net cardiac vector <span class="math-inline">$\vec{M}(t)$</span>.</p>
+
+      <section id="sec-5-septal">
+        <h3 id="sec-5-septal-title" class="header--subsection">1. Septal Depolarization (The <span class="math-inline">$q$</span>-wave)</h3>
+        <p id="sec-5-p10" class="text--body">The first part of the ventricles to depolarize is the middle third of the interventricular septum. Crucially, the signal is delivered by the <strong>Left Bundle Branch</strong>, causing the septum to depolarize from <strong>Left-to-Right</strong>.</p>
+        <ul class="list--technical">
+          <li><strong>Vector:</strong> Points toward the right and slightly anteriorly.</li>
+          <li><strong>ECG Result:</strong> In lateral leads (I, aVL, V5, V6), this vector moves <em>away</em> from the positive electrode, producing the small, physiological <strong>septal <span class="math-inline">$q$</span>-wave</strong>.</li>
+        </ul>
+      </section>
+
+      <section id="sec-5-major">
+        <h3 id="sec-5-major-title" class="header--subsection">2. Major Ventricular Activation (The <span class="math-inline">$R$</span>-wave)</h3>
+        <p id="sec-5-p11" class="text--body">As the signal exits the Purkinje network, it activates the endocardium of both ventricles simultaneously. However, the Left Ventricle (LV) has significantly more mass than the Right Ventricle (RV).</p>
+        <ul class="list--technical">
+          <li><strong>Vector:</strong> The "Tug-of-War" <a href="#sec-3" class="link--muted" title="Reference to Section 3: The Cardiac Dipole">[REF:sec-3]</a> is won by the LV. The net vector <span class="math-inline">$\vec{M}$</span> swings powerfully toward the left and inferiorly.</li>
+          <li><strong>ECG Result:</strong> This produces the tall <strong><span class="math-inline">$R$</span>-wave</strong> in the left-sided leads and a deep <strong><span class="math-inline">$S$</span>-wave</strong> in the right-sided leads (V1, V2).</li>
+        </ul>
+      </section>
+
+      <section id="sec-5-basal">
+        <h3 id="sec-5-basal-title" class="header--subsection">3. Basal Activation (The <span class="math-inline">$S$</span>-wave)</h3>
+        <p id="sec-5-p12" class="text--body">The last parts of the heart to depolarize are the posterior-basal regions of the LV and the pulmonary conus.</p>
+        <ul class="list--technical">
+          <li><strong>Vector:</strong> Points superiorly and posteriorly.</li>
+          <li><strong>ECG Result:</strong> This final move away from the inferior leads produces the terminal <strong><span class="math-inline">$S$</span>-wave</strong> in Lead II and aVF.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section id="sec-5-st">
+      <h2 id="sec-5-st-title" class="header--section">The ST Segment: The Plateau of Silence</h2>
+      <p id="sec-5-p13" class="text--body">The ST segment represents the period when the entire ventricular myocardium is depolarized (Phase 2 of the Action Potential <a href="#sec-2" class="link--muted" title="Reference to Section 2: Ion Channels">[REF:sec-2]</a>).</p>
+
+      <section id="sec-5-st-isoelectric">
+        <h3 id="sec-5-st-isoelectric-title" class="header--subsection">Why is it Isoelectric?</h3>
+        <p id="sec-5-p14" class="text--body">During the plateau phase, the transmembrane potential of every myocyte is approximately equal (around <span class="math-inline">$+20$</span> mV). Referring back to the Poisson equation <a href="#sec-1" class="link--muted" title="Reference to Section 1: The Biophysical Bedrock">[REF:sec-1]</a>:</p>
+        <div id="sec-5-eq2" class="math-block">
+          $$\sigma \nabla^2 \phi = -I_v$$
+        </div>
+        <p id="sec-5-p15" class="text--body">If there is no spatial gradient in potential (<span class="math-inline">$\nabla \phi = 0$</span>), there is no current flow between cells. No current flow means no dipole (<span class="math-inline">$M = 0$</span>). Consequently, the ECG records a flat line at the baseline.</p>
+      </section>
+
+      <aside id="sec-5-injury-warning" class="callout callout--warning">
+        <h3 id="sec-5-injury-title" class="header--subsection">The Injury Current Exception</h3>
+        <p id="sec-5-p16" class="text--body">In myocardial infarction, damaged cells cannot maintain a plateau potential. This creates a spatial gradient between the healthy (depolarized) and injured (partially polarized) zones. This gradient generates a constant "injury vector" that shifts the ST segment away from the baseline, a hallmark of STEMI.</p>
+      </aside>
+    </section>
+
+    <section id="sec-5-t-paradox">
+      <h2 id="sec-5-t-paradox-title" class="header--section">The T-Wave Paradox: The Logic of "Double Negation"</h2>
+      <p id="sec-5-p17" class="text--body">The T-wave represents ventricular repolarization. Under a simplistic physical model, if depolarization (moving positive charge) produces an upright wave, then repolarization (the "undoing" of that charge) moving in the same direction should produce an inverted wave.</p>
+
+      <p id="sec-5-p18" class="text--body"><strong>However, in a healthy heart, the T-wave is upright in the same leads where the QRS is upright.</strong> This is the T-wave Paradox.</p>
+
+      <section id="sec-5-t-mechanism">
+        <h3 id="sec-5-t-mechanism-title" class="header--subsection">The Biophysical Mechanism: Anisotropy of AP Duration</h3>
+        <p id="sec-5-p19" class="text--body">The paradox is resolved by understanding that <strong>repolarization does not follow the same path as depolarization.</strong></p>
+        <ol class="list--technical">
+          <li><strong>Depolarization Sequence:</strong> Endocardium <span class="math-inline">$\rightarrow$</span> Epicardium.</li>
+          <li><strong>Repolarization Sequence:</strong> <strong>Epicardium <span class="math-inline">$\rightarrow$</span> Endocardium.</strong></li>
+        </ol>
+        <p id="sec-5-p20" class="text--body">Why the reversal? The Action Potential Duration (APD) is not uniform across the heart wall. Epicardial cells have a significantly higher density of transient outward <span class="math-inline">$K^+$</span> channels (<span class="math-inline">$I_{to}$</span>), leading to a shorter Phase 2 and faster repolarization compared to endocardial cells.</p>
+      </section>
+
+      <section id="sec-5-t-math">
+        <h3 id="sec-5-t-math-title" class="header--subsection">The "Double Negation" Math</h3>
+        <p id="sec-5-p21" class="text--body">Let us analyze the vector physics for a lead looking at the epicardium (e.g., V5):</p>
+        <ul class="list--technical">
+          <li><strong>Depolarization (QRS):</strong>
+            <ul>
+              <li><em>Charge:</em> Positive wavefront (<span class="math-inline">$+$</span>).</li>
+              <li><em>Direction:</em> Moving toward the electrode (Endo <span class="math-inline">$\to$</span> Epi) (<span class="math-inline">$+$</span>).</li>
+              <li><em>Result:</em> <span class="math-inline">$(+) \times (+) = \mathbf{Positive}$</span> (Upright R-wave).</li>
+            </ul>
+          </li>
+          <li><strong>Repolarization (T-wave):</strong>
+            <ul>
+              <li><em>Charge:</em> Repolarization is essentially the movement of a "negative" wavefront (the return to negative resting potential) (<span class="math-inline">$-$</span>).</li>
+              <li><em>Direction:</em> Because the epicardium finishes first, the wave of "recovery" moves away from the electrode, back toward the endocardium (Epi <span class="math-inline">$\to$</span> Endo) (<span class="math-inline">$-$</span>).</li>
+              <li><em>Result:</em> <span class="math-inline">$(-) \times (-) = \mathbf{Positive}$</span> (Upright T-wave).</li>
+            </ul>
+          </li>
+        </ul>
+      </section>
+
+      <aside id="sec-5-t-logic-axiom" class="callout callout--important">
+        <h3 id="sec-5-t-logic-title" class="header--subsection">The Logic of Upright Recovery</h3>
+        <p id="sec-5-p22" class="text--body">The T-wave is upright because the <strong>negative</strong> charge of repolarization is moving in a <strong>negative</strong> direction (away from the lead). This "Double Negation" ensures that the electrical recovery of the heart is concordant with its activation.</p>
+      </aside>
+
+      <pre id="sec-5-code-t" class="code-block"><code>/**
+ * T-Wave Morphology Simulation
+ * Demonstrates the impact of APD gradient on T-wave polarity.
+ */
+function calculateTPoint(endoAPD, epiAPD, time) {
+    // If epiAPD < endoAPD, repolarization wavefront moves Epi -> Endo
+    const gradient = epiAPD - endoAPD; 
+    const direction = Math.sign(gradient); // Negative means away from lead
+    const charge = -1; // Repolarization is negative
+    
+    return charge * direction; // Result is positive (upright)
+}</code></pre>
+    </section>
+
+    <section id="sec-5-uwave">
+      <h2 id="sec-5-uwave-title" class="header--section">The U-Wave: The Final Echo</h2>
+      <p id="sec-5-p23" class="text--body">The U-wave is a small deflection following the T-wave, often invisible at normal heart rates but prominent in bradycardia or hypokalemia.</p>
+
+      <section id="sec-5-u-hypotheses">
+        <h3 id="sec-5-u-hypotheses-title" class="header--subsection">Etiological Hypotheses</h3>
+        <p id="sec-5-p24" class="text--body">The exact source of the U-wave remains a subject of debate in biophysics, with three leading theories:</p>
+        <ol class="list--technical">
+          <li><strong>Purkinje Repolarization:</strong> The Purkinje fibers have the longest APDs in the heart. The U-wave may represent their late recovery.</li>
+          <li><strong>M-Cell Activity:</strong> A specialized layer of "Mid-myocardial" cells (M-cells) with unique ion channel kinetics may repolarize later than the endocardium.</li>
+          <li><strong>Mechano-Electrical Feedback:</strong> The physical relaxation of the ventricles may stretch the cell membranes, opening stretch-activated ion channels that create a small late current.</li>
+        </ol>
+      </section>
+
+      <aside id="sec-5-potassium-pearl" class="callout callout--important">
+        <h3 id="sec-5-potassium-title" class="header--subsection">Clinical Pearl: The U-Wave and Potassium</h3>
+        <p id="sec-5-p25" class="text--body">In hypokalemia, the <span class="math-inline">$I_{K1}$</span> conductance is reduced, significantly slowing the final stages of repolarization <a href="#sec-2" class="link--muted" title="Reference to Section 2: Ion Channels">[REF:sec-2]</a>. This "stretches" the T-wave and makes the U-wave more prominent, often leading to a "T-U fusion" that can be mistaken for a long QT interval.</p>
+      </aside>
+    </section>
+
+    <section id="sec-5-summary">
+      <h2 id="sec-5-summary-title" class="header--section">Summary: The Waveform as a Vector History</h2>
+      <p id="sec-5-p26" class="text--body">By integrating the Poisson equation and cellular kinetics, we move from pattern recognition to morphological logic:</p>
+      <ul class="list--technical">
+        <li><strong>P-wave:</strong> The radial spread of atrial <span class="math-inline">$Ca^{2+}/Na^+$</span> currents.</li>
+        <li><strong>QRS:</strong> The high-speed transit of <span class="math-inline">$Na^+$</span> through the H.P.A.V. hierarchy <a href="#sec-4" class="link--muted" title="Reference to Section 4: Macroscopic Conduction">[REF:sec-4]</a>, resulting in a sequence of septal, major ventricular, and basal vectors.</li>
+        <li><strong>ST Segment:</strong> A period of zero-gradient "electrical silence" during the AP plateau.</li>
+        <li><strong>T-wave:</strong> The biophysical triumph of the "Double Negation," where a transmural gradient in <span class="math-inline">$I_{to}$</span> channels causes the epicardium to recover first, producing an upright vector.</li>
+      </ul>
+      <p id="sec-5-p27" class="text--body">Understanding this logic allows the clinician to predict how pathology—such as a bundle branch block or an electrolyte shift—will fundamentally alter the shape of the ECG, long before they consult a textbook of patterns.</p>
+    </section>
+  </article>
+</section>
+</section>

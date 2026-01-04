@@ -1,0 +1,189 @@
+<section id="sec-2" class="content-section">
+<article class="technical-spec-chapter" id="sec-2">
+    <header class="chapter-header">
+        <h1 class="medical-heading-primary text-medical-900 font-inter font-bold text-3xl mb-2">
+            Einthoven’s Legacy: The Bipolar Limb Leads
+        </h1>
+        <h2 class="medical-heading-secondary text-medical-700 font-inter font-semibold text-xl mb-6">
+            爱因霍芬的遗产：双极肢体导联
+        </h2>
+    </header>
+
+    <section class="content-section" id="sec-2-intro">
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            在建立了“导联轴”这一抽象物理概念后 <a href="#sec-1" class="text-medical-600 hover:underline" title="Jump to Section 1: Defining the Lead Axis">[REF:sec-1]</a>，我们现在进入心电图空间物理学的基石——<strong class="highlight-text text-medical-600">标准双极肢体导联（Standard Bipolar Limb Leads）</strong>。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            1901 年，威廉·爱因霍芬（Willem Einthoven）通过三个放置在体表的电极，首次在二维平面上捕捉到了心脏的电活动。这不仅是医学工程的突破，更是一场几何学的革命：他将人体简化为一个等边三角形，从而为心脏电向量的测量建立了一套严密的坐标系。
+        </p>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-bipolar-concept">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">肢体导联的几何构建：双极的概念</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            所谓“双极（Bipolar）”，是指心电图机测量的电位差来自于两个真实的、活跃的记录电极。与后文中提到的以虚拟中心为参考的单极导联不同，双极导联的导联轴直接连接了人体的一对肢体。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            为了在额面（Frontal Plane）内捕捉电矢量，爱因霍芬选择了左臂（LA）、右臂（RA）和左腿（LL）作为采样点。
+        </p>
+
+        <aside class="important-card bg-slate-50 border-l-4 border-medical-500 p-6 my-8 rounded-r-lg shadow-sm" role="note">
+            <h4 class="font-inter font-bold text-medical-900 mb-2">双极导联的物理定义</h4>
+            <p class="academic-body text-sm">
+                每个肢体导联都由一个特定的正极和负极组成，其导联轴的方向遵循从负极指向正极的矢量约定：
+            </p>
+            <ul class="list-disc ml-5 mt-2 text-sm text-slate-700 space-y-1">
+                <li><strong>导联 I (Lead I)</strong>：RA (-) &rarr; LA (+)。观察方向为 $0^\circ$（水平向左）。</li>
+                <li><strong>导联 II (Lead II)</strong>：RA (-) &rarr; LL (+)。观察方向为 $+60^\circ$（右肩向左下）。</li>
+                <li><strong>导联 III (Lead III)</strong>：LA (-) &rarr; LL (+)。观察方向为 $+120^\circ$（左肩向右下）。</li>
+            </ul>
+        </aside>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-triangle">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">爱因霍芬三角 (Einthoven’s Triangle)</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            爱因霍芬提出了一个天才的假设：<strong class="highlight-text text-medical-600">心脏可以被视为位于一个充满均匀导电介质的等边三角形中心的一个点电源（电偶极子）。</strong>
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            虽然现代生理学证明人体并非完美的匀质球体，且心脏并非位于几何中心，但这一物理模型在临床诊断中依然展现出惊人的准确性。
+        </p>
+
+        <figure class="svg-container my-8">
+            <div class="flex justify-center bg-slate-50/50 rounded-lg p-8 border border-slate-200">
+                <svg viewBox="0 0 400 350" width="100%" class="max-w-lg" aria-labelledby="svg-title-2" aria-describedby="svg-desc-2">
+                    <title id="svg-title-2">Einthoven's Triangle Diagram</title>
+                    <desc id="svg-desc-2">A geometric representation of the three bipolar limb leads forming an equilateral triangle around the heart vector.</desc>
+                    <defs>
+                        <pattern id="triangleGrid-sec2" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" stroke-width="0.5"/>
+                        </pattern>
+                        <marker id="blueArrow-sec2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#0ea5e9" />
+                        </marker>
+                        <marker id="heartArrow-sec2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#e11d48" />
+                        </marker>
+                    </defs>
+                    <rect width="400" height="350" fill="url(#triangleGrid-sec2)" />
+                    
+                    <!-- The Triangle -->
+                    <path d="M 200 300 L 50 50 L 350 50 Z" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4" />
+                    
+                    <!-- Lead I Axis -->
+                    <line x1="55" y1="50" x2="345" y2="50" stroke="#0ea5e9" stroke-width="3" marker-end="url(#blueArrow-sec2)" />
+                    <text x="200" y="40" class="font-sans text-xs fill-medical-700" text-anchor="middle" font-weight="bold">Lead I (0°)</text>
+                    
+                    <!-- Lead II Axis -->
+                    <line x1="55" y1="55" x2="195" y2="295" stroke="#0ea5e9" stroke-width="3" marker-end="url(#blueArrow-sec2)" />
+                    <text x="100" y="190" class="font-sans text-xs fill-medical-700" transform="rotate(60, 100, 190)" font-weight="bold">Lead II (+60°)</text>
+                    
+                    <!-- Lead III Axis -->
+                    <line x1="345" y1="55" x2="205" y2="295" stroke="#0ea5e9" stroke-width="3" marker-end="url(#blueArrow-sec2)" />
+                    <text x="290" y="190" class="font-sans text-xs fill-medical-700" transform="rotate(-60, 290, 190)" font-weight="bold">Lead III (+120°)</text>
+                    
+                    <!-- Electrodes -->
+                    <circle cx="50" cy="50" r="6" fill="#1e293b" />
+                    <text x="30" y="45" class="font-sans text-[10px] fill-slate-500">RA</text>
+                    <circle cx="350" cy="50" r="6" fill="#1e293b" />
+                    <text x="360" y="45" class="font-sans text-[10px] fill-slate-500">LA</text>
+                    <circle cx="200" cy="300" r="6" fill="#1e293b" />
+                    <text x="200" y="320" class="font-sans text-[10px] fill-slate-500" text-anchor="middle">LL</text>
+                    
+                    <!-- Cardiac Vector in Center -->
+                    <g transform="translate(200, 130)">
+                        <line x1="0" y1="0" x2="30" y2="52" stroke="#e11d48" stroke-width="4" marker-end="url(#heartArrow-sec2)" />
+                        <circle cx="0" cy="0" r="3" fill="#e11d48" />
+                        <text x="15" y="40" class="font-serif italic text-sm fill-heart-red">P</text>
+                    </g>
+                </svg>
+            </div>
+            <figcaption class="text-center text-sm text-slate-500 mt-4 font-noto-serif">图 2-2: 爱因霍芬三角。心脏电向量 P 在三个等边排列的导联轴上进行投影。注意各导联的正负极指向。</figcaption>
+        </figure>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-law">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">爱因霍芬定律 (Einthoven’s Law)</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            爱因霍芬三角不仅是一个解剖学模型，更是一个严密的数学闭环。根据基尔霍夫电压定律（Kirchhoff’s Voltage Law），在一个闭合回路中，电位差之和必须为零。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            在肢体导联的三角形回路中，如果我们定义各点的电位分别为 $\Phi_{LA}$、$\Phi_{RA}$ 和 $\Phi_{LL}$，则：
+        </p>
+        <ul class="list-none academic-body font-noto-serif text-slate-800 mb-4 ml-4">
+            <li>• $V_I = \Phi_{LA} - \Phi_{RA}$</li>
+            <li>• $V_{II} = \Phi_{LL} - \Phi_{RA}$</li>
+            <li>• $V_{III} = \Phi_{LL} - \Phi_{LA}$</li>
+        </ul>
+
+        <div class="formula-block bg-slate-50 border border-slate-200 rounded-xl p-6 my-6 text-center shadow-inner">
+            <p class="font-mono text-sm text-slate-500 mb-2">Einthoven’s Law</p>
+            <div class="text-2xl py-2">
+                $$V_I + V_{III} = V_{II}$$
+            </div>
+            <p class="mt-4 text-sm text-slate-600">这意味着：在任何给定的瞬间，导联 I 的电压加上导联 III 的电压，必然等于导联 II 的电压。</p>
+        </div>
+
+        <aside class="warning-callout bg-red-50 border-l-4 border-heart-red p-6 my-8 rounded-r-lg shadow-sm" role="alert">
+            <h4 class="font-inter font-bold text-medical-900 mb-2">临床纠错应用</h4>
+            <p class="academic-body text-sm">
+                爱因霍芬定律是检查心电图电极是否放错的“金标准”。如果心电图纸上显示的 I + III 不等于 II，通常意味着电极导线连接错误（如左右手电极反接）。
+            </p>
+        </aside>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-physics-deduction">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">物理推演：为什么 II 导联通常最“高”？</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            在正常的心脏电生理状态下，心室除极的总向量 $\vec{P}$ 的平均电轴大约指向 $+60^\circ$（从右上指向左下）。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            根据投影原理 $V = |\vec{P}| \cos(\theta)$ <a href="#sec-1" class="text-medical-600 hover:underline" title="Return to Projection Principle in Section 1">[REF:sec-1]</a>：
+        </p>
+        <ol class="list-decimal ml-5 academic-body font-noto-serif text-slate-800 space-y-2">
+            <li><strong>对于导联 I ($0^\circ$)</strong>：$\vec{P}$ 与导联轴夹角约为 $60^\circ$，$\cos(60^\circ) = 0.5$。</li>
+            <li><strong>对于导联 II ($+60^\circ$)</strong>：$\vec{P}$ 与导联轴几乎平行，夹角趋近 $0^\circ$，$\cos(0^\circ) = 1$。</li>
+            <li><strong>对于导联 III ($+120^\circ$)</strong>：$\vec{P}$ 与导联轴夹角约为 $60^\circ$，$\cos(60^\circ) = 0.5$。</li>
+        </ol>
+
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mt-4">
+            <strong class="highlight-text text-medical-600">推论：</strong> 这就是为什么在大多数正常人的心电图中，<strong class="font-bold">II 导联的 R 波振幅最高</strong>，且满足 $0.5 + 0.5 = 1$ 的数学美感。这也是临床上常选取 II 导联作为心律监测长导联的物理逻辑——它拥有最高的信噪比。
+        </p>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-volume-conductor">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">体导电体与容积导电 (Volume Conductor)</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            爱因霍芬三角的成功建立在<strong class="font-bold">容积导电（Volume Conduction）</strong>理论之上。心脏浸泡在人体的组织液和血液中，这些液体充当了导体。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            根据电磁场理论，心脏除极产生的电偶极子会在周围介质中建立电场。虽然电场强度随距离的平方反比衰减（$1/r^2$），但由于肢体末端距离心脏相对较远且对称，我们可以近似认为电极捕捉到的是心脏电活动的远场投影。
+        </p>
+
+        <div class="img-placeholder my-8" data-img-id="anatomy-volume-conduction">
+            <p class="img-description">
+                这是一张展示人体躯干容积导电与电极放置的医学示意图。图中显示了半透明的人体躯干，心脏位于中心，周围环绕着代表电场的流线。躯干内部填充了淡蓝色，象征着作为导体的组织液和血液。右臂（RA）、左臂（LA）和左腿（LL）末端标有明显的电极贴片，它们通过虚线连接形成一个包围心脏的等边三角形（爱因霍芬三角）。该图详细描绘了心脏产生的微弱电流如何通过人体组织传导至皮肤表面，并最终被远端的肢体电极捕捉，强调了“远场投影”的物理概念。
+            </p>
+        </div>
+    </section>
+
+    <section class="content-section mt-8" id="sec-2-limitations">
+        <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">局限性与向六轴系统的演进</h3>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            尽管标准双极导联提供了额面电活动的基础框架，但它们之间存在 $60^\circ$ 的巨大角度间隙。在爱因霍芬三角中，导联 I、II、III 形成了一个闭合的力系，但它们无法直接告诉我们心脏向左上方（如 aVL）或垂直下方（如 aVF）的精确电活动。
+        </p>
+        <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+            为了填补这些角度空白，我们需要引入“中心端”概念，将双极导联演进为单极加压导联。这正是戈德伯格（Goldberger）将在数十年后完成的壮举 <a href="#sec-3" class="text-medical-600 hover:underline" title="Go to Section 3: Augmented Unipolar Leads">[REF:sec-3]</a>。
+        </p>
+
+        <aside class="important-card bg-slate-50 border-l-4 border-medical-500 p-6 my-8 rounded-r-lg shadow-sm" role="note">
+            <h4 class="font-inter font-bold text-medical-900 mb-2">本节小结</h4>
+            <ul class="list-disc ml-5 text-sm text-slate-700 space-y-1">
+                <li>肢体导联是测量两个解剖点之间电位差的<strong>双极系统</strong>。</li>
+                <li><strong>爱因霍芬三角</strong>将人体简化为等边三角形，定义了 $0^\circ, +60^\circ, +120^\circ$ 三个观测维度。</li>
+                <li><strong>爱因霍芬定律 ($I + III = II$)</strong> 是电荷守恒和矢量叠加在心电图上的直接体现。</li>
+            </ul>
+        </aside>
+    </section>
+</article>
+</section>

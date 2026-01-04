@@ -1,0 +1,37 @@
+# Technical Specification: ECG Physics Chapter 2 — From Electrodes to Leads
+
+This specification defines the architectural and creative requirements for the second chapter of the "ECG Physics" series. The document must transition from the microscopic dipole concepts of Chapter 1 to a macroscopic, multi-vector observation system.
+
+## 1. Content Guidelines
+The Writer must adopt a **first-principles reasoning style**, moving from physical hardware to mathematical abstraction.
+- **Conceptual Framework**: Explicitly distinguish between the "Hardware" (Electrodes as physical transducers) and "Software" (Leads as mathematical vectors).
+- **Mathematical Rigor**: Use **dot product notation** ($\vec{V}_{lead} = \vec{D} \cdot \vec{L}$) to explain why the amplitude of a QRS complex is the projection of the cardiac vector onto the lead axis. 
+- **The "Camera" Analogy**: Maintain the pedagogical thread that 12 leads are 12 different camera angles observing the same 3D event.
+- **Evidence & Rigor**: Citations should reflect standard electrophysiology (e.g., Einthoven, Wilson) and clinical correlations aligned with USMLE Step 1 cardiovascular physiology.
+
+## 2. Visual Design System
+The design must mirror a high-end medical journal with a modern, interactive interface.
+- **Typography**: 
+  - **Headers**: *Noto Serif SC* (Weight 700) for a prestigious, academic feel.
+  - **Body**: *Inter* or *system-sans* for high legibility.
+  - **Math/Code**: *Roboto Mono* for variables and formulas.
+- **Color Palette**: 
+  - **Medical Blue** (`#0ea5e9`): Used for "Positive" leads and terminal points.
+  - **Heart Red** (`#e11d48`): Used for the cardiac depolarization vector.
+  - **Neutral Slate** (`#f8fafc`): Background for formula blocks and SVG containers.
+- **Component Styles**:
+  - **Formula Blocks**: Centered, slate-50 background, subtle 1px border.
+  - **Clinical Correlation Cards**: Border-left (4px) in `heart-red` to denote high-yield board info.
+
+## 3. Interactive Elements
+The Transformer and Designer must collaborate on **Inline SVG animations** that visualize abstract physics:
+- **Vector Projection Demo**: An interactive SVG where a user can rotate a "Cardiac Vector" (red arrow). As it rotates, the projected shadow on "Lead II" (blue axis) should grow/shrink, simultaneously drawing a corresponding ECG wave (P-QRS-T) to show the relationship between angle and amplitude.
+- **The Hexaxial Toggle**: A 12-lead grid where clicking a lead (e.g., aVF) highlights its position on the Hexaxial/Einthoven coordinate system.
+- **CSS Effects**: Use **Glassmorphism** for floating labels on SVG diagrams. Implement `transition-all` on lead cards so they scale slightly and change border color when the user explores anatomical groupings (Lateral vs. Inferior).
+
+## 4. Accessibility & Performance
+- **Accessibility**: All SVG elements must include `<title>` and `<desc>` tags. Use high-contrast ratios (4.5:1) for text against backgrounds. Ensure the 12-lead grouping interactions are keyboard-navigable.
+- **Performance**: 
+  - MathJax should be configured for `chtml` output for faster rendering.
+  - SVGs must be optimized (minified) and use `viewBox` for perfect scaling across mobile and desktop.
+  - Avoid heavy external libraries; rely on Tailwind CSS for 90% of styling.

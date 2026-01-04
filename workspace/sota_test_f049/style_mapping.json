@@ -1,0 +1,74 @@
+{
+  "rules": [
+    {
+      "markdown_pattern": "document_root",
+      "css_selector": "body",
+      "description": null
+    },
+    {
+      "markdown_pattern": "main_title",
+      "css_selector": "h1.heading-1",
+      "description": null
+    },
+    {
+      "markdown_pattern": "section_title",
+      "css_selector": "h2.heading-2",
+      "description": null
+    },
+    {
+      "markdown_pattern": "body_text",
+      "css_selector": "p.paragraph",
+      "description": null
+    },
+    {
+      "markdown_pattern": "important_concept_card",
+      "css_selector": "div.callout.callout--important",
+      "description": null
+    },
+    {
+      "markdown_pattern": "pathological_warning",
+      "css_selector": "div.callout.callout--warning",
+      "description": null
+    },
+    {
+      "markdown_pattern": "physics_equation",
+      "css_selector": "div.math-block",
+      "description": null
+    },
+    {
+      "markdown_pattern": "interactive_dashboard_container",
+      "css_selector": "section.card",
+      "description": null
+    },
+    {
+      "markdown_pattern": "code_terminal",
+      "css_selector": "pre.code-block",
+      "description": null
+    },
+    {
+      "markdown_pattern": "ion_flow_svg",
+      "css_selector": "path.ion-flow-path",
+      "description": null
+    },
+    {
+      "markdown_pattern": "electric_signal_node",
+      "css_selector": "circle.pulse-electric",
+      "description": null
+    },
+    {
+      "markdown_pattern": "parameter_control",
+      "css_selector": "input.parameter-slider",
+      "description": null
+    },
+    {
+      "markdown_pattern": "reference_link",
+      "css_selector": "span.text--muted",
+      "description": null
+    },
+    {
+      "markdown_pattern": "data_table",
+      "css_selector": "table.card",
+      "description": null
+    }
+  ]
+}
