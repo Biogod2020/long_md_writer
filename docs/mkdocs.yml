@@ -1,0 +1,6 @@
+site_name: HTML Writing Agent
+theme: material
+nav:
+  - Home: README.md
+  - Upgrade Plan: SOTA_Upgrade_Plan_Detailed.md
+  - Tutorials: geminicli2api_async_usage_tutorial.md

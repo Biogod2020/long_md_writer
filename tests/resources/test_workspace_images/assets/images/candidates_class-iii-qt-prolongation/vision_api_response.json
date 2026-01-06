@@ -1,0 +1,8 @@
+{
+  "raw_response": "```json\n{\n  \"selected_image\": \"img_3.webp\",\n  \"reasoning\": \"This image is a professional medical table that clearly categorizes antiarrhythmic drugs by the Vaughan-Williams classification. For Class III drugs (e.g., Amiodarone, Sotalol), it provides a specific ECG diagram that overlays the drug-induced change—a prolonged QT interval, highlighted in blue—onto a standard grey baseline trace. This directly satisfies the requirement to demonstrate the extension relative to a standard trace in a clear, educational format.\",\n  \"description_of_selected\": \"A comprehensive clinical table of antiarrhythmic drug actions. The 'Class III' section lists common agents and includes an ECG diagram showing a normal QRS complex followed by a significantly delayed and prolonged T-wave (highlighted in blue), illustrating the prolongation of the QT interval.\"\n}\n```",
+  "parsed": {
+    "selected_image": "img_3.webp",
+    "reasoning": "This image is a professional medical table that clearly categorizes antiarrhythmic drugs by the Vaughan-Williams classification. For Class III drugs (e.g., Amiodarone, Sotalol), it provides a specific ECG diagram that overlays the drug-induced change—a prolonged QT interval, highlighted in blue—onto a standard grey baseline trace. This directly satisfies the requirement to demonstrate the extension relative to a standard trace in a clear, educational format.",
+    "description_of_selected": "A comprehensive clinical table of antiarrhythmic drug actions. The 'Class III' section lists common agents and includes an ECG diagram showing a normal QRS complex followed by a significantly delayed and prolonged T-wave (highlighted in blue), illustrating the prolongation of the QT interval."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "img_id": "class-i-ecg",
+  "description": "ECG trace showing QRS widening from Class I antiarrhythmic drugs",
+  "strategy": {
+    "thinking": "The content focuses on the electrophysiological impact of Class I antiarrhythmics (sodium channel blockers) on ventricular depolarization. The queries target the specific drug class and the hallmark clinical finding (QRS widening) using technical terminology.",
+    "queries": [
+      "Class I antiarrhythmic QRS",
+      "flecainide QRS widening ECG"
+    ],
+    "guidance": "Select a professional ECG strip that clearly demonstrates a widened QRS complex characteristic of sodium channel blockade."
+  },
+  "candidates_found": 20,
+  "downloaded": 20,
+  "selected": "img_7.jpg",
+  "reasoning": "This image provides a clear, professional schematic ECG trace that demonstrates the progressive widening of the QRS complex. It specifically illustrates the 'rate-dependent blockade' (use-dependence) characteristic of Class I antiarrhythmic drugs (particularly Class Ic), where the QRS interval increases as the drug binds more effectively to sodium channels over successive beats. This dynamic representation is more educational than a static wide QRS as it shows the transition from narrow to wide.",
+  "selected_image_description": "A schematic ECG strip showing a sequence of heartbeats where the QRS complex progressively widens from left to right. Below the trace is a diagram illustrating the binding and unbinding kinetics of the drug, labeled 'onset kinetics' and 'rate-dependent blockade', explaining the physiological mechanism behind the observed ECG change."
+}

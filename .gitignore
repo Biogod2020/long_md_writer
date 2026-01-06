@@ -30,22 +30,30 @@ env/
 .vscode/
 .idea/
 *.swp
+.DS_Store
 
 # Project Workspace & Outputs
-workspace/
-workspace_test/
-workspace_debug/
-.agent/
-logs/
-inputs/
+/workspace/
+/workspace_test/
+/workspace_debug/
+/.agent/
+/logs/
 
-# Temporary & Test Files
-test_*.py
-tests/debug_*.py
-main.py
-merge.txt
-raw_payload.json
-last_request_payload.json
-geminicli2api_async_usage_tutorial.md
-html_transform_upgrade.md
+# Data & Payloads (Large or Sensitive)
+/data/*.json
+/data/merge.txt
+/last_request_payload.json
+/raw_payload.json
+/merge.txt
 
+# Root Level Temporary Files (Already moved to docs/ or data/)
+/html_transform_upgrade.md
+/geminicli2api_async_usage_tutorial.md
+/SOTA_Upgrade_Plan_Detailed.md
+/README.md
+/README_CN.md
+
+# Application Specific
+/inputs/
+/test_workspace_images/
+/test_workspace_images_cn/

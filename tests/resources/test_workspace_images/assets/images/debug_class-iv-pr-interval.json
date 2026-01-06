@@ -1,0 +1,17 @@
+{
+  "img_id": "class-iv-pr-interval",
+  "description": "ECG strip illustrating PR interval prolongation from calcium channel blockers",
+  "strategy": {
+    "thinking": "The context requires a technical ECG strip demonstrating the specific electrophysiological effect of Class IV antiarrhythmics (calcium channel blockers) on the AV node, specifically PR interval prolongation. The queries target the drug classification and the clinical manifestation to ensure academic relevance.",
+    "queries": [
+      "Class IV antiarrhythmic ECG",
+      "PR interval prolongation ECG"
+    ],
+    "guidance": "Select a professional ECG strip where the PR interval clearly exceeds 200ms (five small squares) on a standard grid."
+  },
+  "candidates_found": 20,
+  "downloaded": 20,
+  "selected": "img_3.webp",
+  "reasoning": "Image img_3.webp is a professional summary table from a medical publication (Thoracic Key) that explicitly categorizes antiarrhythmic drugs. In the row for Class IV (Calcium Channel Blockers like Verapamil and Diltiazem), it provides a schematic ECG illustration where the PR interval is specifically highlighted in red and shown to be prolonged compared to other classes. This directly addresses the request for an illustration of PR interval prolongation caused by these specific drugs in a clear, educational format.",
+  "selected_image_description": "A technical table titled 'ANTIARRHYTHMIC DRUG ACTIONS' classifying drugs by the Vaughan-Williams system. The row for Class IV (Calcium Channel Blockers) lists Verapamil and Diltiazem and features a schematic ECG diagram where the PR interval is highlighted in red, visually demonstrating its prolongation as a primary clinical effect."
+}
