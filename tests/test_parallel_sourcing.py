@@ -14,7 +14,7 @@ from src.agents.image_sourcing_agent import ImageSourcingAgent
 
 def test_parallel_sourcing():
     # Setup paths
-    workspace_dir = Path("/Users/jay/LocalProjects/long_html_writing_agent/test_workspace_images_cn").resolve()
+    workspace_dir = (Path(__file__).parent / "resources" / "test_workspace_images_cn").resolve()
     html_file = workspace_dir / "html" / "detailed_intro.html"
     
     # Initialize agent

@@ -14,7 +14,7 @@ from src.agents.image_sourcing_agent import ImageSourcingAgent
 
 def test_cn_sourcing_fast():
     # Setup paths
-    workspace_dir = Path("/Users/jay/LocalProjects/long_html_writing_agent/test_workspace_images_cn").resolve()
+    workspace_dir = (Path(__file__).parent / "resources" / "test_workspace_images_cn").resolve()
     html_file = workspace_dir / "html" / "test_retry.html"
     assets_dir = workspace_dir / "assets" / "images"
 

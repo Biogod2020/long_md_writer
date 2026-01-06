@@ -14,7 +14,7 @@ from src.agents.image_sourcing_agent import ImageSourcingAgent
 
 def test_image_sourcing():
     # 1. Setup workspace
-    workspace = Path("test_workspace_images").resolve()
+    workspace = (Path(__file__).parent / "resources" / "test_workspace_images").resolve()
     if workspace.exists():
         import shutil
         shutil.rmtree(workspace)
