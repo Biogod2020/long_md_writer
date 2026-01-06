@@ -61,13 +61,18 @@ Output the complete JavaScript code in a ```javascript block.
 
 
 class DesignAgent:
-    """视觉与交互设计组 Agent"""
+    """视觉与交互设计组 Agent (Enhanced with Design Tokens support)"""
     
     def __init__(self, client: Optional[GeminiClient] = None):
         self.client = client or GeminiClient()
     
     def run(self, state: AgentState) -> AgentState:
-        """执行设计流程：Designer -> CSS Coder -> JS Scripter"""
+        """
+        执行设计流程：
+        1. Check for Design Tokens (if not present, generate visual guide)
+        2. CSS Coder (referencing tokens)
+        3. JS Scripter (independent)
+        """
         
         # 读取所有 Markdown 内容
         full_content = self._get_full_markdown(state)
@@ -76,13 +81,22 @@ class DesignAgent:
             state.errors.append("Design Agent: No Markdown content available")
             return state
         
-        # Step 1: 视觉设计
-        design_guide = self._run_designer(state, full_content)
+        # Step 1: 视觉设计或使用 Design Tokens
+        design_guide = None
+        if state.design_tokens:
+            # Use Design Tokens as the foundation
+            print("  [DesignAgent] Using Design Tokens as foundation")
+            design_guide = self._tokens_to_design_guide(state.design_tokens)
+        else:
+            # Fallback: Generate design guide the traditional way
+            print("  [DesignAgent] No Design Tokens found, generating design guide")
+            design_guide = self._run_designer(state, full_content)
+            
         if not design_guide:
             state.errors.append("Design Agent: Designer failed")
             return state
         
-        # Step 2: CSS 编码
+        # Step 2: CSS 编码 (referencing design tokens/guide)
         css_result = self._run_css_coder(state, full_content, design_guide)
         if not css_result:
             state.errors.append("Design Agent: CSS Coder failed")
@@ -90,7 +104,7 @@ class DesignAgent:
         
         css_code, style_mapping = css_result
         
-        # Step 3: JS 脚本
+        # Step 3: JS 脚本 (独立生成，不依赖设计指南)
         js_code = self._run_js_scripter(state, full_content)
         if not js_code:
             state.errors.append("Design Agent: JS Scripter failed")
@@ -103,6 +117,27 @@ class DesignAgent:
             state.errors.append(f"Design Agent: Failed to save assets: {e}")
         
         return state
+    
+    def _tokens_to_design_guide(self, tokens) -> str:
+        """Convert Design Tokens to a design guide string for CSS Coder."""
+        import json
+        return f"""# Design Tokens (Single Source of Truth)
+The following design tokens have been pre-defined. Your CSS MUST use these values through CSS variables.
+
+```json
+{json.dumps(tokens.raw_json, indent=2, ensure_ascii=False)}
+```
+
+## CSS Variable Usage
+Use CSS variables like:
+- `var(--color-primary)` for primary color
+- `var(--spacing-4)` for standard spacing
+- `var(--font-family-heading)` for headings
+- `var(--border-radius-lg)` for rounded corners
+
+## Important
+Do NOT hardcode color values. Reference the tokens via CSS variables.
+"""
     
     def _get_full_markdown(self, state: AgentState) -> str:
         """读取所有已完成的 Markdown 内容"""

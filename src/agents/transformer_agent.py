@@ -82,6 +82,7 @@ class TransformerAgent:
                     prompt=prompt,
                     system_instruction=TRANSFORMER_SYSTEM_PROMPT,
                     temperature=0.3,
+                    stream=True  # 启用流式生成以避免 500 SSL 超时
                 )
                 if response.success:
                     break
@@ -138,19 +139,66 @@ class TransformerAgent:
             parts.append(", ".join(existing_ids))
             parts.append("\n\n")
         
-        # 3. Previously converted HTML (for consistency)
+        # 3. Design Assets Context (CSS + JS)
+        # Include style.css for understanding available classes and design tokens
+        if state.css_path:
+            try:
+                css_content = Path(state.css_path).read_text(encoding="utf-8")
+                parts.append("# style.css (Available Classes & Design Tokens)\n")
+                parts.append("Use ONLY these CSS classes and variables. Do NOT invent new class names.\n")
+                parts.append(f"```css\n{css_content[:15000]}\n```\n\n")
+            except Exception:
+                pass
+        
+        # Include main.js for understanding interactive element contracts
+        if state.js_path:
+            try:
+                js_content = Path(state.js_path).read_text(encoding="utf-8")
+                parts.append("# main.js (Interactive Element Contracts)\n")
+                parts.append("Ensure generated HTML elements match the selectors/IDs expected by this JavaScript.\n")
+                parts.append(f"```javascript\n{js_content[:8000]}\n```\n\n")
+            except Exception:
+                pass
+        
+        # 4. ALL Previously converted HTML sections (for consistency)
         if state.completed_html_sections:
-            parts.append("# Previously Converted HTML (for style reference)\n")
-            for html_path in state.completed_html_sections[-2:]:  # Last 2 sections
+            parts.append("# Previously Converted HTML Sections (for style consistency)\n")
+            parts.append("Match the structural patterns, class usage, and styling approach of these sections.\n\n")
+            
+            # Include all previous sections, with smart truncation for earlier ones
+            total_sections = len(state.completed_html_sections)
+            for idx, html_path in enumerate(state.completed_html_sections):
                 try:
                     content = Path(html_path).read_text(encoding="utf-8")
-                    parts.append(f"```html\n{content[:2000]}\n```\n\n")
+                    section_name = Path(html_path).stem
+                    
+                    # More recent sections get more content shown
+                    if idx >= total_sections - 2:
+                        # Last 2 sections: show full content (up to 5000 chars)
+                        truncated = content[:5000]
+                        if len(content) > 5000:
+                            truncated += "\n<!-- ... truncated ... -->"
+                    elif idx >= total_sections - 4:
+                        # Previous 2-4 sections: show 2000 chars
+                        truncated = content[:2000]
+                        if len(content) > 2000:
+                            truncated += "\n<!-- ... truncated ... -->"
+                    else:
+                        # Earlier sections: show only structure (1000 chars)
+                        truncated = content[:1000]
+                        if len(content) > 1000:
+                            truncated += "\n<!-- ... see full file for complete content ... -->"
+                    
+                    parts.append(f"## {section_name}\n```html\n{truncated}\n```\n\n")
                 except Exception:
                     pass
         
         # 4. Current section info
         parts.append(f"# Current Section: {section.id}\n")
-        parts.append(f"Section Title: {section.title}\n\n")
+        parts.append(f"Section Title: {section.title}\n")
+        if hasattr(section, 'metadata') and section.metadata:
+            parts.append(f"Section Metadata (Layout/Context): {json.dumps(section.metadata)}\n")
+        parts.append("\n")
         
         # 5. Markdown content
         parts.append("# Markdown Content\n")

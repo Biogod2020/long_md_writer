@@ -1,258 +1,166 @@
 """
-MarkdownQAAgent: Reviews all Markdown sections against Manifest and Raw Materials.
-Uses the same fix logic as VisualQAAgent (replace/append/delete).
+MarkdownQAAgent: Orchestrates the Critic-Advicer-Fixer loop for Markdown content.
+Redesigned to handle large documents and robust feedback loops.
 """
 
-import json
 from pathlib import Path
 from typing import Optional, List, Dict
+import json
+import re
 
-from ..core.gemini_client import GeminiClient
-from ..core.types import AgentState
-
-
-MARKDOWN_QA_SYSTEM_PROMPT = '''You are a **world-class technical editor** with expertise in:
-- Scientific and technical writing
-- Markdown syntax and best practices
-- Content structure and logical flow
-- Fact-checking against source materials
-
-## Your Task
-You will receive:
-1. **Manifest (Expected Structure)**: JSON defining sections, titles, and knowledge points.
-2. **Raw Materials**: Original source content and user requirements.
-3. **Merged Markdown**: All generated sections combined (with `<!-- [SOURCE:md/sec-X.md] -->` markers).
-4. **Editable Files**: List of Markdown files you can suggest fixes for.
-
-## Instructions
-1. **Verify Structure**: Ensure all manifest sections exist with correct titles.
-2. **Check Completeness**: Verify key knowledge points from raw materials are covered.
-3. **Assess Quality**: Logical flow, clear explanations, proper Markdown syntax.
-4. **Generate Fixes**: Use the JSON schema below. Target specific source files.
-
-## Output Schema (JSON)
-```json
-{
-  "overall_verdict": "PASS" | "FAIL",
-  "issues": [
-    {
-      "severity": "critical" | "major" | "minor",
-      "description": "Section sec-3 is missing the concept of X from raw materials.",
-      "source_file": "md/sec-3.md",
-      "fix": {
-        "type": "replace",
-        "target": "## 小结",
-        "replacement": "## X 的核心原理\\n\\n[内容关于X]\\n\\n## 小结"
-      }
-    }
-  ],
-  "summary": "Summary of findings."
-}
-```
-
-## Fix Types
-- `replace`: Find exact `target` string and replace with `replacement`.
-- `append`: Add `content` at `location` ("start" or "end" of file).
-- `delete`: Remove exact `target` string.
-
-## Critical Rules
-- **Source files only**: Only reference files from the provided editable list.
-- **Conservative**: Flag only clear issues, not stylistic preferences.
-- **Minimal diffs**: Target the smallest change that fixes the issue.
-- If quality is acceptable, return `"overall_verdict": "PASS"` with empty issues.
-'''
-
+from src.core.gemini_client import GeminiClient
+from src.core.types import AgentState
+from src.agents.markdown_qa.critic import run_markdown_critic
+from src.agents.markdown_qa.advicer import run_markdown_advicer
+from src.agents.markdown_qa.fixer import run_markdown_fixer, apply_patches
 
 class MarkdownQAAgent:
-    """Agent that reviews Markdown quality and applies targeted fixes."""
+    """
+    Agent that handles Markdown quality assurance.
+    Workflow:
+    1. Critic reviews full content -> VERDICT
+    2. If APPROVE -> Finish
+    3. If REWRITE -> Flag for rewrite (WriterAgent)
+    4. If MODIFY -> Advicer generates specific plan -> Fixer applies patches
+    """
 
     def __init__(self, client: Optional[GeminiClient] = None, max_iterations: int = 3):
         self.client = client or GeminiClient()
         self.max_iterations = max_iterations
-        self.model_name = "gemini-3-flash-preview-maxthinking"
 
-    def run(self, state: AgentState) -> AgentState:
-        """Execute Markdown QA and repair loop."""
+    async def run(self, state: AgentState) -> AgentState:
         if not state.completed_md_sections:
             print("  [MarkdownQA] No Markdown sections to review.")
             return state
 
-        # Track iterations to prevent infinite loops
+        # 1. Check for Max Iterations
         iteration = getattr(state, "md_qa_iterations", 0)
         if iteration >= self.max_iterations:
-            print(f"  [MarkdownQA] Reached max iterations ({self.max_iterations}). Skipping.")
+            print(f"  [MarkdownQA] Reached max AI iterations ({self.max_iterations}).")
             state.md_qa_needs_revision = False
             return state
 
         state.md_qa_iterations = iteration + 1
-        print(f"  [MarkdownQA] Starting iteration {state.md_qa_iterations}...")
+        print(f"\n  [MarkdownQA] Iteration {state.md_qa_iterations}: AI Self-Review...")
 
-        # 1. Merge all Markdown with source markers
-        merged_content = self._merge_with_markers(state)
+        # 2. Merge Content for Context
+        merged_content = self._merge_content(state)
+        
+        # 3. CRITIC Phase
+        critique = await run_markdown_critic(self.client, state, merged_content, debug=state.debug_mode)
+        verdict = critique.get("verdict", "MODIFY") # Default to modify if undefined
+        feedback = critique.get("feedback", "")
+        
+        print(f"  [MarkdownQA] Verdict: {verdict}")
+        
+        if verdict == "APPROVE":
+            print("  [MarkdownQA] ✅ Content Approved.")
+            state.md_qa_needs_revision = False
+            state.markdown_approved = True
+            return state
+            
+        elif verdict == "REWRITE":
+            print("  [MarkdownQA] 🔄 Triggering Rewrite Loop...")
+            print(f"  [MarkdownQA] Feedback: {feedback[:200]}...")
+            state.rewrite_needed = True # Flag for edges.py
+            state.rewrite_feedback = feedback
+            # We do NOT increment iterations heavily here, as Writer will handle it.
+            # But the edge will route us away.
+            return state
+            
+        elif verdict == "MODIFY":
+            print("  [MarkdownQA] 🛠️ Proceeding to Modification Phase...")
+            
+            # 4. ADVICER Phase
+            file_list = [Path(p).name for p in state.completed_md_sections]
+            advice_map = await run_markdown_advicer(
+                self.client, 
+                merged_content, 
+                file_list, 
+                feedback, 
+                debug=state.debug_mode
+            )
+            
+            if not advice_map:
+                print("  [MarkdownQA] Advicer suggested no changes.")
+                state.md_qa_needs_revision = False
+                return state
+                
+            print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
+            
+            # 5. FIXER Phase (Parallel with max 4 concurrent tasks)
+            import asyncio
+            
+            semaphore = asyncio.Semaphore(4)
+            fixes_applied = 0
+            fix_results = []
+            
+            async def fix_single_file(filename: str, advice: str):
+                """Fix a single file with semaphore-controlled concurrency."""
+                async with semaphore:
+                    target_path = next((p for p in state.completed_md_sections if Path(p).name == filename), None)
+                    if not target_path:
+                        print(f"  [MarkdownQA] ⚠️ Could not find path for {filename}")
+                        return None
+                    
+                    print(f"    [MarkdownQA] Fixing {filename}...")
+                    current_content = Path(target_path).read_text(encoding="utf-8")
+                    
+                    fix_result = await run_markdown_fixer(
+                        self.client, 
+                        current_content, 
+                        advice, 
+                        context=merged_content,
+                        debug=state.debug_mode
+                    )
+                    
+                    return {
+                        "filename": filename,
+                        "target_path": target_path,
+                        "current_content": current_content,
+                        "fix_result": fix_result
+                    }
+            
+            # Launch all tasks in parallel (limited by semaphore)
+            tasks = [fix_single_file(fn, adv) for fn, adv in advice_map.items()]
+            fix_results = await asyncio.gather(*tasks)
+            
+            # Apply patches from results
+            for res in fix_results:
+                if res is None:
+                    continue
+                    
+                fix_result = res["fix_result"]
+                if fix_result and fix_result.get("status") == "FIXED":
+                    new_content = apply_patches(res["current_content"], fix_result)
+                    
+                    if new_content != res["current_content"]:
+                        Path(res["target_path"]).write_text(new_content, encoding="utf-8")
+                        fixes_applied += 1
+                        print(f"      ✅ Applied fixes to {res['filename']}")
+                    else:
+                        print(f"      ⚠️ Patches didn't change content for {res['filename']}")
+                else:
+                    reason = fix_result.get('reason') if fix_result else "No result"
+                    print(f"      ❌ Fixer failed for {res['filename']}: {reason}")
+            
+            if fixes_applied > 0:
+                 state.md_qa_needs_revision = True # Loop back to Critic
+            else:
+                 print("  [MarkdownQA] No fixes applied effectively.")
+                 state.md_qa_needs_revision = False # Stop if we can't fix it
+                 
+            return state
 
-        # 2. Get list of editable files
-        file_list = self._list_editable_files(state)
-
-        # 3. Get VLM critique
-        response = self._get_critique(state, merged_content, file_list)
-        if not response:
-            state.errors.append("MarkdownQAAgent: Failed to get response from VLM.")
+        else:
+            print(f"  [MarkdownQA] Unknown verdict {verdict}.")
             state.md_qa_needs_revision = False
             return state
 
-        # 4. Handle results
-        verdict = response.get("overall_verdict", "PASS")
-        print(f"  [MarkdownQA] Verdict: {verdict}")
-
-        if verdict == "FAIL":
-            issues = response.get("issues", [])
-            modified = self._apply_fixes(state, issues)
-
-            if modified:
-                print(f"  [MarkdownQA] Applied fixes. Requesting re-check.")
-                state.md_qa_needs_revision = True
-            else:
-                print(f"  [MarkdownQA] VLM suggested fixes but none could be applied.")
-                state.md_qa_needs_revision = False
-        else:
-            print(f"  [MarkdownQA] Quality check passed.")
-            state.md_qa_needs_revision = False
-
-        return state
-
-    def _merge_with_markers(self, state: AgentState) -> str:
-        """Merge all Markdown sections with source file markers."""
-        parts = []
-        for md_path in state.completed_md_sections:
-            try:
-                content = Path(md_path).read_text(encoding="utf-8")
-                filename = Path(md_path).name
-                marked = f"<!-- [SOURCE:md/{filename}] -->\n{content}\n<!-- [/SOURCE:md/{filename}] -->"
-                parts.append(marked)
-            except Exception as e:
-                parts.append(f"<!-- Error reading {md_path}: {e} -->")
-        return "\n\n".join(parts)
-
-    def _list_editable_files(self, state: AgentState) -> List[str]:
-        """List Markdown files that VLM can suggest fixes for."""
-        return [f"md/{Path(p).name}" for p in state.completed_md_sections]
-
-    def _get_critique(self, state: AgentState, merged: str, file_list: List[str]) -> Optional[Dict]:
-        """Send merged Markdown to VLM for review."""
-        # Prepare manifest info
-        manifest_info = {
-            "project_title": state.manifest.project_title,
-            "sections": [
-                {"id": s.id, "title": s.title, "summary": s.summary}
-                for s in state.manifest.sections
-            ],
-            "knowledge_map": state.manifest.knowledge_map
-        }
-
-        prompt = f"""# Manifest (Expected Structure)
-```json
-{json.dumps(manifest_info, indent=2, ensure_ascii=False)}
-```
-
-# Raw Materials (Source)
-{state.raw_materials[:50000]}
-
-# Editable Files
-{json.dumps(file_list, indent=2)}
-
-# Merged Markdown Content (with markers)
-{merged[:100000]}
-
-Please review the Markdown content and provide your assessment.
-"""
-
-        try:
-            response = self.client.generate(
-                prompt=prompt,
-                system_instruction=MARKDOWN_QA_SYSTEM_PROMPT,
-                temperature=0.0
-            )
-
-            if not response.success:
-                print(f"  [MarkdownQA] VLM Error: {response.error}")
-                return None
-
-            # Parse JSON from response
-            text = response.text.strip()
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0].strip()
-            
-            # Pre-process: common LaTeX escape issues in JSON
-            # Replace single backslashes with double backslashes unless they are already escaped
-            import re
-            fixed_text = re.sub(r'(?<!\\)\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', text)
-
-            try:
-                return json.loads(fixed_text)
-            except json.JSONDecodeError:
-                # Fallback to original text if regex failed
-                return json.loads(text)
-        except Exception as e:
-            print(f"  [MarkdownQA] Failed to parse VLM response: {e}")
-            return None
-
-    def _apply_fixes(self, state: AgentState, issues: List[Dict]) -> bool:
-        """Apply the suggested fixes to the source files (same logic as VisualQA)."""
-        modified = False
-        workspace = Path(state.workspace_path)
-
-        for issue in issues:
-            severity = issue.get("severity", "minor")
-            if severity == "minor":
-                continue
-
-            source_file_rel = issue.get("source_file")
-            if not source_file_rel:
-                continue
-
-            source_file = workspace / source_file_rel
-            if not source_file.exists():
-                print(f"  [MarkdownQA] Warning: Suggested file {source_file_rel} not found.")
-                continue
-
-            content = source_file.read_text(encoding="utf-8")
-            fix = issue.get("fix", {})
-            fix_type = fix.get("type")
-
-            if fix_type == "replace":
-                target = fix.get("target")
-                replacement = fix.get("replacement")
-                if target and replacement and target in content:
-                    content = content.replace(target, replacement, 1)
-                    modified = True
-                    print(f"  [MarkdownQA] Replaced content in {source_file_rel}")
-                else:
-                    print(f"  [MarkdownQA] Could not find target for replacement in {source_file_rel}")
-
-            elif fix_type == "append":
-                new_content = fix.get("content")
-                location = fix.get("location", "end")
-                if new_content:
-                    if location == "end":
-                        content = content.rstrip() + "\n\n" + new_content + "\n"
-                    else:
-                        content = new_content + "\n\n" + content
-                    modified = True
-                    print(f"  [MarkdownQA] Appended content to {source_file_rel}")
-
-            elif fix_type == "delete":
-                target = fix.get("target")
-                if target and target in content:
-                    content = content.replace(target, "")
-                    modified = True
-                    print(f"  [MarkdownQA] Deleted content from {source_file_rel}")
-
-            if modified:
-                source_file.write_text(content, encoding="utf-8")
-
-        return modified
-
-
-def create_markdown_qa_agent(client: Optional[GeminiClient] = None) -> MarkdownQAAgent:
-    """Create MarkdownQAAgent instance."""
-    return MarkdownQAAgent(client=client)
+    def _merge_content(self, state: AgentState) -> str:
+        """Helper to merge content for the prompt"""
+        merged = []
+        for path in state.completed_md_sections:
+            p = Path(path)
+            merged.append(f"## File: {p.name}\n\n{p.read_text()}")
+        return "\n\n".join(merged)

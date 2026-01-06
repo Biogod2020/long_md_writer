@@ -50,6 +50,24 @@ Identify any visual bugs, rendering errors (like unrendered LaTeX symbols or box
     
     parts.append({"text": prompt})
     
+    # Check for Structured Output capability
+    if hasattr(client, "generate_structured"):
+        try:
+            # Note: We don't include images in the structured prompt logic here because
+            # generate_structured expects a string prompt.
+            # Client V2 needs update to support multi-modal structured output or we construct payload manually.
+            # However, our GeminiClientNew.generate_structured_async takes prompt, schema...
+            # It builds messages: [{"role": "user", "content": prompt}].
+            # It doesn't currently support image parts + structured output easily in the wrapper.
+            # Let's fallback to standard generation for vision for now until client is updated
+            # OR we can assume client handles parts if passed (but signature is prompt:str).
+            
+            # Actually, standard generation works fine for vision. 
+            # Let's keep using generate() for now to avoid breaking multi-modal input.
+            pass
+        except:
+            pass
+    
     try:
         response = client.generate(
             parts=parts,

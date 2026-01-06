@@ -7,19 +7,13 @@ from ...core.gemini_client import GeminiClient
 from .prompts import FIXER_SYSTEM_PROMPT
 from .utils import parse_json_response, add_line_numbers
 
-def run_fixer(
-    client: GeminiClient,
+def prepare_fixer_task(
     issue: Dict,
     section_path: str,
     workspace_path: str,
-    style_mapping_path: Optional[str] = None,
-    debug_image_path: Optional[Path] = None,
-    debug: bool = False
+    style_mapping_path: Optional[str] = None
 ) -> Optional[Dict]:
-    """
-    Generate a fix for ONE specific issue, optionally using a debug image.
-    Uses style_mapping.json for context instead of full appendices to reduce load.
-    """
+    """Prepare task for Visual Fixer."""
     workspace = Path(workspace_path)
     section_code = Path(section_path).read_text(encoding="utf-8")
     
@@ -73,7 +67,32 @@ Generate a fix for the visual issue described above.
 Analyze whether the issue is caused by the Section HTML, Global CSS, or Global JS.
 Modify ONLY ONE file.
 """
+    return {
+        "prompt": prompt,
+        "system_instruction": FIXER_SYSTEM_PROMPT,
+        "temperature": 0.0,
+        "issue_id": issue.get('id')
+    }
 
+def run_fixer(
+    client: GeminiClient,
+    issue: Dict,
+    section_path: str,
+    workspace_path: str,
+    style_mapping_path: Optional[str] = None,
+    debug_image_path: Optional[Path] = None,
+    debug: bool = False
+) -> Optional[str]: # Changed return type to str for raw response
+    """
+    Generate a fix for ONE specific issue, optionally using a debug image.
+    Uses style_mapping.json for context instead of full appendices to reduce load.
+    Returns the raw response text from the model.
+    """
+    
+    task = prepare_fixer_task(issue, section_path, workspace_path, style_mapping_path)
+    if not task:
+        return None
+        
     parts = []
     # Add debug image if provided
     if debug_image_path and debug_image_path.exists():
@@ -97,7 +116,7 @@ Modify ONLY ONE file.
         except Exception as e:
             print(f"    [Fixer] Error loading debug image {debug_image_path}: {e}")
 
-    parts.append({"text": prompt})
+    parts.append({"text": task["prompt"]})
     
     # Retry logic for API 500 errors
     MAX_RETRIES = 3

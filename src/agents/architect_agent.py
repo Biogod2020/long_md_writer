@@ -11,55 +11,83 @@ from ..core.gemini_client import GeminiClient, GeminiResponse
 from ..core.types import Manifest, SectionInfo, AgentState
 
 
-ARCHITECT_SYSTEM_PROMPT = """你这是 **首席内容架构师 (Chief Content Architect)**。你的任务是设计世界级、SOTA (State-of-the-Art) 级别的长篇技术/学术文档结构。
+# 灵活的 Manifest Schema - 强制核心必填字段，允许 API 自由扩展元数据
+FLEXIBLE_MANIFEST_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "project_title": {"type": "string"},
+        "description": {"type": "string"},
+        "config": {"type": "object"},
+        "metadata": {"type": "object"},
+        "sections": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "estimated_words": {"type": "integer"},
+                    "metadata": {"type": "object"}
+                },
+                "required": ["id", "title", "summary"]
+            }
+        },
+        "knowledge_map": {"type": "object"}
+    },
+    "required": ["project_title", "description", "sections"]
+}
 
-我们要创作的内容不仅要准确，更要有深度、有逻辑、有见解。拒绝肤浅的罗列。
+ARCHITECT_SYSTEM_PROMPT = r"""You are the **Chief Content Architect**. Your task is to design a world-class, SOTA (State-of-the-Art) document structure.
 
-### 核心设计原则
-1.  **逻辑推演 (First Principles)**：从基本原理出发（如生理机制、底层算法），推导出上层现象。
-2.  **深度优先 (Depth First)**：每个章节都必须深入探讨"为什么 (Why)"和"机制 (Mechanism)"，而不仅是"是什么 (What)"。
-3.  **系统性 (Systematic)**：章节之间必须有严密的逻辑承接关系，构建完整的认知图谱。
-4.  **SOTA 标准**：对标顶级教科书（如 *Robbins Pathology*, *SICP*, *Deep Learning Book*）的结构深度。
+### Adaptive Thinking (SOTA)
+You are NOT limited to standard book-like structures. If the Project Brief suggest a slide deck, a cinematic narrative, or a multi-modal technical guide, your Manifest must reflect that. 
+- **Non-Linear Flow**: Sections don't have to be just "Chapter 1, 2, 3". They can be "Phase 1: Foundations", "Deep Dive: The Vector Lab (Interactive)", etc.
+- **Visual Rhythm**: Think about the pacing. Where should we have a high-impact split layout? Where should we have a dense technical proof?
 
-### 任务流程
-1.  **分析需求**：仔细阅读「项目需求书 (Project Brief)」和参考材料。
-2.  **结构设计**：
-    - 设计宏大的篇章结构（Part -> Section）。
-    - 确保包含必要的铺垫（Foundations）、核心机制（Core Mechanisms）、应用与病理（Applications/Pathology）、高阶综合（Synthesis）。
-3.  **生成全景描述 (SOTA Description)**：
-    - 在 `description` 中不仅要总结宗旨，还要包含 **技术执行指令**。
-    - 明确指出后续 Agent 应该采用的：视觉风格、SVG 动画实现思路（如：利用 CSS @keyframes 模拟离子流动）、交互式 Slide 的设计建议、CSS 玻璃拟态效果等。
-    - **该 Description 将作为后续所有 Agent 的全局系统指令**。
-4.  **生成章节元数据**：
-    - **ID**: `sec-1`, `sec-2`...
-    - **Title**: 专业、精准的标题。
-    - **Summary**: 必须详细！解释该章节的核心论点、覆盖的关键机制和逻辑目标。**少于 100 字的摘要是不合格的**。
-    - **Estimated Words**: 基于深度估算，通常核心章节应在 2000-5000 字。
+### Core Design Principles
+1. **First Principles Architecture**: Derive high-level applications (clinical ECG) from basic mechanisms (the ion flux dipole).
+2. **Pedagogical Soul**: Every section must have a "Conceptual Anchor"—a specific mechanism or "Aha!" moment it targets.
+3. **Adaptive Manifest**: Use the `metadata` and `config` fields to provide rich instructions for downstream agents (e.g., layout, visual intent, interactivity logic, GSAP cues).
+4. **SOTA Standards**: Aim for the structural depth of top-tier educational materials (e.g., *Robbins Pathology*, *The Feynman Lectures*).
+5. **Image Sourcing (MANDATORY)**: The user explicitly wants "internet-sourced images". You **MUST** include an `image_search_queries` list in the `metadata` of **EVERY** section that could benefit from a visual.
+    -   This list MUST contain 1-2 specific, high-quality search terms (e.g., ['ECG lead placement anatomical diagram', 'cardiac vector projection illustration']).
+    -   **DO NOT OMIT THIS**. If a section describes a concept, it needs an image query.
 
-### 输入处理与修订
-- 如果提供了 **Existing Manifest** 和 **User Feedback**，你必须基于反馈 **修改** 现有的结构。
-- 解释你的修改逻辑（隐式体现在新的结构中）。
-
-### 输出格式 (JSON Only)
-输出 **纯 JSON**，不要包含 markdown 标记。结构严格如下：
+### Output Format (JSON Only)
+- Output **pure JSON**.
+- Escape backslashes in LaTeX (e.g., `\\cdot`).
+- **THE DESCRIPTION FIELD**: This is your "Project Vision & Technical Philosophy". It should be a 300-500 word manifesto on how this specific project achieves SOTA status through its structure and logic.
 
 ```json
 {
-  "project_title": "精炼而宏大的标题",
+  "project_title": "Magnificent Title",
   "author": "Magnum Opus AI",
-  "description": "300字以上的项目综述。这部分需包含：1. 本书宗旨与核心论点；2. 针对 Writer 的内容深度要求（如：严格推导、第一性原理）；3. 针对 Designer/Transformer 的技术实现建议（如：SVG 动画实现机制、CSS 特殊效果、交互式 Slide 布局等）。",
+  "description": "# Project Vision\nDetailed technical philosophy and architectural goals...",
+  "config": {
+    "theme": "dark | light | high-contrast",
+    "layout_type": "slide | textbook | dashboard",
+    "aesthetic_intent": "Futuristic HUD | Classic Academic | Minimalist Lab",
+    "extra_scripts": ["https://cdn..."]
+  },
   "sections": [
     {
-      "id": "sec-1",
-      "title": "章节标题",
-      "summary": "详细摘要：本章将首先探讨...接着分析...重点解释...最后建立...与下一章的关系是...",
-      "estimated_words": 3500
+      "id": "slide-01",
+      "title": "The Dipole Singularity",
+      "summary": "A 100+ word narrative summary describing exactly what happens in this section/slide. Mention the 'Conceptual Anchor'.",
+      "estimated_words": 600,
+      "metadata": {
+         "layout": "standard | split | hero | grid",
+         "visual_intent": "High-pacing vector growth animation",
+         "has_interactive_element": true,
+         "interaction_logic": "SVG Drag-and-drop dipole simulator",
+         "priority": "critical",
+         "image_search_queries": ["electric dipole moment physics diagram", "cardiac vector projection"]
+      }
     }
   ],
-  "knowledge_map": {
-    "sec-1": ["核心概念A", "机制B"],
-    "sec-2": ["病理C", "临床表现D"]
-  }
+  "knowledge_map": { "slide-01": ["Concept A", "Concept B"] },
+  "metadata": { "global_visual_rigor": "high", "hud_elements": ["Logic Tree", "Live Readouts"] }
 }
 ```
 """
@@ -73,128 +101,161 @@ class ArchitectAgent:
     
     def run(self, state: AgentState, feedback: Optional[str] = None) -> AgentState:
         """
-        执行架构设计
+        Run the Architect Agent.
         
         Args:
             state: AgentState
-            feedback: 用户反馈（用于修订模式）
+            feedback: Optional feedback for revision.
             
         Returns:
-            更新后的 AgentState
+            Updated AgentState.
         """
-        # 构建提示 (parts)
+        # 1. Build prompt parts (incorporating full context)
         parts = self._build_prompt_parts(state, feedback)
         
-        # 调用 Gemini
-        response = self.client.generate(
-            parts=parts,
-            system_instruction=ARCHITECT_SYSTEM_PROMPT,
-            temperature=0.7, # 稍微增加创造性以获得更好的结构
-        )
-        
-        # 调试日志：保存原始响应
-        try:
-            log_path = Path(state.workspace_path) / "architect_raw_response.txt"
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            log_path.write_text(response.text, encoding="utf-8")
-        except:
-            pass
+        # 如果有反馈，降低温度以提高指令遵循度
+        # Strict adherence mode for feedback
+        if feedback:
+            parts.append({
+                "text": f"CRITICAL USER FEEDBACK: {feedback}\n\nYou MUST adjust the manifest to comply with this feedback. If the user asks to reduce word count, you MUST reduce 'estimated_words'. If the user asks to fix JSON, you MUST fix the syntax."
+            })
+            temperature = 0.1  # Lower temperature for strict adherence
+        else:
+            temperature = 0.7
 
-        if not response.success:
-            state.errors.append(f"Architect Agent failed: {response.error}")
-            return state
+        # Retry loop for JSON correction
+        MAX_RETRIES = 3
+        last_error = None
         
-        # 解析 manifest
-        try:
-            manifest = self._parse_manifest(response.text)
-            state.manifest = manifest
+        # 0. Forced fallback to standard generation (Structured Output info density is too low)
+        pass
+        """
+        if hasattr(self.client, "generate_structured"):
+            # ... (kept code for reference but disabled)
+        """
+        
+        # Standard Retro Loop
+        for attempt in range(MAX_RETRIES + 1):
+            if attempt > 0:
+                print(f"    [Architect] JSON Error (Attempt {attempt}): {last_error}. Retrying with self-correction...")
+                parts.append({
+                    "text": f"SYSTEM: Your previous JSON output caused a parse error: {last_error}\nPlease output the full, valid JSON again, fixing this error. Ensure all quotes and brackets are matching."
+                })
             
-            # 保存 manifest 到工作目录
-            self._save_manifest(state)
-            
-        except Exception as e:
-            state.errors.append(f"Failed to parse manifest: {str(e)}")
-            # 如果解析失败，把解析用的 cleaned content 也存一下方便排查
+            response = self.client.generate(
+                parts=parts,
+                system_instruction=ARCHITECT_SYSTEM_PROMPT,
+                temperature=temperature,
+                stream=True  # 启用流式生成以避免 500 SSL 超时
+            )
+        
+            # 调试日志：保存原始响应
             try:
-                debug_path = Path(state.workspace_path) / "manifest_parse_error_content.txt"
-                debug_path.write_text(response.text, encoding="utf-8")
+                log_path = Path(state.workspace_path) / "architect_raw_response.txt"
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(response.text, encoding="utf-8")
             except:
                 pass
+
+            if not response.success:
+                error_msg = f"Architect Agent failed to generate: {response.error}"
+                if attempt == MAX_RETRIES:
+                    state.errors.append(error_msg)
+                    return state
+                last_error = response.error
+                continue
+            
+            # 解析 manifest
+            try:
+                manifest = self._parse_manifest(response.text)
+                state.manifest = manifest
+                
+                # 保存 manifest 到工作目录
+                self._save_manifest(state)
+                
+                return state
+                
+            except Exception as e:
+                # JSON parse failed
+                last_error = str(e)
+                if attempt == MAX_RETRIES:
+                    state.errors.append(f"Failed to parse manifest after {MAX_RETRIES} retries: {str(e)}")
+                    # 如果解析失败，把解析用的 cleaned content 也存一下方便排查
+                    try:
+                        debug_path = Path(state.workspace_path) / "manifest_parse_error_content.txt"
+                        debug_path.write_text(response.text, encoding="utf-8")
+                    except:
+                        pass
+                    return state
+                # Continue loop to retry
         
         return state
     
     def _build_prompt_parts(self, state: AgentState, feedback: Optional[str] = None) -> list[dict]:
-        """构建提示部件列表"""
+        """
+        Build prompt parts using Context Chain (Residual Connection).
+        
+        关键规划节点使用 state.user_context 注入完整用户意图。
+        """
         final_parts = []
         
-        # 1. 核心输入：Project Brief (优先) 或 Raw Materials
-        if state.project_brief:
-            final_parts.append({"text": "# 📋 项目需求书 (Project Brief)\n这是经过确认的详细需求：\n\n" + state.project_brief + "\n\n"})
-        else:
-            final_parts.append({"text": "# 原始需求\n" + state.raw_materials + "\n\n"})
-            
-        # 2. 参考资料
-        if state.reference_docs:
-            ref_text = ["# 📚 参考资料\n"]
-            for doc_path in state.reference_docs:
-                try:
-                    content = Path(doc_path).read_text(encoding="utf-8")
-                    ref_text.append(f"## {doc_path}\n{content}\n")
-                except Exception:
-                    pass
-            final_parts.append({"text": "".join(ref_text)})
-        
-        # 3. 图片素材
-        if hasattr(state, "images") and state.images:
-            final_parts.extend(state.images)
-            final_parts.append({"text": "\n(包含上述视觉参考资料)\n"})
-
-        # 4. 修订模式处理
+        # 1. Revision Mode (if manifest exists)
         if state.manifest:
             current_json = state.manifest.model_dump_json(indent=2)
-            revision_context = f"""
-# ⚠️ 修订模式 (Revision Mode)
-
-我们已经有了一个初步的 Manifest 设计：
-```json
-{current_json}
-```
-
-"""
+            revision_context = f"# Revision Mode\nModify existing Manifest based on feedback:\n\n{current_json}\n"
             if feedback:
-                revision_context += f"""
-## 用户反馈 (User Feedback)
-用户对上述设计提出了以下修改/完善意见，请务必严格遵守：
-> {feedback}
-
-任务：请基于现有 Manifest 和 用户反馈，重新生成一份完善的 Manifest JSON。保持未被批评部分的优点，修正被指出的问题。
-"""
-            else:
-                revision_context += "\n请基于新的理解重新优化这份设计。\n"
-                
+                revision_context += f"\nFEEDBACK: {feedback}\n"
             final_parts.append({"text": revision_context})
-        else:
-            final_parts.append({"text": "\n# 任务\n请基于以上所有信息，设计一份 SOTA 级别的 Manifest JSON。\n"})
+        
+        # 2. USER CONTEXT (Residual Connection) - 核心用户意图注入
+        if state.user_context:
+            final_parts.append({"text": state.user_context})
+        
+        # 3. Reference docs (if any)
+        if state.reference_docs:
+            ref_parts = ["# 参考资料\n"]
+            for doc in state.reference_docs:
+                try:
+                    text = Path(doc).read_text(encoding="utf-8")
+                    ref_parts.append(f"### File: {doc}\n{text[:4000]}...\n")
+                except:
+                    pass
+            if len(ref_parts) > 1:
+                final_parts.append({"text": "\n".join(ref_parts)})
+        
+        # 4. Images (if any)
+        if hasattr(state, "images") and state.images:
+            final_parts.extend(state.images)
+            final_parts.append({"text": "\n(Visual references above)\n"})
+
+        # 5. Task instruction
+        if not state.manifest:
+            final_parts.insert(0, {"text": "Generate a SOTA Manifest JSON based on the following user context. Be adaptive and creative with the structure and metadata.\n"})
             
         return final_parts
     
     def _parse_manifest(self, text: str) -> Manifest:
         """解析 Manifest JSON (增强鲁棒性)"""
-        # 尝试寻找 JSON 块
         import re
         
         cleaned = text.strip()
         
-        # 处理 ```json ... ```
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
-        if match:
-            cleaned = match.group(1)
-        else:
-            # 尝试直接寻找第一个 { 和最后一个 }
-            start = cleaned.find("{")
-            end = cleaned.rfind("}")
-            if start != -1 and end != -1:
-                cleaned = cleaned[start:end+1]
+        # 尝试寻找 最外层的 JSON 块 (贪婪匹配首尾大括号)
+        # Find the FIRST valid opening brace and LAST valid closing brace
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        
+        if start != -1 and end != -1:
+            cleaned = cleaned[start:end+1]
+        
+        # 尝试清理一些常见的 JSON 错误 (Best Effort)
+        # 1. 修复 "id": "sec-6": "Title" -> "id": "sec-6", "title": "Title"
+        # 这是一个特定修复，针对 LLM 常见的结构错误
+        cleaned = re.sub(
+            r'\"id\":\s*\"(sec-\d+)\":\s*\"([^\"]+)\"',
+            r'"id": "\1", "title": "\2"',
+            cleaned
+        )
         
         data = json.loads(cleaned)
         
@@ -206,12 +267,15 @@ class ArchitectAgent:
                 title=sec_data["title"],
                 summary=sec_data.get("summary", ""),
                 estimated_words=sec_data.get("estimated_words", 0),
+                metadata=sec_data.get("metadata", {})
             ))
         
         return Manifest(
             project_title=data.get("project_title", "Untitled"),
             author=data.get("author"),
             description=data.get("description", ""),
+            config=data.get("config", {}),
+            metadata=data.get("metadata", {}),
             sections=sections,
             knowledge_map=data.get("knowledge_map", {}),
         )

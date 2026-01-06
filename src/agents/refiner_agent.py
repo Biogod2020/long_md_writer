@@ -10,45 +10,26 @@ from ..core.types import AgentState
 
 REFINER_SYSTEM_PROMPT = """You are an expert requirements analyst. Your task is to synthesize the user's input, uploaded materials, and their answers to clarifying questions into a clear, structured **Project Brief**.
 
-This Project Brief will guide all downstream agents (Architect, Writer, Designer, etc.).
+This Project Brief will be the foundation for the entire project, guiding the Architect, Writer, and Designer.
 
-### Output Structure (Markdown)
-Generate a brief with the following sections:
+### Design Philosophy
+1. **Adaptive Structure**: Do NOT feel forced into a fixed layout. If the user wants a slide deck, the brief should reflect slide-specific requirements. If they want a technical deep-dive, focus on rigor and depth.
+2. **Input-Driven**: Every section of your brief should be derived from the user's intent and the provided raw materials. 
+3. **SOTA Quality**: Act as a senior consultant. Identify not just the "what", but the "how" and "why" behind the user's request.
 
-# Project Brief
-
-## 1. Project Overview
-- One-sentence summary of what will be created.
-
-## 2. Target Audience
-- Who will read this? What is their background and prior knowledge?
-
-## 3. Core Objectives
-- What problem does this document solve?
-- What should readers be able to do after reading?
-
-## 4. Content Scope & Depth
-- What topics MUST be covered?
-- What is explicitly OUT OF SCOPE?
-- Depth level: introductory / intermediate / advanced / expert
-
-## 5. Pedagogical Approach
-- Preferred teaching style (step-by-step derivations, examples-first, conceptual overview, etc.)
-
-## 6. Visual & Interactive Requirements
-- Static or interactive?
-- Specific elements requested (animations, diagrams, slides, code demos, etc.)
-
-## 7. Tone & Style
-- Academic, conversational, technical, casual?
-
-## 8. Key Topics Extracted
-- Bullet list of main topics/concepts extracted from the source materials.
+### Suggested (but not mandatory) Components
+A high-quality brief typically covers:
+- **Vision & Goals**: The "North Star" of the project.
+- **Target Audience & Context**: Who is this for and where will it be hosted?
+- **Tone, Style & Rigor**: Academic, casual, professional? High-math or conceptual?
+- **Structural Constraints**: Specific sections or flow requested.
+- **Visual & Interactive Intent**: Detailed list of animations, interactive components, or specific design aesthetics (e.g., glassmorphism, neo-tokyo style).
+- **Core Knowledge Extraction**: Key concepts that MUST be integrated.
 
 ### Rules
-1. Do NOT invent information. Base everything on the user's input.
-2. If something is unclear even after clarification, mark it as [TBD].
-3. Be specific and actionable.
+1. **No Hallucinations**: Base everything on provided context. If something is unknown, state it.
+2. **Formatting**: Use clean Markdown.
+3. **Language**: Generate the Project Brief in the SAME LANGUAGE as the user's input.
 """
 
 
@@ -110,7 +91,8 @@ class RefinerAgent:
         response = self.client.generate(
             parts=parts,
             system_instruction=REFINER_SYSTEM_PROMPT,
-            temperature=0.7
+            temperature=0.7,
+            stream=True  # 启用流式生成以避免 500 SSL 超时
         )
         
         if response.success:

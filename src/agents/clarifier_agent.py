@@ -8,32 +8,29 @@ from ..core.gemini_client import GeminiClient, GeminiResponse
 from ..core.types import AgentState
 
 
-CLARIFIER_SYSTEM_PROMPT = """You are an expert project analyst. Your task is to analyze the user's initial input and ask 3-5 targeted clarifying questions to ensure the final output perfectly matches their expectations.
+CLARIFIER_SYSTEM_PROMPT = """You are an expert technical project analyst. Your task is to analyze the user's intent and ask targeted clarifying questions to bridge the gap between their raw request and a SOTA technical production.
 
-### Your Role
-You help users articulate their needs for generating long-form HTML documents (lectures, tutorials, documentation, etc.). You do NOT make assumptions about the domain or content type.
+### Adaptive Reasoning
+Do NOT stick to a fixed number of questions. Use your judgment:
+- If the request is simple and clear, ask 1-2 sharp questions.
+- If the request is complex or vague (e.g., "build a training course"), ask 5-7 deep questions covering structure, interactive needs, and technical depth.
+- **Layout Identification**: Pay special attention to whether the user wants a standard document, slides, a dashboard, or a lab manual. Ask questions that help define the `layout_type`.
 
-### Question Categories (choose relevant ones)
-1. **Target Audience**: Who will read this? What is their background?
-2. **Content Depth**: Should this be introductory, intermediate, or advanced?
-3. **Pedagogical Approach**: Prefer step-by-step derivations, examples-first, or conceptual overviews?
-4. **Visual & Interactive Elements**: Do they want animations, interactive diagrams, slides, or static content?
-5. **Length & Structure**: How many sections? Estimated total words?
-6. **Tone & Style**: Academic, conversational, technical, or casual?
+### Question Categories
+- **Strategic Goal**: What is the ultimate outcome?
+- **Technical Rigor**: Level of depth (First-principles vs. high-level)?
+- **Visual/UX Architecture**: Does this require specific interactive components (animations, code runners, slide transitions)?
+- **Audience Context**: Background and prerequisite knowledge?
 
 ### Output Format
-Return a JSON array of questions. Each question should be:
-- Clear and specific
-- Non-leading (don't suggest an answer)
-- Directly actionable
-
+Return a JSON array of questions.
 ```json
 [
-  {"id": "q1", "category": "audience", "question": "Who is the primary audience for this document?"},
-  {"id": "q2", "category": "depth", "question": "..."},
+  {"id": "q1", "category": "layout", "question": "Since you mentioned a training course, would a slide-based layout with interactive labs be more effective than a static document?"},
   ...
 ]
 ```
+**Language**: Always match the language of the user's input.
 """
 
 
@@ -66,10 +63,46 @@ class ClarifierAgent:
         
         parts.append({"text": "\nBased on the above input, generate 3-5 clarifying questions to better understand the user's requirements.\n"})
         
+        if hasattr(self.client, "generate_structured"):
+            try:
+                # Need to manually construct prompt string from parts
+                # Usually Clarifier has simple text parts
+                prompt_text = "\n".join([p["text"] for p in parts])
+                
+                print("    [Clarifier] Using Structured Output (JSON Schema)...")
+                schema = {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "string"},
+                            "category": {"type": "string"},
+                            "question": {"type": "string"}
+                        },
+                        "required": ["id", "category", "question"]
+                    }
+                }
+                
+                response = self.client.generate_structured(
+                    prompt=prompt_text,
+                    response_schema=schema,
+                    schema_name="ClarificationQuestions",
+                    system_instruction=CLARIFIER_SYSTEM_PROMPT,
+                    temperature=0.7
+                )
+                
+                if response.success and response.json_data:
+                    return response.json_data
+                else:
+                    print(f"    [Clarifier] Structured generation failed: {response.error}. Falling back...")
+            except Exception as e:
+                print(f"    [Clarifier] Structured generation error: {e}. Falling back...")
+
         response = self.client.generate(
             parts=parts,
             system_instruction=CLARIFIER_SYSTEM_PROMPT,
-            temperature=0.7
+            temperature=0.7,
+            stream=True  # 启用流式生成以避免 500 SSL 超时
         )
         
         if not response.success:

@@ -75,11 +75,44 @@ Provide a single, short sentence of guidance for selecting the best image (e.g.,
 ```
 """
         
+        # Schema for structured output
+        schema = {
+            "type": "object",
+            "properties": {
+                "thinking": {"type": "string"},
+                "queries": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 2,
+                    "maxItems": 2
+                },
+                "guidance": {"type": "string"}
+            },
+            "required": ["thinking", "queries", "guidance"]
+        }
+
         try:
+            # Try structured generation first
+            if hasattr(self.client, "generate_structured"):
+                response = self.client.generate_structured(
+                    prompt=prompt,
+                    response_schema=schema,
+                    schema_name="ImageSearchStrategy",
+                    temperature=0.2
+                )
+                
+                if response.success and response.json_data:
+                    result = response.json_data
+                    if self.debug:
+                        print(f"    - Strategy Thinking: {result.get('thinking', 'N/A')[:100]}...")
+                        print(f"    - Queries: {result.get('queries', [])}")
+                        print(f"    - Guidance: {result.get('guidance', 'N/A')}")
+                    return result
+            
+            # Fallback to standard generation
             response = self.client.generate(prompt=prompt, temperature=0.2)
             if response.success and response.text:
                 text = response.text
-                # Extract JSON from markdown if present
                 if "```json" in text:
                     text = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL).group(1)
                 elif "```" in text:

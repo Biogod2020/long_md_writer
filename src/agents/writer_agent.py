@@ -24,11 +24,16 @@ WRITER_SYSTEM_PROMPT = """You are an expert technical writer. Your task is to wr
 - **Alert Blocks**: `:::warning` ... `:::` for common pitfalls or pathological cases.
 - **Code Blocks**: Standard ```language ... ``` blocks.
 - **Math**: Use LaTeX format $...$ for inline and $$...$$ for block math.
+- **Visual Placeholders**: Proactively identify where diagrams (SVG, Mermaid, etc.) would add value. Leave a placeholder like:
+  `[VISUAL: type=mermaid, description="Flowchart of X process"]` or 
+  `[VISUAL: type=svg, description="Physical model of Y dipole"]`.
 
 ### Output
 - Output ONLY the Markdown content for the assigned section.
 - Do NOT include the section number in the title; the assembler will handle it.
 - Ensure the content length matches the estimated word count provided.
+- Ensure scientific accuracy and a high-quality "textbook" style.
+- **Important**: Use the SAME LANGUAGE as the Project Brief and Manifest.
 """
 
 
@@ -38,7 +43,7 @@ class WriterAgent:
     def __init__(self, client: Optional[GeminiClient] = None):
         self.client = client or GeminiClient()
     
-    def run(self, state: AgentState) -> AgentState:
+    async def run(self, state: AgentState) -> AgentState:
         """
         执行章节写作（单个章节）
         
@@ -47,6 +52,14 @@ class WriterAgent:
         if not state.manifest:
             state.errors.append("Writer Agent: Manifest not available")
             return state
+        
+        # Check if we are in a REWRITE loop triggered by QA
+        if getattr(state, "rewrite_needed", False):
+            print(f"  [Writer] 🔄 Rewrite triggered by Critic. Feedback: {getattr(state, 'rewrite_feedback', '')[:100]}...")
+            state.current_section_index = 0
+            state.completed_md_sections = []
+            # We keep state.rewrite_feedback for _build_prompt
+            state.rewrite_needed = False
         
         # 获取当前要写的章节
         if state.current_section_index >= len(state.manifest.sections):
@@ -63,10 +76,11 @@ class WriterAgent:
         response = None
         for attempt in range(max_retries):
             try:
-                response = self.client.generate(
+                response = await self.client.generate_async(
                     prompt=prompt,
                     system_instruction=WRITER_SYSTEM_PROMPT,
                     temperature=0.7,
+                    stream=True  # 启用流式生成以避免 500 SSL 超时
                 )
                 if response.success:
                     break
@@ -94,10 +108,10 @@ class WriterAgent:
         
         return state
     
-    def run_all(self, state: AgentState) -> AgentState:
+    async def run_all(self, state: AgentState) -> AgentState:
         """写作所有章节（循环调用 run）"""
         while not state.all_sections_written():
-            state = self.run(state)
+            state = await self.run(state)
             if state.errors:
                 # 如果有错误，停止继续
                 break
@@ -107,6 +121,12 @@ class WriterAgent:
         """构建全量上下文提示"""
         parts = []
         
+        # 0. Critic Feedback (if in rewrite loop)
+        rewrite_feedback = getattr(state, "rewrite_feedback", None)
+        if rewrite_feedback:
+            parts.append("# CRITIC FEEDBACK (MUST ADDRESS THESE ISSUES)\n")
+            parts.append(f"The previous draft was rejected with the following feedback:\n{rewrite_feedback}\n\n")
+            
         # 1. 项目概览
         parts.append("# 项目概览\n")
         parts.append(f"**标题**: {state.manifest.project_title}\n")
@@ -146,7 +166,14 @@ class WriterAgent:
             points = state.manifest.knowledge_map[section.id]
             parts.append(f"**核心知识点**: {', '.join(points)}\n")
         
-        parts.append("\n请开始撰写这个章节的完整 Markdown 内容。")
+        # 章节元数据 (SOTA)
+        if hasattr(section, 'metadata') and section.metadata:
+            parts.append(f"**SECTION METADATA (Design Intent)**:\n")
+            for k, v in section.metadata.items():
+                parts.append(f"- {k}: {v}\n")
+            parts.append("\n")
+        
+        parts.append("\n请开始撰写这个章节的完整 Markdown 内容。按照元数据中的设计意图进行创作。")
         
         return "".join(parts)
     

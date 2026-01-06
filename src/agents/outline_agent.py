@@ -77,16 +77,95 @@ class OutlineAgent:
         else:
             parts.append({"text": "# Raw Requirements\n" + state.raw_materials + "\n\n"})
         
-        # 2. Raw Materials (additional context)
-        if state.raw_materials and state.project_brief:
-            parts.append({"text": "# Original Source Materials (for reference)\n" + state.raw_materials[:10000] + "\n\n"})
+        # 3. Raw Materials (ALWAYS include as reference for deeper context)
+        if state.raw_materials:
+            # Include raw materials regardless of whether project_brief exists
+            # This provides the original source content for more accurate outline design
+            raw_preview = state.raw_materials[:20000]  # Increased limit for better coverage
+            if len(state.raw_materials) > 20000:
+                raw_preview += "\n\n[... content truncated ...]"
+            parts.append({"text": "# Original Source Materials (Reference)\n" + raw_preview + "\n\n"})
         
         parts.append({"text": "Based on the above Project Brief and source materials, design a comprehensive document outline.\n"})
         
+        if hasattr(self.client, "generate_structured"):
+            try:
+                # Construct prompt text from parts
+                prompt_text = "\n".join([p["text"] for p in parts])
+                
+                print("    [Outline] Using Structured Output (JSON Schema)...")
+                schema = {
+                    "type": "object",
+                    "properties": {
+                        "project_title": {"type": "string"},
+                        "author": {"type": "string"},
+                        "sections": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "title": {"type": "string"},
+                                    "summary": {"type": "string"},
+                                    "estimated_words": {"type": "integer"}
+                                },
+                                "required": ["id", "title", "summary", "estimated_words"]
+                            }
+                        },
+                        "knowledge_map": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
+                        }
+                    },
+                    "required": ["project_title", "sections"]
+                }
+                
+                response = self.client.generate_structured(
+                    prompt=prompt_text,
+                    response_schema=schema,
+                    schema_name="DocumentOutline",
+                    system_instruction=OUTLINE_SYSTEM_PROMPT,
+                    temperature=0.7
+                )
+                
+                if response.success and response.json_data:
+                    outline = response.json_data
+                    state.manifest = Manifest(
+                        project_title=outline.get("project_title", "Untitled"),
+                        author=outline.get("author", "Magnum Opus AI"),
+                        description="",
+                        sections=[
+                            SectionInfo(
+                                id=s["id"],
+                                title=s["title"],
+                                summary=s.get("summary", ""),
+                                estimated_words=s.get("estimated_words", 2000)
+                            ) for s in outline.get("sections", [])
+                        ],
+                        knowledge_map=outline.get("knowledge_map", {})
+                    )
+                    self._save_outline(state)
+                    # Helper to log struct response
+                    try:
+                        log_path = Path(state.workspace_path) / "outline_structured_response.txt"
+                        log_path.parent.mkdir(parents=True, exist_ok=True)
+                        log_path.write_text(response.text, encoding="utf-8")
+                    except: pass
+                    
+                    return state
+                else:
+                    print(f"    [Outline] Structured generation failed: {response.error}. Falling back...")
+            except Exception as e:
+                print(f"    [Outline] Structured generation error: {e}. Falling back...")
+
         response = self.client.generate(
             parts=parts,
             system_instruction=OUTLINE_SYSTEM_PROMPT,
-            temperature=0.7
+            temperature=0.7,
+            stream=True  # 启用流式生成以避免 500 SSL 超时
         )
         
         # Debug: save response

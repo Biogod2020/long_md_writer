@@ -10,7 +10,8 @@ from DrissionPage import ChromiumOptions, ChromiumPage
 
 from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState
-from .assembler_agent import HTML_TEMPLATE
+from ..core.json_utils import parse_json_dict_robust
+
 
 CRITIC_SYSTEM_PROMPT = """## Your Role: Visual Critic
 You are a visual QA specialist. Your ONLY job is to identify visual issues in HTML screenshots.
@@ -129,20 +130,77 @@ class VisualQAAgent:
                     print(f"      - [{issue.get('severity', 'unknown')}] {issue.get('problem', 'No description')}")
                 
                 # Step 2: Fixer addresses each issue
-                fixes_applied = 0
-                for issue in issues:
-                    print(f"\n    [Fixer] Addressing: {issue.get('id', 'unknown')}")
-                    fix_result = self._run_fixer(state, section_path, issue)
-                    
-                    if fix_result and fix_result.get("status") == "FIXED":
-                        applied = self._apply_single_fix(state, fix_result)
-                        if applied:
-                            fixes_applied += 1
-                            any_modified = True
-                            print(f"    [Fixer] ✅ Applied fix to {fix_result.get('target_file')}")
-                    else:
-                        reason = fix_result.get("reason", "Unknown") if fix_result else "No response"
-                        print(f"    [Fixer] ⏭️ Skipped: {reason}")
+                if hasattr(self.client, "generate_parallel"):
+                     print(f"    [VisualQA] 🚀 Using Parallel Execution for {len(issues)} fixes...")
+                     from .visual_qa.fixer import prepare_fixer_task
+                     from .visual_qa.utils import parse_json_response
+                     
+                     tasks = []
+                     valid_issues = []
+                     
+                     # 1. Prepare all tasks
+                     for issue in issues:
+                         task = prepare_fixer_task(
+                             issue=issue,
+                             section_path=section_path,
+                             workspace_path=state.workspace_path,
+                             style_mapping_path=str(Path(state.workspace_path) / "style_mapping.json")
+                         )
+                         if task:
+                             tasks.append(task)
+                             valid_issues.append(issue)
+                     
+                     if tasks:
+                         try:
+                             # 2. Execute parallel
+                             responses = self.client.generate_parallel(tasks)
+                             
+                             # 3. Process results
+                             fixes_applied = 0
+                             for i, response in enumerate(responses):
+                                 issue = valid_issues[i]
+                                 if not response.success:
+                                     print(f"    [Fixer] ❌ Failed to fix issue {issue.get('id')}: {response.error}")
+                                     continue
+                                     
+                                 fix_result = parse_json_response(response.text)
+                                 if fix_result and fix_result.get("status") == "FIXED":
+                                     # Need to inject target_file if missing or wrong relative path
+                                     # The prompt asks for it, but let's be safe
+                                     
+                                    print(f"    [Fixer] Applying fix for {issue.get('id')}...")
+                                    applied = self._apply_single_fix(state, fix_result)
+                                    if applied:
+                                        fixes_applied += 1
+                                        any_modified = True
+                                        print(f"      ✅ Fixed {fix_result.get('target_file')}")
+                                 else:
+                                    reason = fix_result.get("reason", "Unknown") if fix_result else "Parse Error"
+                                    print(f"    [Fixer] ⏭️ Skipped {issue.get('id')}: {reason}")
+                                    
+                         except Exception as e:
+                             print(f"    [VisualQA] Parallel Fixer Error: {e}")
+                             fixes_applied = 0
+                     else:
+                        fixes_applied = 0
+
+                else:
+                    # Sequential Fallback
+                    print(f"    [VisualQA] Running sequential fixes...")
+                    fixes_applied = 0
+                    for issue in issues:
+                        print(f"\n    [Fixer] Addressing: {issue.get('id', 'unknown')}")
+                        fix_result = self._run_fixer(state, section_path, issue)
+                        
+                        if fix_result and fix_result.get("status") == "FIXED":
+                            applied = self._apply_single_fix(state, fix_result)
+                            if applied:
+                                fixes_applied += 1
+                                any_modified = True
+                                print(f"    [Fixer] ✅ Applied fix to {fix_result.get('target_file')}")
+                        else:
+                            reason = fix_result.get("reason", "Unknown") if fix_result else "No response"
+                            print(f"    [Fixer] ⏭️ Skipped: {reason}")
                 
                 if fixes_applied == 0:
                     print(f"    [Iteration {iteration}] No fixes applied. Breaking to avoid infinite loop.")
@@ -778,7 +836,7 @@ Analyze the attached {len(screenshot_paths)} screenshots and identify any visual
                 print(f"    [Critic] API Error: {response.error}")
                 return None
             
-            return self._parse_json_response(response.text)
+            return parse_json_dict_robust(response.text)
         except Exception as e:
             print(f"    [Critic] Exception: {e}")
             return None
@@ -838,7 +896,7 @@ Generate a fix for the issue described above. Choose the most appropriate file t
                 print(f"    [Fixer] API Error: {response.error}")
                 return None
             
-            return self._parse_json_response(response.text)
+            return parse_json_dict_robust(response.text)
         except Exception as e:
             print(f"    [Fixer] Exception: {e}")
             return None
