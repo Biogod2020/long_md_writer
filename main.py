@@ -63,7 +63,7 @@ def main():
     parser.add_argument(
         "--api-url",
         type=str,
-        default="http://localhost:7860",
+        default="http://localhost:8888/v1",
         help="Gemini API 代理地址（默认: http://localhost:7860）"
     )
     
@@ -85,6 +85,18 @@ def main():
         "--test-connection",
         action="store_true",
         help="测试 API 连接"
+    )
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="开启调试模式，保存每一步的中间状态"
+    )
+
+    parser.add_argument(
+        "--skip-qa",
+        action="store_true",
+        help="跳过文本质检 (Markdown QA) 阶段"
     )
     
     args = parser.parse_args()
@@ -132,16 +144,18 @@ def main():
         ) as progress:
             task = progress.add_task("Running agent workflow...", total=None)
             
-            final_state = run_workflow(
-                raw_materials=raw_materials,
-                reference_docs=args.reference,
-                workspace_base=args.output,
-                job_id=args.job_id,
-                api_base_url=args.api_url,
-                auth_token=args.auth_token,
-            )
-            
-            progress.update(task, completed=True)
+        import asyncio
+        final_state = asyncio.run(run_workflow(
+            raw_materials=raw_materials,
+            reference_docs=args.reference,
+            workspace_base=args.output,
+            job_id=args.job_id,
+            api_base_url=args.api_url,
+            auth_token=args.auth_token,
+            debug_mode=args.debug,
+            skip_markdown_qa=args.skip_qa,
+        ))
+        progress.update(task, completed=True)
         
         # 显示结果
         if final_state.errors:
