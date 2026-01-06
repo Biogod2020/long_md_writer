@@ -13,6 +13,7 @@ class SectionInfo(BaseModel):
     summary: str = Field(..., description="章节摘要")
     estimated_words: int = Field(default=0, description="预估字数")
     file_path: Optional[str] = Field(default=None, description="Markdown 文件路径")
+    metadata: dict = Field(default_factory=dict, description="章节元数据 (辅助后续 Agent 处理，如 layout, style 等)")
 
 
 class Manifest(BaseModel):
@@ -21,6 +22,8 @@ class Manifest(BaseModel):
     author: Optional[str] = Field(default=None, description="作者")
     description: str = Field(..., description="项目描述")
     sections: list[SectionInfo] = Field(default_factory=list, description="章节列表")
+    metadata: dict = Field(default_factory=dict, description="全局元数据")
+    config: dict = Field(default_factory=dict, description="项目配置 (如全局布局偏好等)")
     knowledge_map: dict[str, list[str]] = Field(
         default_factory=dict, 
         description="核心知识点映射，key 为章节 ID，value 为知识点列表"
@@ -32,6 +35,51 @@ class Manifest(BaseModel):
             if section.id == section_id:
                 return section
         return None
+
+
+class DesignTokens(BaseModel):
+    """设计令牌 - 视觉设计决策的单一真理来源 (SOTA Design System Pattern)"""
+    colors: dict = Field(default_factory=dict, description="颜色令牌 (primitive + semantic)")
+    typography: dict = Field(default_factory=dict, description="排版令牌 (font-family, size, weight, line-height)")
+    spacing: dict = Field(default_factory=dict, description="间距令牌")
+    effects: dict = Field(default_factory=dict, description="效果令牌 (shadows, border-radius, blur)")
+    components: dict = Field(default_factory=dict, description="组件令牌 (card, button, callout 等)")
+    raw_json: dict = Field(default_factory=dict, description="原始 JSON 数据")
+    
+    def get_css_variables(self) -> str:
+        """生成 CSS 变量声明"""
+        lines = [":root {"]
+        
+        # Colors - primitive
+        for key, value in self.colors.get("primitive", {}).items():
+            lines.append(f"  --color-{key}: {value};")
+        
+        # Colors - semantic
+        for key, value in self.colors.get("semantic", {}).items():
+            # Handle token references like {colors.primitive.blue-500}
+            if isinstance(value, str) and value.startswith("{"):
+                # For now, just use the raw value; CSS generation will resolve
+                pass
+            lines.append(f"  --color-{key}: {value};")
+        
+        # Typography
+        for category, values in self.typography.items():
+            if isinstance(values, dict):
+                for key, value in values.items():
+                    lines.append(f"  --{category}-{key}: {value};")
+        
+        # Spacing
+        for key, value in self.spacing.items():
+            lines.append(f"  --spacing-{key}: {value};")
+        
+        # Effects
+        for category, values in self.effects.items():
+            if isinstance(values, dict):
+                for key, value in values.items():
+                    lines.append(f"  --{category}-{key}: {value};")
+        
+        lines.append("}")
+        return "\n".join(lines)
 
 
 class StyleRule(BaseModel):
@@ -70,6 +118,7 @@ class AgentState(BaseModel):
     
     # 数据契约
     manifest: Optional[Manifest] = Field(default=None, description="项目清单")
+    design_tokens: Optional[DesignTokens] = Field(default=None, description="设计令牌 (SOTA 单一真理来源)")
     style_mapping: Optional[StyleMapping] = Field(default=None, description="样式契约")
     
     # 进度跟踪
@@ -98,6 +147,12 @@ class AgentState(BaseModel):
     vqa_needs_reassembly: bool = Field(default=False, description="是否需要重新拼装")
     md_qa_iterations: int = Field(default=0, description="Markdown QA 迭代次数")
     md_qa_needs_revision: bool = Field(default=False, description="是否需要 MD 返工")
+    rewrite_needed: bool = Field(default=False, description="是否需要触发重写逻辑")
+    rewrite_feedback: str = Field(default="", description="重写反馈意见")
+    skip_markdown_qa: bool = Field(default=False, description="是否跳过 Markdown QA (默认为 False)")
+    markdown_approved: bool = Field(default=False, description="Markdown 是否通过人机审核")
+    user_markdown_feedback: Optional[str] = Field(default=None, description="用户对 Markdown 的修改意见")
+    debug_mode: bool = Field(default=False, description="是否开启调试模式，开启后将保存每一步的状态")
     
     def is_manifest_ready(self) -> bool:
         """检查清单是否就绪"""
@@ -122,3 +177,38 @@ class AgentState(BaseModel):
         if not self.manifest:
             return False
         return len(self.completed_html_sections) >= len(self.manifest.sections)
+
+    @property
+    def user_context(self) -> str:
+        """
+        用户意图上下文 (Context Chain / Residual Connection)
+        
+        关键规划节点应注入此上下文：
+        - Clarifier, Refiner, Architect, TechSpec, DesignTokens
+        
+        执行节点 (Writer, Transformer, Critic) 不需要直接注入，
+        它们使用关键节点的产出 (manifest, design_tokens 等)
+        """
+        parts = []
+        
+        # 1. Original request (always present)
+        if self.raw_materials:
+            parts.append(f"# 原始用户请求\n{self.raw_materials}")
+        
+        # 2. Clarification Q&A (if answered)
+        if self.clarifier_questions and self.clarifier_answers:
+            qa_lines = ["# 用户澄清问答"]
+            for q in self.clarifier_questions:
+                qid = q.get('id', '')
+                question = q.get('question', '')
+                answer = self.clarifier_answers.get(qid, '(未回答)')
+                qa_lines.append(f"- Q [{q.get('category', '')}]: {question}")
+                qa_lines.append(f"  A: {answer}")
+            parts.append("\n".join(qa_lines))
+        
+        # 3. Approved Brief (if exists)
+        if self.project_brief:
+            parts.append(f"# 已审核的项目简报\n{self.project_brief}")
+        
+        return "\n\n---\n\n".join(parts) if parts else ""
+

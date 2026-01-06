@@ -1,266 +1,382 @@
-"""
-Native Gemini API Client for geminicli2api proxy.
-Supports thinkingConfig and maximum reasoning budget.
-"""
 
 import os
 import json
-import requests
-from typing import Optional
+import httpx
+import asyncio
+from typing import Optional, Dict, List, Any, Union
 from dataclasses import dataclass, field
-
 
 @dataclass
 class GeminiResponse:
-    """Gemini API 响应封装"""
+    """Wrapper for Gemini API Response"""
     text: str = ""
-    thoughts: list[str] = field(default_factory=list)
-    raw_response: Optional[dict] = None
+    json_data: Optional[Dict] = None
     success: bool = True
     error: Optional[str] = None
-
+    raw_response: Optional[Dict] = None
+    thoughts: List[str] = field(default_factory=list)
 
 class GeminiClient:
     """
-    Native Gemini API 客户端
-    使用 geminicli2api 代理服务器进行透传调用
+    Async Gemini API Client targeting the geminicli2api proxy (v1/chat/completions).
+    Supports structured output (JSON Schema) and high concurrency.
     """
     
     DEFAULT_MODEL = "gemini-3-flash-preview-maxthinking"
+    DEFAULT_BASE_URL = "http://localhost:8888/v1"
     
     def __init__(
         self,
-        api_base_url: str = "http://localhost:7860",
+        api_base_url: str = DEFAULT_BASE_URL,
         auth_token: Optional[str] = None,
         model: Optional[str] = None,
+        timeout: float = 120.0
     ):
         self.api_base_url = api_base_url.rstrip("/")
-        self.auth_token = auth_token or os.getenv("GEMINI_AUTH_PASSWORD", "")
+        self.auth_token = auth_token or os.getenv("GEMINI_AUTH_PASSWORD", "123456")
         self.model = model or self.DEFAULT_MODEL
+        self.timeout = timeout
         
     def _get_headers(self) -> dict:
-        """构建请求头"""
         headers = {"Content-Type": "application/json"}
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
         return headers
-    
-    def _build_payload(
+
+    async def generate_async(
         self,
         prompt: Optional[str] = None,
-        parts: Optional[list[dict]] = None,
+        parts: Optional[List[Dict]] = None,
         system_instruction: Optional[str] = None,
         temperature: float = 0.7,
-        top_p: float = 0.95,
-        max_output_tokens: int = 65536,
-    ) -> dict:
+        max_tokens: int = 65536,
+        model: Optional[str] = None,
+        **kwargs
+    ) -> GeminiResponse:
         """
-        构建 Native Gemini 格式的请求载荷
+        Standard async text/multimodal generation.
+        Converts Gemini 'parts' to OpenAI 'content' array if needed.
         """
-        contents = []
         
-        # 系统指令（如果有）
+        messages = []
         if system_instruction:
-            contents.append({
-                "role": "user",
-                "parts": [{"text": f"[SYSTEM INSTRUCTION]\n{system_instruction}\n[END SYSTEM INSTRUCTION]"}]
-            })
-            contents.append({
-                "role": "model", 
-                "parts": [{"text": "Understood. I will follow these instructions."}]
-            })
+            messages.append({"role": "system", "content": system_instruction})
         
-        # 用户输入
-        user_parts = []
+        user_content = []
+        
+        # Handle simple string prompt
         if prompt:
-            user_parts.append({"text": prompt})
+            user_content.append({"type": "text", "text": prompt})
+            
+        # Handle Gemini-style parts
         if parts:
-            user_parts.extend(parts)
+            for part in parts:
+                if "text" in part:
+                    user_content.append({"type": "text", "text": part["text"]})
+                elif "inlineData" in part:
+                    mime = part["inlineData"].get("mimeType", "image/jpeg")
+                    data = part["inlineData"]["data"]
+                    user_content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime};base64,{data}"
+                        }
+                    })
+        
+        # If user_content is simple (just one text), send as string (optional optimization, but OpenAI handles list fine)
+        if len(user_content) == 1 and user_content[0]["type"] == "text":
+             messages.append({"role": "user", "content": user_content[0]["text"]})
+        elif user_content:
+             messages.append({"role": "user", "content": user_content})
+        else:
+             # Empty prompt guard
+             messages.append({"role": "user", "content": " "})
+        
+        is_streaming = kwargs.get("stream", False)
+        payload = {
+            "model": model or self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_completion_tokens": max_tokens, 
+            "stream": is_streaming
+        }
+        
+        url = f"{self.api_base_url}/chat/completions"
+        
+        # Debug: Save last payload to a file
+        try:
+            with open("last_request_payload.json", "w", encoding="utf-8") as f:
+                json.dump({"url": url, "payload": payload}, f, indent=2, ensure_ascii=False)
+        except:
+            pass
             
-        if not user_parts:
-            # 避免空请求
-            user_parts.append({"text": " "})
-            
-        contents.append({
-            "role": "user",
-            "parts": user_parts
-        })
+        try:
+            # Use longer timeout for potentially slow responses
+            client_timeout = httpx.Timeout(self.timeout, connect=10.0)
+            async with httpx.AsyncClient(timeout=client_timeout) as client:
+                if is_streaming:
+                    full_content = []
+                    full_thoughts = []
+                    
+                    final_error = None
+                    async with client.stream("POST", url, json=payload, headers=self._get_headers()) as resp:
+                        if resp.status_code != 200:
+                            error_body = await resp.aread()
+                            return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {error_body.decode()}")
+                        
+                        async for line in resp.aiter_lines():
+                            if line.startswith("data: "):
+                                data_str = line[6:].strip()
+                                if data_str == "[DONE]":
+                                    break
+                                try:
+                                    chunk = json.loads(data_str)
+                                    
+                                    # Handle errors sent inside the stream
+                                    if "error" in chunk:
+                                        final_error = f"Stream Error: {chunk['error'].get('message', 'Unknown error')}"
+                                        print(f"\n[Stream Error] {final_error}")
+                                        break
+                                        
+                                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                                    
+                                    # Capture normal content
+                                    content = delta.get("content", "")
+                                    if content:
+                                        full_content.append(content)
+                                        if self.api_base_url.find("localhost") != -1:
+                                            print(content, end="", flush=True)
+                                            
+                                    # Capture reasoning/thoughts
+                                    reasoning = delta.get("reasoning_content", "")
+                                    if reasoning:
+                                        full_thoughts.append(reasoning)
+                                except Exception as e:
+                                    if self.api_base_url.find("localhost") != -1:
+                                        print(f"\n[Stream Error Parsing] {e} on line: {line}")
+                                    pass
+                    
+                    final_text = "".join(full_content)
+                    final_thoughts = "".join(full_thoughts)
+                    
+                    if final_error and not final_text:
+                         return GeminiResponse(success=False, error=final_error)
+                         
+                    if not final_text:
+                        if not final_thoughts:
+                            print(f"\n[Stream Warning] No content or thoughts captured from stream.")
+                        else:
+                            print(f"\n[Stream Note] Only thoughts captured ({len(final_thoughts)} chars).")
+                            
+                    return GeminiResponse(text=final_text, thoughts=full_thoughts, success=True)
+                else:
+                    resp = await client.post(url, json=payload, headers=self._get_headers())
+                    
+                    if resp.status_code != 200:
+                        return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {resp.text}")
+                    
+                    data = resp.json()
+                    try:
+                        message = data["choices"][0]["message"]
+                        content = message.get("content", "")
+                        thoughts = message.get("reasoning_content", "")
+                        full_thoughts = [thoughts] if thoughts else []
+                        return GeminiResponse(text=content, thoughts=full_thoughts, raw_response=data, success=True)
+                    except (KeyError, IndexError) as e:
+                        # Missing expected fields in response
+                        return GeminiResponse(success=False, error=f"Malformed response: {e}. Data: {str(data)[:500]}")
+                
+        except Exception as e:
+            return GeminiResponse(success=False, error=str(e))
+
+    async def generate_structured_async(
+        self,
+        prompt: str,
+        response_schema: Dict[str, Any],
+        schema_name: str = "output",
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.1,
+        model: Optional[str] = None
+    ) -> GeminiResponse:
+        """
+        Generate strict JSON output adhering to a JSON Schema.
+        """
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
         
         payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature,
-                "topP": top_p,
-                "maxOutputTokens": max_output_tokens,
+            "model": model or self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_name,
+                    "schema": response_schema
+                }
             }
         }
         
-        return payload
-
-    
-    def _parse_response(self, response_json: dict) -> GeminiResponse:
-        """解析 Gemini API 响应"""
-        result = GeminiResponse(raw_response=response_json)
+        url = f"{self.api_base_url}/chat/completions"
         
         try:
-            candidates = response_json.get("candidates", [])
-            if not candidates:
-                result.success = False
-                result.error = "No candidates in response"
-                return result
-            
-            content = candidates[0].get("content", {})
-            parts = content.get("parts", [])
-            
-            text_parts = []
-            thought_parts = []
-            
-            for part in parts:
-                if part.get("thought", False):
-                    # 这是思维过程
-                    thought_parts.append(part.get("text", ""))
-                else:
-                    # 这是实际输出
-                    text_parts.append(part.get("text", ""))
-            
-            result.text = "\n".join(text_parts)
-            result.thoughts = thought_parts
-            
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(url, json=payload, headers=self._get_headers())
+                
+                if resp.status_code != 200:
+                    return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {resp.text}")
+                
+                data = resp.json()
+                content_str = data["choices"][0]["message"]["content"]
+                
+                try:
+                    json_data = json.loads(content_str)
+                    return GeminiResponse(text=content_str, json_data=json_data, raw_response=data, success=True)
+                except json.JSONDecodeError:
+                    return GeminiResponse(success=False, error="Failed to parse returned JSON string", text=content_str)
+                    
         except Exception as e:
-            result.success = False
-            result.error = f"Failed to parse response: {str(e)}"
-        
-        return result
-    
-    def generate(
-        self,
-        prompt: Optional[str] = None,
-        parts: Optional[list[dict]] = None,
-        system_instruction: Optional[str] = None,
-        temperature: float = 0.7,
-        top_p: float = 0.95,
-        max_output_tokens: int = 65536,
-        stream: bool = False,
-    ) -> GeminiResponse:
+            return GeminiResponse(success=False, error=str(e))
+
+    async def generate_parallel_async(self, tasks: List[Dict], debug: bool = False) -> List[GeminiResponse]:
         """
-        调用 Gemini API 生成内容
+        Execute multiple generation tasks in parallel with retry logic.
+        Each task dict should contain args for generate_async or generate_structured_async.
         
-        Args:
-            prompt: 用户输入(文本)
-            parts: 用户输入(多模态部件列表)
-            system_instruction: 系统指令
-            temperature: 温度参数
-            top_p: Top-P 采样参数
-            max_output_tokens: 最大输出 token 数
-            stream: 是否使用流式生成 (解决长生成 500 错误)
+        Example task:
+        {
+            "type": "text", # or "structured"
+            "prompt": "...",
+            "system_instruction": "...",
+            ... args ...
+        }
+        """
+        max_concurrent = 2  # Conservative limit to avoid rate limiting
+        semaphore = asyncio.Semaphore(max_concurrent)
+        max_retries = 5
+        base_delay = 1.0
+        
+        async with httpx.AsyncClient(timeout=self.timeout, limits=httpx.Limits(max_keepalive_connections=10, max_connections=20)) as client:
             
-        Returns:
-            GeminiResponse 对象
-        """
-        method = "streamGenerateContent" if stream else "generateContent"
-        endpoint = f"{self.api_base_url}/v1beta/models/{self.model}:{method}"
-        
-        payload = self._build_payload(
-            prompt=prompt,
-            parts=parts,
-            system_instruction=system_instruction,
-            temperature=temperature,
-            top_p=top_p,
-            max_output_tokens=max_output_tokens,
-        )
-        
-        try:
-            if stream:
-                # 流式处理逻辑 (SSE 格式)
-                with requests.post(
-                    endpoint,
-                    headers=self._get_headers(),
-                    json=payload,
-                    stream=True,
-                    timeout=300
-                ) as response:
-                    if response.status_code != 200:
-                        return GeminiResponse(
-                            success=False,
-                            error=f"API Error {response.status_code}: {response.text}"
-                        )
+            async def worker(task_idx: int, task: dict):
+                async with semaphore:
+                    task_type = task.get("type", "text")
+                    task_id = task.get("issue_id", f"task-{task_idx}")
+                    t_args = task.copy()
+                    if "type" in t_args: del t_args["type"]
+                    if "issue_id" in t_args: del t_args["issue_id"]
+                    if "target_file" in t_args: del t_args["target_file"]
                     
-                    all_text_parts = []
-                    all_thought_parts = []
-                    last_full_json = None
+                    url = f"{self.api_base_url}/chat/completions"
+                    headers = self._get_headers()
                     
-                    for line in response.iter_lines(decode_unicode=True):
-                        if not line:
-                            continue
+                    # Construct Payload based on type
+                    if task_type == "structured":
+                        messages = []
+                        if t_args.get("system_instruction"):
+                             messages.append({"role": "system", "content": t_args.pop("system_instruction")})
+                        messages.append({"role": "user", "content": t_args.pop("prompt")})
                         
-                        # 处理 SSE 前缀 "data: "
-                        if line.startswith("data:"):
-                            json_str = line[len("data:"):].strip()
-                        else:
-                            json_str = line.strip()
-                            
+                        schema = t_args.pop("response_schema")
+                        name = t_args.pop("schema_name", "output")
+                        
+                        payload = {
+                            "model": t_args.get("model", self.model),
+                            "messages": messages,
+                            "temperature": t_args.get("temperature", 0.1),
+                            "response_format": {
+                                "type": "json_schema",
+                                "json_schema": {"name": name, "schema": schema}
+                            }
+                        }
+                    else: # text
+                        messages = []
+                        if t_args.get("system_instruction"):
+                             messages.append({"role": "system", "content": t_args.pop("system_instruction")})
+                        messages.append({"role": "user", "content": t_args.pop("prompt")})
+                        
+                        payload = {
+                            "model": t_args.get("model", self.model),
+                            "messages": messages,
+                            "temperature": t_args.get("temperature", 0.7),
+                            "max_completion_tokens": t_args.get("max_tokens", 65536)
+                        }
+
+                    # Retry loop with exponential backoff
+                    for attempt in range(max_retries):
                         try:
-                            chunk_data = json.loads(json_str)
-                            last_full_json = chunk_data # 保留最后一个完整包供 raw_response 使用
+                            if debug:
+                                print(f"      [Worker {task_id}] Attempt {attempt+1}/{max_retries}...")
                             
-                            # 解析 chunk
-                            candidates = chunk_data.get("candidates", [])
-                            if candidates:
-                                content = candidates[0].get("content", {})
-                                parts = content.get("parts", [])
-                                for p in parts:
-                                    if p.get("thought", False):
-                                        all_thought_parts.append(p.get("text", ""))
-                                    else:
-                                        all_text_parts.append(p.get("text", ""))
-                        except json.JSONDecodeError:
-                            continue
+                            resp = await client.post(url, json=payload, headers=headers)
                             
-                    return GeminiResponse(
-                        text="".join(all_text_parts),
-                        thoughts=all_thought_parts,
-                        raw_response=last_full_json,
-                        success=True
-                    )
-            else:
-                # 标准非流式逻辑
-                response = requests.post(
-                    endpoint,
-                    headers=self._get_headers(),
-                    json=payload,
-                    timeout=300
-                )
-                
-                if response.status_code == 200:
-                    return self._parse_response(response.json())
-                else:
-                    return GeminiResponse(
-                        success=False,
-                        error=f"API Error {response.status_code}: {response.text}"
-                    )
-                
-        except requests.exceptions.Timeout:
-            return GeminiResponse(success=False, error="Request timeout after 300 seconds")
-        except requests.exceptions.RequestException as e:
-            return GeminiResponse(success=False, error=f"Request failed: {str(e)}")
+                            # Handle retryable errors (429, 5xx)
+                            if resp.status_code in [429, 502, 503, 504] and attempt < max_retries - 1:
+                                delay = base_delay * (1.5 ** attempt)
+                                if resp.status_code == 429:
+                                    # Try to extract retry delay from response
+                                    try:
+                                        error_data = resp.json()
+                                        for detail in error_data.get("error", {}).get("details", []):
+                                            if "retryDelay" in detail:
+                                                delay = float(str(detail["retryDelay"]).rstrip('s'))
+                                                break
+                                    except:
+                                        pass
+                                if debug:
+                                    print(f"      [Worker {task_id}] Rate limited ({resp.status_code}), retrying in {delay:.1f}s...")
+                                await asyncio.sleep(delay)
+                                continue
+                            
+                            if resp.status_code != 200:
+                                error_body = resp.text[:200] if resp.text else ""
+                                return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {error_body}")
+                            
+                            data = resp.json()
+                            
+                            # Validate response structure
+                            if not data.get("choices") or len(data["choices"]) == 0:
+                                return GeminiResponse(success=False, error="Empty choices in API response")
+                            
+                            content = data["choices"][0].get("message", {}).get("content", "")
+                            if not content:
+                                return GeminiResponse(success=False, error="Empty content in API response")
+                            
+                            if debug:
+                                # Print first 200 chars of response for debugging
+                                preview = content[:200].replace('\n', ' ')
+                                print(f"      [Worker {task_id}] ✓ Response received: {preview}...")
+                            
+                            if task_type == "structured":
+                                return GeminiResponse(text=content, json_data=json.loads(content), success=True)
+                            else:
+                                return GeminiResponse(text=content, success=True)
+                                
+                        except httpx.RequestError as e:
+                            if attempt < max_retries - 1:
+                                delay = base_delay * (1.5 ** attempt)
+                                if debug:
+                                    print(f"      [Worker {task_id}] Connection error: {e}, retrying in {delay:.1f}s...")
+                                await asyncio.sleep(delay)
+                                continue
+                            return GeminiResponse(success=False, error=f"Connection error after {max_retries} attempts: {str(e)}")
+                        except Exception as e:
+                            return GeminiResponse(success=False, error=f"Exception: {str(e)}")
+                    
+                    return GeminiResponse(success=False, error=f"Failed after {max_retries} attempts")
+
+            coroutines = [worker(i, task) for i, task in enumerate(tasks)]
+            return await asyncio.gather(*coroutines)
+
+    # Synchronous Wrappers for Compatibility
+    def generate(self, *args, **kwargs) -> GeminiResponse:
+        return asyncio.run(self.generate_async(*args, **kwargs))
+
+    def generate_structured(self, *args, **kwargs) -> GeminiResponse:
+        return asyncio.run(self.generate_structured_async(*args, **kwargs))
     
-    def test_connection(self) -> bool:
-        """测试与代理服务器的连接"""
-        try:
-            response = self.generate(
-                prompt="Hello, respond with 'OK' only.",
-                temperature=0.1,
-                
-            )
-            return response.success and len(response.text) > 0
-        except Exception:
-            return False
+    def generate_parallel(self, tasks: List[Dict], debug: bool = False) -> List[GeminiResponse]:
+         return asyncio.run(self.generate_parallel_async(tasks, debug=debug))
 
-
-# 便捷函数
-def create_client(
-    api_base_url: str = "http://localhost:7860",
-    auth_token: Optional[str] = None,
-) -> GeminiClient:
-    """创建 Gemini 客户端实例"""
-    return GeminiClient(api_base_url=api_base_url, auth_token=auth_token)
