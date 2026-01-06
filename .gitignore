@@ -1,0 +1,51 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Project Workspace & Outputs
+workspace/
+workspace_test/
+workspace_debug/
+.agent/
+logs/
+inputs/
+
+# Temporary & Test Files
+test_*.py
+tests/debug_*.py
+main.py
+merge.txt
+raw_payload.json
+last_request_payload.json
+geminicli2api_async_usage_tutorial.md
+html_transform_upgrade.md
+
