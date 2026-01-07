@@ -179,10 +179,18 @@ graph TD
 ## 5. 项目进度安排 (SOTA Upgrade TO-DO List)
 
 ### Phase A: 架构重塑与协议定义 (基础建设)
-- [ ] **[Core]** 升级 `Manifest` 模型，注入 `format_profile` 与 **`js_enabled`** 开关。
-- [ ] **[Core]** 升级 `SectionInfo` 元数据，增加 `interaction_spec` 契约字段。
-- [ ] **[Core]** 升级 `AgentState` 属性，支持存储 `vqa_playbook` 与 **`js_mapping`** 契约。
-- [ ] **[Agent]** 更新 `ArchitectAgent` 提示词，确立首个“多态”规划模型。
+**目标**：在代码层面确立“多态”与“交互”的底层语义契约，确保后续 Agent 能够根据统一协议执行。
+
+- [ ] **1. 数据模型升级 (Types Layer)**：
+    - 在 `types.py` 中新增 `FormatProfile` 枚举：`SLIDE` (16:9 幻灯片), `BLOG` (长流式文章), `DASHBOARD` (仪表盘/卡片), `HANDOUT` (紧凑讲义)。
+    - 升级 `Manifest` 模型：注入 `format_profile` 字段，并增加 **`js_enabled`** 全局开关（布尔值），用于控制是否启用交互逻辑旁路。
+    - 扩展 `SectionInfo.metadata`：定义 `InteractionSpec` 契约，要求 Agent 标记每章需要的特定交互组件（如 `dynamic-dipole`, `collapsible-steps`）以及相关的 VQA 审计点。
+- [ ] **2. 状态机语义扩展 (AgentState Layer)**：
+    - 升级 `AgentState` 属性：集成 **`js_mapping`**（类似于 StyleMapping 的 JS 钩子契约，定义 Data Attributes 如何映射到核心模块）。
+    - 新增 **`vqa_playbook`** 字段（List[Dict]）：用于存储由 Architect/Writer 协同生成的交互测试动作流，供 `JS Probe` 执行。
+- [ ] **3. 架构规划智化 (ArchitectAgent)**：
+    - 更新 `ARCHITECT_SYSTEM_PROMPT`：强制 Architect 节点在生成目录前，必须通过 `Reasoning` 链基于用户提示词（如“想要酷炫的幻灯片”）显式锁定一个 `format_profile`。
+    - 确立“多态”规划模型：Architect 生成的 `Manifest` 必须包含 Profile 特定的配置，例如 Slide 模式下的分页策略和 Dashboard 模式下的栅格布局元数据。
 
 ### Phase B: 设计系统与 JS 引擎模块化 (资产库建设)
 - [ ] **[Assets]** 建立 `src/assets/js_modules/`，整理 Slide/TOC/Theme 等核心 JS 引擎文件。
