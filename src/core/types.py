@@ -1,9 +1,488 @@
 """
 Data types and models for the Magnum Opus HTML Agent system.
+
+SOTA 2.0 升级：
+- AssetEntry: 资产条目模型
+- UniversalAssetRegistry (UAR): 统一资产注册表
+- CropMetadata: 裁切元数据
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Optional, Literal
+from enum import Enum
+from pydantic import BaseModel, Field, PrivateAttr
+import json
+from pathlib import Path
+import hashlib
+
+
+# ============================================================================
+# SOTA 2.0: 资产管理系统 (Universal Asset Registry)
+# ============================================================================
+
+class AssetSource(str, Enum):
+    """资产来源枚举"""
+    USER = "USER"      # 用户本地输入 (inputs/ 目录)
+    AI = "AI"          # AI 生成 (SVG, Mermaid 等)
+    WEB = "WEB"        # 网络搜索获取
+
+
+class AssetVQAStatus(str, Enum):
+    """资产视觉质检状态"""
+    PENDING = "PENDING"    # 待审核
+    PASS = "PASS"          # 通过
+    FAIL = "FAIL"          # 不通过
+    SKIPPED = "SKIPPED"    # 跳过审核
+
+
+class ReusePolicy(str, Enum):
+    """资产复用策略"""
+    ALWAYS = "ALWAYS"   # 总是可复用
+    ONCE = "ONCE"       # 仅使用一次
+    NEVER = "NEVER"     # 不可复用 (如章节特定图)
+
+
+class AssetQualityLevel(str, Enum):
+    """资产质量等级"""
+    HIGH = "HIGH"           # 高质量，可直接使用
+    MEDIUM = "MEDIUM"       # 中等质量，可用但有局限
+    LOW = "LOW"             # 低质量，不建议使用
+    UNASSESSED = "UNASSESSED"  # 未评估
+
+
+class AssetFulfillmentAction(str, Enum):
+    """
+    资产履约动作 - Writer 决策后的行动指令
+
+    当 Writer 判断现有资产不适合时，指定应采取的行动
+    """
+    USE_EXISTING = "USE_EXISTING"     # 使用现有资产 (直接注入 <img>)
+    GENERATE_SVG = "GENERATE_SVG"     # 拒绝现有资产，生成 SVG
+    SEARCH_WEB = "SEARCH_WEB"         # 拒绝现有资产，启用网络搜图
+    GENERATE_MERMAID = "GENERATE_MERMAID"  # 生成 Mermaid 图表
+    SKIP = "SKIP"                     # 此处不需要图像
+
+
+class CropMetadata(BaseModel):
+    """裁切元数据 - 用于 CSS object-position 和 object-fit"""
+    left: str = Field(default="50%", description="水平位置 (CSS object-position X)")
+    top: str = Field(default="50%", description="垂直位置 (CSS object-position Y)")
+    zoom: float = Field(default=1.0, description="缩放倍数")
+    width: Optional[str] = Field(default=None, description="容器宽度 (如 '100%', '300px')")
+    height: Optional[str] = Field(default=None, description="容器高度 (如 'auto', '200px')")
+    object_fit: Literal["cover", "contain", "fill", "none", "scale-down"] = Field(
+        default="cover", description="CSS object-fit 属性"
+    )
+
+    def to_inline_style(self) -> str:
+        """生成内联 CSS 样式字符串"""
+        styles = [f"object-position: {self.left} {self.top}"]
+        styles.append(f"object-fit: {self.object_fit}")
+        if self.width:
+            styles.append(f"width: {self.width}")
+        if self.height:
+            styles.append(f"height: {self.height}")
+        return "; ".join(styles)
+
+
+class AssetEntry(BaseModel):
+    """
+    资产条目 - UAR 的基本单元
+
+    设计理念：
+    - 每个资产都有唯一的 namespace-qualified ID
+    - semantic_label 用于 LLM 语义匹配
+    - crop_metadata 存储裁切决策，供 Writer 直接注入 <img> 标签
+    """
+    id: str = Field(..., description="唯一标识符，带命名空间前缀 (如 's1-ecg-diagram')")
+    source: AssetSource = Field(..., description="资产来源")
+    local_path: Optional[str] = Field(default=None, description="本地物理路径 (相对于 workspace)")
+    original_url: Optional[str] = Field(default=None, description="原始 URL (仅 WEB 来源)")
+    semantic_label: str = Field(..., description="语义描述，用于意图匹配 (如 '心电图 P 波形成示意图')")
+    content_hash: Optional[str] = Field(default=None, description="内容指纹 (用于去重)")
+
+    # 裁切与展示
+    crop_metadata: CropMetadata = Field(default_factory=CropMetadata, description="裁切元数据")
+    alt_text: Optional[str] = Field(default=None, description="替代文本 (无障碍)")
+    caption: Optional[str] = Field(default=None, description="图片说明文字")
+
+    # 版权与归属
+    copyright_info: Optional[str] = Field(default=None, description="版权信息")
+    attribution: Optional[str] = Field(default=None, description="署名归属")
+
+    # 状态与策略
+    vqa_status: AssetVQAStatus = Field(default=AssetVQAStatus.PENDING, description="VQA 状态")
+    reuse_policy: ReusePolicy = Field(default=ReusePolicy.ALWAYS, description="复用策略")
+    usage_count: int = Field(default=0, description="使用次数")
+
+    # SOTA 2.0: 质量评估
+    quality_level: AssetQualityLevel = Field(
+        default=AssetQualityLevel.UNASSESSED,
+        description="资产质量等级 (由 VLM 评估)"
+    )
+    quality_notes: Optional[str] = Field(
+        default=None,
+        description="质量评估备注 (如: '分辨率低', '水印明显', '内容不完整')"
+    )
+    suitable_for: list[str] = Field(
+        default_factory=list,
+        description="适用场景列表 (如: ['概念图示', '流程说明'])"
+    )
+    unsuitable_for: list[str] = Field(
+        default_factory=list,
+        description="不适用场景列表 (如: ['精确数据展示', '临床诊断参考'])"
+    )
+
+    # 关联信息
+    used_in_sections: list[str] = Field(default_factory=list, description="使用该资产的章节 ID 列表")
+    tags: list[str] = Field(default_factory=list, description="标签 (用于分类检索)")
+    rejection_history: list[dict] = Field(
+        default_factory=list,
+        description="被拒绝使用的历史记录 [{section_id, reason, suggested_action}]"
+    )
+
+    def to_img_tag(self, class_name: Optional[str] = None) -> str:
+        """
+        生成完整的 <img> HTML 标签 (Writer-Direct-Inject 协议)
+
+        示例输出:
+        <img src="assets/images/s1-ecg-diagram.png"
+             alt="心电图 P 波形成示意图"
+             style="object-position: 30% 20%; object-fit: cover; width: 100%"
+             class="figure-main">
+
+        Returns:
+            HTML img 标签字符串，如果 local_path 无效则返回带占位符的标签
+        """
+        # 确保 src 有有效值
+        src_path = self.local_path or self.original_url or f"missing-asset-{self.id}"
+        parts = [f'<img src="{src_path}"']
+
+        # Alt text
+        alt = self.alt_text or self.semantic_label
+        parts.append(f'alt="{alt}"')
+
+        # Inline style with crop metadata
+        style = self.crop_metadata.to_inline_style()
+        parts.append(f'style="{style}"')
+
+        # Optional class
+        if class_name:
+            parts.append(f'class="{class_name}"')
+
+        # Data attributes for tracking
+        parts.append(f'data-asset-id="{self.id}"')
+
+        return " ".join(parts) + ">"
+
+    def increment_usage(self, section_id: str) -> None:
+        """记录资产使用"""
+        self.usage_count += 1
+        if section_id not in self.used_in_sections:
+            self.used_in_sections.append(section_id)
+
+    def can_reuse(self) -> bool:
+        """检查是否可复用"""
+        if self.reuse_policy == ReusePolicy.NEVER:
+            return False
+        if self.reuse_policy == ReusePolicy.ONCE and self.usage_count > 0:
+            return False
+        return True
+
+    def is_quality_acceptable(self, min_level: AssetQualityLevel = AssetQualityLevel.MEDIUM) -> bool:
+        """
+        检查质量是否达到最低要求
+
+        Args:
+            min_level: 最低可接受质量等级
+
+        Returns:
+            是否达标
+        """
+        quality_order = {
+            AssetQualityLevel.HIGH: 3,
+            AssetQualityLevel.MEDIUM: 2,
+            AssetQualityLevel.LOW: 1,
+            AssetQualityLevel.UNASSESSED: 2,  # 未评估按中等处理
+        }
+        return quality_order[self.quality_level] >= quality_order[min_level]
+
+    def record_rejection(self, section_id: str, reason: str, suggested_action: AssetFulfillmentAction) -> None:
+        """
+        记录被拒绝使用
+
+        Args:
+            section_id: 章节 ID
+            reason: 拒绝原因
+            suggested_action: 建议的替代行动
+        """
+        self.rejection_history.append({
+            "section_id": section_id,
+            "reason": reason,
+            "suggested_action": suggested_action.value
+        })
+
+    def to_candidate_summary(self) -> str:
+        """
+        生成候选资产摘要 (供 Writer 判断使用)
+
+        返回格式适合注入到 Prompt 中
+        """
+        lines = [f"**{self.id}**: {self.semantic_label}"]
+        lines.append(f"  - 来源: {self.source.value} | 质量: {self.quality_level.value}")
+        if self.quality_notes:
+            lines.append(f"  - 备注: {self.quality_notes}")
+        if self.suitable_for:
+            lines.append(f"  - 适用: {', '.join(self.suitable_for)}")
+        if self.unsuitable_for:
+            lines.append(f"  - 不适用: {', '.join(self.unsuitable_for)}")
+        if self.local_path:
+            lines.append(f"  - 路径: {self.local_path}")
+        return "\n".join(lines)
+
+
+class VisualIntentDeclaration(BaseModel):
+    """
+    视觉意图声明 - Writer 在创作时声明的图像需求
+
+    Writer 输出此结构来表达：
+    1. 需要什么样的图像
+    2. 是否找到了合适的现有资产
+    3. 如果没有，希望采取什么行动
+    """
+    intent_id: str = Field(..., description="意图 ID (如 's1-visual-1')")
+    description: str = Field(..., description="图像内容描述 (用于搜图或生成)")
+    context: str = Field(..., description="上下文说明 (为什么需要这张图)")
+    placement: str = Field(default="inline", description="放置位置: inline, figure, hero, sidebar")
+
+    # Writer 的决策
+    action: AssetFulfillmentAction = Field(..., description="履约动作")
+    matched_asset_id: Optional[str] = Field(default=None, description="匹配的现有资产 ID (若 action=USE_EXISTING)")
+    rejection_reason: Optional[str] = Field(default=None, description="拒绝现有资产的原因 (若有)")
+
+    # 生成/搜索参数
+    svg_spec: Optional[str] = Field(default=None, description="SVG 生成规格 (若 action=GENERATE_SVG)")
+    search_queries: list[str] = Field(default_factory=list, description="搜图关键词 (若 action=SEARCH_WEB)")
+    mermaid_code: Optional[str] = Field(default=None, description="Mermaid 代码 (若 action=GENERATE_MERMAID)")
+
+    # 裁切建议
+    suggested_crop: Optional[CropMetadata] = Field(default=None, description="建议的裁切参数")
+
+    def to_visual_directive(self) -> str:
+        """
+        生成 :::visual 指令块
+
+        用于 Writer 输出中表示"需要新资产"的情况
+        """
+        config = {
+            "id": self.intent_id,
+            "action": self.action.value,
+            "description": self.description,
+        }
+
+        if self.matched_asset_id:
+            config["matched_asset"] = self.matched_asset_id
+        if self.rejection_reason:
+            config["rejection_reason"] = self.rejection_reason
+        if self.search_queries:
+            config["search_queries"] = self.search_queries
+        if self.svg_spec:
+            config["svg_spec"] = self.svg_spec
+        if self.mermaid_code:
+            config["mermaid_code"] = self.mermaid_code
+
+        import json
+        json_str = json.dumps(config, ensure_ascii=False)
+        return f":::visual {json_str}\n{self.context}\n:::"
+
+
+class UniversalAssetRegistry(BaseModel):
+    """
+    统一资产注册表 (UAR) - 系统的"视觉大脑"
+
+    核心职责：
+    1. 资产注册与持久化
+    2. 语义匹配查询 (intent_match)
+    3. 跨章节资产复用管理
+    """
+    assets: dict[str, AssetEntry] = Field(default_factory=dict, description="资产映射表 {id: AssetEntry}")
+    _persist_path: Optional[str] = PrivateAttr(default=None)  # 持久化路径 (不序列化)
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    def set_persist_path(self, path: str) -> None:
+        """设置持久化路径"""
+        self._persist_path = path
+
+    def register_immediate(self, entry: AssetEntry) -> None:
+        """
+        产出即持久化：注册资产并立即写入 assets.json
+        """
+        self.assets[entry.id] = entry
+        self._persist()
+
+    def register_batch(self, entries: list[AssetEntry]) -> None:
+        """批量注册资产"""
+        for entry in entries:
+            self.assets[entry.id] = entry
+        self._persist()
+
+    def get_asset(self, asset_id: str) -> Optional[AssetEntry]:
+        """根据 ID 获取资产"""
+        return self.assets.get(asset_id)
+
+    def get_assets_by_source(self, source: AssetSource) -> list[AssetEntry]:
+        """根据来源获取资产列表"""
+        return [a for a in self.assets.values() if a.source == source]
+
+    def get_reusable_assets(self) -> list[AssetEntry]:
+        """获取所有可复用的资产"""
+        return [a for a in self.assets.values() if a.can_reuse()]
+
+    def get_assets_for_section(self, section_id: str) -> list[AssetEntry]:
+        """获取某章节使用的所有资产"""
+        return [a for a in self.assets.values() if section_id in a.used_in_sections]
+
+    def find_by_tags(self, tags: list[str]) -> list[AssetEntry]:
+        """根据标签查找资产"""
+        return [a for a in self.assets.values() if any(t in a.tags for t in tags)]
+
+    def intent_match_candidates(self, semantic_query: str, limit: int = 5) -> list[AssetEntry]:
+        """
+        获取候选资产列表供 LLM 语义匹配
+
+        注意：此方法返回候选列表，实际的语义匹配由 LLM 完成
+        调用方应将 semantic_query 和候选列表一起发送给 LLM 进行判断
+        """
+        # 只返回可复用且已通过 VQA 的资产
+        candidates = [
+            a for a in self.assets.values()
+            if a.can_reuse() and a.vqa_status in (AssetVQAStatus.PASS, AssetVQAStatus.SKIPPED)
+        ]
+        return candidates[:limit]
+
+    def generate_id(self, namespace: str, semantic_hint: str) -> str:
+        """
+        生成唯一资产 ID
+
+        格式: {namespace}-{semantic_slug}-{hash_suffix}
+        示例: s1-ecg-pwave-a3f2
+        """
+        # 简化语义提示为 slug
+        slug = semantic_hint.lower()[:20].replace(" ", "-").replace("_", "-")
+        # 生成短哈希后缀
+        hash_input = f"{namespace}-{semantic_hint}-{len(self.assets)}"
+        hash_suffix = hashlib.md5(hash_input.encode()).hexdigest()[:4]
+        return f"{namespace}-{slug}-{hash_suffix}"
+
+    def _persist(self) -> None:
+        """持久化到 JSON 文件"""
+        if not self._persist_path:
+            return
+
+        path = Path(self._persist_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 序列化所有资产 (兼容 Pydantic v1 和 v2)
+        data = {
+            "assets": {k: (v.model_dump() if hasattr(v, 'model_dump') else v.dict()) for k, v in self.assets.items()},
+            "total_count": len(self.assets),
+            "stats": {
+                "by_source": {
+                    s.value: len(self.get_assets_by_source(s))
+                    for s in AssetSource
+                },
+                "reusable_count": len(self.get_reusable_assets())
+            }
+        }
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    @classmethod
+    def load_from_file(cls, path: str) -> "UniversalAssetRegistry":
+        """从 JSON 文件加载 UAR"""
+        registry = cls()
+        registry.set_persist_path(path)
+
+        file_path = Path(path)
+        if file_path.exists():
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            for asset_id, asset_data in data.get("assets", {}).items():
+                # 处理枚举类型（带默认值，兼容旧版 assets.json）
+                asset_data["source"] = AssetSource(asset_data.get("source", "USER"))
+                asset_data["vqa_status"] = AssetVQAStatus(asset_data.get("vqa_status", "PENDING"))
+                asset_data["reuse_policy"] = ReusePolicy(asset_data.get("reuse_policy", "ALWAYS"))
+                # SOTA 2.0: 质量等级枚举
+                if "quality_level" in asset_data and asset_data["quality_level"]:
+                    asset_data["quality_level"] = AssetQualityLevel(asset_data["quality_level"])
+                else:
+                    asset_data["quality_level"] = AssetQualityLevel.UNASSESSED
+                # 处理嵌套模型
+                if "crop_metadata" in asset_data and asset_data["crop_metadata"]:
+                    asset_data["crop_metadata"] = CropMetadata(**asset_data["crop_metadata"])
+                registry.assets[asset_id] = AssetEntry(**asset_data)
+
+        return registry
+
+    def to_summary(self, include_quality: bool = True) -> str:
+        """
+        生成资产注册表摘要 (用于 Prompt 注入)
+
+        Args:
+            include_quality: 是否包含质量评估信息
+        """
+        lines = ["## 📦 可用资产注册表 (UAR)", ""]
+        lines.append("以下是可用的图像资产。请根据写作需求判断是否使用，如果质量不佳或不符合意图，可以选择生成 SVG 或启用网络搜图。\n")
+
+        reusable = self.get_reusable_assets()
+        if not reusable:
+            lines.append("*当前无可复用资产，请使用 `:::visual` 指令声明图像需求*")
+            return "\n".join(lines)
+
+        for asset in reusable:
+            lines.append(asset.to_candidate_summary())
+            lines.append("")  # 空行分隔
+
+        return "\n".join(lines)
+
+    def to_decision_context(self, visual_intent: str) -> str:
+        """
+        生成针对特定视觉意图的决策上下文
+
+        Args:
+            visual_intent: 视觉意图描述 (如 "心电图 P 波形成过程")
+
+        Returns:
+            包含候选资产和决策指导的 Prompt 片段
+        """
+        lines = [f"### 🎯 视觉需求: {visual_intent}", ""]
+        lines.append("**可用候选资产:**")
+
+        candidates = self.intent_match_candidates(visual_intent, limit=5)
+        if not candidates:
+            lines.append("*无匹配的现有资产*")
+            lines.append("")
+            lines.append("**建议行动:** 使用 `:::visual` 指令，指定 `action: GENERATE_SVG` 或 `action: SEARCH_WEB`")
+        else:
+            for i, asset in enumerate(candidates, 1):
+                lines.append(f"\n**候选 {i}:**")
+                lines.append(asset.to_candidate_summary())
+
+            lines.append("")
+            lines.append("**决策指导:**")
+            lines.append("- 如果候选资产质量高且符合意图 → 直接使用 `<img>` 标签 (action: USE_EXISTING)")
+            lines.append("- 如果候选资产质量不佳 → 使用 `:::visual` 并说明拒绝原因")
+            lines.append("- 如果需要精确的示意图 → 建议 action: GENERATE_SVG")
+            lines.append("- 如果需要真实照片/复杂图像 → 建议 action: SEARCH_WEB")
+
+        return "\n".join(lines)
+
+
+# ============================================================================
+# 原有模型 (保持不变)
+# ============================================================================
 
 
 class SectionInfo(BaseModel):
@@ -120,6 +599,10 @@ class AgentState(BaseModel):
     manifest: Optional[Manifest] = Field(default=None, description="项目清单")
     design_tokens: Optional[DesignTokens] = Field(default=None, description="设计令牌 (SOTA 单一真理来源)")
     style_mapping: Optional[StyleMapping] = Field(default=None, description="样式契约")
+
+    # SOTA 2.0: 统一资产注册表
+    asset_registry: Optional[UniversalAssetRegistry] = Field(default=None, description="统一资产注册表 (UAR)")
+    uar_path: Optional[str] = Field(default=None, description="UAR 持久化路径 (assets.json)")
     
     # 进度跟踪
     current_section_index: int = Field(default=0, description="当前处理的章节索引")
@@ -209,6 +692,116 @@ class AgentState(BaseModel):
         # 3. Approved Brief (if exists)
         if self.project_brief:
             parts.append(f"# 已审核的项目简报\n{self.project_brief}")
-        
+
         return "\n\n---\n\n".join(parts) if parts else ""
+
+    # ========================================================================
+    # SOTA 2.0: 资产管理与全量上下文
+    # ========================================================================
+
+    def initialize_uar(self) -> UniversalAssetRegistry:
+        """
+        初始化或加载 UAR
+
+        如果 uar_path 存在，从文件加载；否则创建新的 UAR
+        """
+        if self.asset_registry is not None:
+            return self.asset_registry
+
+        # 设置默认 UAR 路径
+        if not self.uar_path:
+            self.uar_path = f"{self.workspace_path}/assets.json"
+
+        # 加载或创建 UAR
+        self.asset_registry = UniversalAssetRegistry.load_from_file(self.uar_path)
+        return self.asset_registry
+
+    def get_uar(self) -> UniversalAssetRegistry:
+        """获取 UAR (如果不存在则初始化)"""
+        if self.asset_registry is None:
+            return self.initialize_uar()
+        return self.asset_registry
+
+    def get_completed_sections_content(self) -> str:
+        """
+        获取已完成章节的全量内容 (用于全量上下文注入)
+
+        返回格式:
+        # 章节 1: 标题
+        [Markdown 内容]
+
+        # 章节 2: 标题
+        [Markdown 内容]
+        ...
+        """
+        if not self.manifest or not self.completed_md_sections:
+            return ""
+
+        parts = []
+        for i, section in enumerate(self.manifest.sections):
+            if i >= len(self.completed_md_sections):
+                break
+
+            md_path = self.completed_md_sections[i]
+            try:
+                with open(md_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                parts.append(f"# 章节 {i+1}: {section.title}\n\n{content}")
+            except FileNotFoundError:
+                parts.append(f"# 章节 {i+1}: {section.title}\n\n*[文件未找到: {md_path}]*")
+
+        return "\n\n---\n\n".join(parts)
+
+    @property
+    def full_creation_context(self) -> str:
+        """
+        全量创作上下文 (Full-Context Perception)
+
+        供 Writer Agent 使用，包含:
+        1. 完整规划 (Manifest)
+        2. 提炼后的意图 (Brief)
+        3. 原始素材 (Raw Materials)
+        4. 资产注册表摘要 (UAR Summary)
+        5. 已完成章节内容
+
+        注意: Vision Part (图像素材) 需要单独通过 multimodal 方式注入
+        """
+        parts = []
+
+        # 1. 项目规划
+        if self.manifest:
+            manifest_summary = f"""## 📋 项目规划 (Manifest)
+**标题**: {self.manifest.project_title}
+**描述**: {self.manifest.description}
+
+### 章节结构
+"""
+            for i, sec in enumerate(self.manifest.sections):
+                status = "✅" if i < len(self.completed_md_sections) else "⏳"
+                manifest_summary += f"{status} {sec.id}: {sec.title} (~{sec.estimated_words}字)\n"
+                manifest_summary += f"   摘要: {sec.summary[:100]}...\n"
+            parts.append(manifest_summary)
+
+        # 2. 项目简报
+        if self.project_brief:
+            parts.append(f"## 📝 项目简报 (Brief)\n\n{self.project_brief}")
+
+        # 3. 原始素材
+        if self.raw_materials:
+            parts.append(f"## 📚 原始素材\n\n{self.raw_materials}")
+
+        # 4. UAR 摘要
+        if self.asset_registry:
+            parts.append(self.asset_registry.to_summary())
+
+        # 5. 已完成章节
+        completed_content = self.get_completed_sections_content()
+        if completed_content:
+            parts.append(f"## ✍️ 已完成章节\n\n{completed_content}")
+
+        return "\n\n---\n\n".join(parts) if parts else ""
+
+    def get_current_section_namespace(self) -> str:
+        """获取当前章节的命名空间前缀"""
+        return f"s{self.current_section_index + 1}"
 
