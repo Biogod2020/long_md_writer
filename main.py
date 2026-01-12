@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from src.orchestration.workflow import WorkflowRunner, run_workflow
+from src.orchestration.workflow_html import WorkflowRunner, run_workflow
 from src.core.gemini_client import GeminiClient
 
 

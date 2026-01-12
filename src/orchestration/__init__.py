@@ -9,4 +9,9 @@ from .edges import (
     should_continue_transforming,
     should_reassemble,
 )
-from .workflow import create_workflow, run_workflow
+
+# HTML Production Pipeline (Markdown → HTML)
+from .workflow_html import create_workflow, run_workflow
+
+# SOTA 2.0 Semantic Flow (Markdown Generation with Asset Management)
+from .workflow_markdown import create_sota2_workflow, run_sota2_workflow

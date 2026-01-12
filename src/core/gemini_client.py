@@ -45,7 +45,7 @@ class GeminiClient:
 
     async def generate_async(
         self,
-        prompt: Optional[str] = None,
+        prompt: Optional[Union[str, List[Dict[str, Any]]]] = None,
         parts: Optional[List[Dict]] = None,
         system_instruction: Optional[str] = None,
         temperature: float = 0.7,
@@ -64,6 +64,14 @@ class GeminiClient:
         
         user_content = []
         
+        # Accept a list prompt as multimodal parts (backward compatibility)
+        if isinstance(prompt, list):
+            if parts:
+                parts = parts + prompt
+            else:
+                parts = prompt
+            prompt = None
+
         # Handle simple string prompt
         if prompt:
             user_content.append({"type": "text", "text": prompt})
@@ -73,9 +81,12 @@ class GeminiClient:
             for part in parts:
                 if "text" in part:
                     user_content.append({"type": "text", "text": part["text"]})
-                elif "inlineData" in part:
-                    mime = part["inlineData"].get("mimeType", "image/jpeg")
-                    data = part["inlineData"]["data"]
+                elif "inlineData" in part or "inline_data" in part:
+                    inline = part.get("inlineData") or part.get("inline_data") or {}
+                    mime = inline.get("mimeType") or inline.get("mime_type") or "image/jpeg"
+                    data = inline.get("data")
+                    if not data:
+                        continue
                     user_content.append({
                         "type": "image_url",
                         "image_url": {
@@ -379,4 +390,3 @@ class GeminiClient:
     
     def generate_parallel(self, tasks: List[Dict], debug: bool = False) -> List[GeminiResponse]:
          return asyncio.run(self.generate_parallel_async(tasks, debug=debug))
-
