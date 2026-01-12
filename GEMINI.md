@@ -1,88 +1,93 @@
 # 🧬 Magnum Opus HTML Agent - SOTA 2.0 全量工程手册
 
 ## 📖 系统定位
-Magnum Opus 2.0 是一套**意图驱动的专业级 AI 出版引擎**。它通过“全量上下文感知”与“分层语义叠流”技术，将用户意图精准转化为具备工业级审美、高度交互性且逻辑严密的 HTML5 产物。
+Magnum Opus 2.0 是一套**意图驱动的专业级 AI 出版引擎**。它通过“全量上下文感知”、“分层语义叠流”与“资产先行闭环”技术，将用户意图精准转化为具备工业级审美、高度交互性且逻辑严密的 HTML5 产物。
 
 ---
 
 ## 🏗️ 核心架构与 SSOT 契约 (Single Source of Truth)
 
-系统运行依赖于四套核心“契约”，确保 Agent 协作的绝对同步与逻辑闭环：
+系统运行依赖于五套核心“契约”，确保 Agent 协作的绝对同步与逻辑闭环：
 
 ### 1. 统一资产注册表 (Universal Asset Registry, UAR)
 *   **角色**：系统的“视觉大脑”。
-*   **标准**：记录资产的 ID、物理路径、语义标签、**裁切参数 (`crop_metadata`)** 及复用标记。
-*   **逻辑**：支持“即产即存”，写手可通过查表实现跨章节资产复用，杜绝重复搜图。
+*   **标准**：记录资产的 ID、物理路径、语义标签、质量等级 (`quality_level`)、**裁切参数 (`crop_metadata`)** 及复用标记。
+*   **逻辑**：支持“产出即持久化”，写手通过 UAR 摘要实现跨章节资产复用，杜绝重复采购。
 
 ### 2. 全量上下文感知 (Full-Context Perception)
-*   **准则**：在创作任何章节时，写手节点强制输入 **[全量大纲 + 提炼意图 + 全量原材料 + 全量原始图像 Part + 实时 UAR + 历史章节文本]**。
-*   **价值**：这是消除 AI 幻觉、确保全书术语一致性的物理级护栏。
+*   **准则**：在创作任何章节时，写手节点强制输入 **[全量大纲 + 提炼意图 (Brief) + 全量原材料 + 实时 UAR + 已完成章节全量文本]**。
+*   **价值**：这是消除 AI 幻觉、确保全书术语一致性与逻辑连贯性的物理级护栏。
 
-### 3. 项目快照与实验 Profile (Project Lifecycle)
-*   **存储结构**：每次运行的环境（Prompt 快照、Raw 数据版本、UAR 状态）均序列化为本地 Profile。
-*   **实验复现**：支持通过 `--profile <id>` 一键回溯环境，实现“控制变量”的局部重写实验。
+### 3. 项目快照与实验 Profile (Phase C - Persistence)
+*   **存储结构**：每次运行的环境（Prompt 快照、Input Blueprint、UAR Checkpoint）均序列化为本地 Profile。
+*   **实验复现**：支持通过 `--profile <id>` 一键回溯环境，实现“控制变量”的局部重写实验与资产决策链追踪。
 
-### 4. 广义行动协议 (Action Protocol)
-*   **契约形式**：使用 `data-controller` 属性取代随机 ID。
-*   **覆盖范围**：涵盖从图片动画到全局 UI 联动（弹出解释、多媒体同步、状态切换）的所有交互。
+### 4. 章节命名空间隔离 (Namespace Isolation)
+*   **组件**：`NamespaceManager` 自动分配前缀（如 `s1`, `s2`）。
+*   **契约**：所有章节内的元素 ID 与资产 ID 强制注入命名空间前缀，防止在最终 Assembler 阶段发生 ID 碰撞。
+
+### 5. 广义行动协议 (Action Protocol)
+*   **契约形式**：使用 `data-controller` 属性取代随机 ID，配合 `:::script` 指令。
+*   **覆盖范围**：从图片缩放、多图画廊到公式推导步进器，所有交互均通过 `components.json` 定义的 Schema 进行约束。
 
 ---
 
 ## 🤖 意图驱动的五层创作流
 
-系统将创作压力解耦为五个专业阶段，所有决策均在 Markdown 语义层完成：
+系统将创作压力解耦为五个专业阶段，核心决策在 Markdown 语义层闭环：
 
 ### 🟢 阶段 1：规划与地基 (Phase A)
 *   **核心节点**：Architect, TechSpec, AssetIndexer。
-*   **关键任务**：用户资产语义贴标、章节 Namespace 隔离前缀注入、全局组件白名单确定。
+*   **关键任务**：用户资产语义贴标与质量初评、章节 Namespace 注入、SOTA 执行契约 (TechSpec) 生成。
 
 ### 🔵 阶段 2：全量深度创作 (Phase B - Layer 1)
 *   **核心节点**：SME Writer (多模态感知型写手)。
-*   **直出协议**：若发现 UAR 已有素材，**直接写出 `<img style="...">` 裁切标签**；否则进行意图打桩。
+*   **Direct-Inject 协议**：若 UAR 已有高质量素材，**直接注入 `<img>` 裁切标签**；否则进行 `:::visual` 意图打桩。
 
 ### 🟡 阶段 3：脚本标注与增强 (Phase B - Layer 2)
 *   **核心节点**：Script Decorator。
-*   **关键任务**：针对 MD 元素叠加 `:::script` 指令，注入 GSAP 动画协议或广义交互钩子。
+*   **关键任务**：分析 Markdown 语义特征，针对性叠加 `:::script` 指令，注入交互控制器钩子。
 
 ### 🟠 阶段 4：资产先行闭环 (Phase D - Shift-Left)
 *   **核心节点**：Asset Fulfillment, Asset Critic。
-*   **关键逻辑**：在 HTML 转换前，完成 SVG 生成、图片采购及**资产级 VQA**（验证裁切坐标是否准确对准描述焦点）。
+*   **关键逻辑**：在 HTML 转换前完成 SVG 生成、图片采购及**资产级 VQA**（验证 AI 产出是否符合描述意图）。
 
 ### 🔴 阶段 5：全量语义综审 (Phase E - Gatekeeper)
 *   **核心节点**：Editorial QA (总编辑)。
-*   **职责**：进行最终的图文校对与逻辑对齐审计，审计通过后提炼 `GhostBuffer` 骨架。
+*   **职责**：执行全量多模态终审，校验裁切范围是否命中文字焦点，审计通过后提炼 `GhostBuffer` 语义骨架。
 
 ---
 
 ## 🛠️ 技术实现细节
 
-### 1. 本地静态安检 (Static Analysis)
-*   **Markdown 指令校验**：正则验证 `:::` 容器闭合性及 JSON 配置语法。
-*   **LaTeX 平衡检查**：本地校验 `$` 符号配对，防止数学公式导致渲染崩溃。
-*   **嵌入式 HTML 核验**：严格检查写手生成的 `<img>` 标签及 CSS 裁切数值合法性。
+### 1. 四重本地静态安检 (Static Analysis)
+*   **MarkdownStructureValidator**：正则验证 `:::` 容器闭合性及 JSON 配置语法。
+*   **EmbeddedHTMLValidator**：严格核验写手生成的 `<img>` 标签及 CSS 裁切数值合法性。
+*   **LaTeXBalanceValidator**：本地校验 `$` 符号配对，防止数学公式导致渲染崩溃。
+*   **NamespaceValidator**：确保所有生成的 ID 严格遵循章节前缀契约。
 
-### 2. 图像采购与智能定位
-*   **文本解耦**：采购 Agent 仅凭 `:::visual` 意图描述进行搜索，不再依赖 HTML 上下文。
-*   **Focus Locator**：利用视觉 API 分析下载图，自动计算重点区域的坐标重心并回写 UAR。
+### 2. 智能焦点计算与图像采购
+*   **Focus Locator**：利用视觉 API 分析下载图，自动计算重点区域的坐标重心并回写 UAR 的 `crop_metadata`。
+*   **多层级采购**：`ImageSourcingAgent` 采用“策略生成 -> 并行搜索 -> VLM 筛选”的三段式架构。
 
-### 3. 严格 HTML 校验
-*   **编译器级报错**：使用 `lxml` 严格模式（`recover=False`）捕获标签未闭合或非法嵌套错误。
-*   **样式契约对齐**：本地核验最终类名是否与 `style_mapping.json` 100% 对齐。
+### 3. 双流水线编排 (Dual-Pipeline)
+*   **Markdown Pipeline**：侧重内容逻辑与资产履约（`workflow_markdown.py`）。
+*   **HTML Pipeline**：侧重 SOTA 设计系统注入与视觉 Bug 修复（`workflow_html.py`）。
 
 ---
 
 ## 🚦 实验与开发指南
 
 ### 目录结构标准
-*   `src/core/validators.py`: 本地静态分析逻辑。
-*   `src/assets/schemas/`: 组件与指令的硬约束 Schema。
-*   `workspace/<job_id>/profile/`: 本次实验的配置与提示词快照。
+*   `src/core/persistence.py`: 实验快照与 Profile 持久化。
+*   `src/core/tools/namespace_manager.py`: 命名空间自动化管理。
+*   `src/agents/writer_agent.py`: 实现 `Writer-Direct-Inject` 协议。
 
 ### 启动实验
-*   **初次运行**：`python main.py --input <raw_dir>`
-*   **复用 Profile**：`python main.py --profile <job_id>` (直接进入局部调整模式)
+*   **语义创作**：`python tests/run_sota2_workflow.py`
+*   **视觉修复**：`python scripts/test_visual_qa.py`
 
 ### 调试规范
-1.  **资产问题**：检查 `UAR (assets.json)` 中的 `crop_metadata`。
-2.  **交互问题**：检查 HTML 中的 `data-controller` 是否匹配 `components.json`。
-3.  **逻辑问题**：检查 `GhostBuffer` 提取的快照是否覆盖了核心结论。
+1.  **资产偏离**：检查 `UAR (assets.json)` 中的 `quality_level` 和 `quality_notes`。
+2.  **交互失效**：检查 Markdown 末尾注入的 `:::script` 块是否通过了 `validate_all_scripts`。
+3.  **持久化异常**：检查 `workspace/<job_id>/profile/input_blueprint.json` 中的内容哈希。

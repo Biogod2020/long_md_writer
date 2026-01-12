@@ -174,7 +174,7 @@ Three-phase internal loop with specific verdict types:
 ### 5. LangGraph Workflow Execution
 
 The workflow uses `app.astream()` for async node support:
-- Interrupts are handled in `run_workflow()` function in `src/orchestration/workflow.py`
+- Interrupts are handled in `run_workflow()` function in `src/orchestration/workflow_html.py`
 - User feedback at interrupt points updates state via `app.update_state()`
 - Setting `current_state = None` after updates triggers workflow resume
 - Debug mode saves every state snapshot to `workspace/{job_id}/debug_logs/`
@@ -314,7 +314,7 @@ This saves every state snapshot to `workspace/{job_id}/debug_logs/step_XXX.json`
 2. Follow standard pattern: `__init__(client)`, `run(state) -> state`
 3. Define state fields in `AgentState` (`src/core/types.py`)
 4. Add node function in `NodeFactory` (`src/orchestration/nodes.py`)
-5. Wire into workflow graph in `create_workflow()` (`src/orchestration/workflow.py`)
+5. Wire into workflow graph in `create_workflow()` (`src/orchestration/workflow_html.py`) or `create_sota2_workflow()` (`src/orchestration/workflow_markdown.py`)
 6. Add conditional edge logic if needed (`src/orchestration/edges.py`)
 
 ### Modifying Agent Behavior

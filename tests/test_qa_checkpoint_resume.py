@@ -10,7 +10,7 @@ root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
 from src.core.types import AgentState
-from src.orchestration.workflow import create_workflow
+from src.orchestration.workflow_html import create_workflow
 from src.core.gemini_client import GeminiClient
 
 async def debug_qa_from_checkpoint():
