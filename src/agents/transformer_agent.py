@@ -146,7 +146,7 @@ class TransformerAgent:
                 css_content = Path(state.css_path).read_text(encoding="utf-8")
                 parts.append("# style.css (Available Classes & Design Tokens)\n")
                 parts.append("Use ONLY these CSS classes and variables. Do NOT invent new class names.\n")
-                parts.append(f"```css\n{css_content[:15000]}\n```\n\n")
+                parts.append(f"```css\n{css_content}\n```\n\n")
             except Exception:
                 pass
         
@@ -156,7 +156,7 @@ class TransformerAgent:
                 js_content = Path(state.js_path).read_text(encoding="utf-8")
                 parts.append("# main.js (Interactive Element Contracts)\n")
                 parts.append("Ensure generated HTML elements match the selectors/IDs expected by this JavaScript.\n")
-                parts.append(f"```javascript\n{js_content[:8000]}\n```\n\n")
+                parts.append(f"```javascript\n{js_content}\n```\n\n")
             except Exception:
                 pass
         
@@ -165,31 +165,12 @@ class TransformerAgent:
             parts.append("# Previously Converted HTML Sections (for style consistency)\n")
             parts.append("Match the structural patterns, class usage, and styling approach of these sections.\n\n")
             
-            # Include all previous sections, with smart truncation for earlier ones
-            total_sections = len(state.completed_html_sections)
-            for idx, html_path in enumerate(state.completed_html_sections):
+            # Include all previous sections - full content (Gemini 1M context)
+            for html_path in state.completed_html_sections:
                 try:
                     content = Path(html_path).read_text(encoding="utf-8")
                     section_name = Path(html_path).stem
-                    
-                    # More recent sections get more content shown
-                    if idx >= total_sections - 2:
-                        # Last 2 sections: show full content (up to 5000 chars)
-                        truncated = content[:5000]
-                        if len(content) > 5000:
-                            truncated += "\n<!-- ... truncated ... -->"
-                    elif idx >= total_sections - 4:
-                        # Previous 2-4 sections: show 2000 chars
-                        truncated = content[:2000]
-                        if len(content) > 2000:
-                            truncated += "\n<!-- ... truncated ... -->"
-                    else:
-                        # Earlier sections: show only structure (1000 chars)
-                        truncated = content[:1000]
-                        if len(content) > 1000:
-                            truncated += "\n<!-- ... see full file for complete content ... -->"
-                    
-                    parts.append(f"## {section_name}\n```html\n{truncated}\n```\n\n")
+                    parts.append(f"## {section_name}\n```html\n{content}\n```\n\n")
                 except Exception:
                     pass
         

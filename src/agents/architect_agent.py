@@ -217,7 +217,7 @@ class ArchitectAgent:
             for doc in state.reference_docs:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
-                    ref_parts.append(f"### File: {doc}\n{text[:4000]}...\n")
+                    ref_parts.append(f"### File: {doc}\n{text}\n")
                 except:
                     pass
             if len(ref_parts) > 1:
@@ -284,14 +284,64 @@ class ArchitectAgent:
         """保存 Manifest 到工作目录"""
         if not state.manifest:
             return
-            
+
         manifest_path = Path(state.workspace_path) / "manifest.json"
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         manifest_path.write_text(
             state.manifest.model_dump_json(indent=2),
             encoding="utf-8"
         )
+
+    async def run_async(self, state: AgentState, feedback: Optional[str] = None) -> AgentState:
+        """异步版本"""
+        parts = self._build_prompt_parts(state, feedback)
+
+        if feedback:
+            parts.append({
+                "text": f"CRITICAL USER FEEDBACK: {feedback}\n\nYou MUST adjust the manifest to comply with this feedback."
+            })
+            temperature = 0.1
+        else:
+            temperature = 0.7
+
+        MAX_RETRIES = 3
+        last_error = None
+
+        for attempt in range(MAX_RETRIES + 1):
+            if attempt > 0:
+                print(f"    [Architect] JSON Error (Attempt {attempt}): {last_error}. Retrying...")
+                parts.append({
+                    "text": f"SYSTEM: Your previous JSON output caused a parse error: {last_error}\nPlease output the full, valid JSON again."
+                })
+
+            response = await self.client.generate_async(
+                parts=parts,
+                system_instruction=ARCHITECT_SYSTEM_PROMPT,
+                temperature=temperature,
+                stream=True
+            )
+
+            if not response.success:
+                error_msg = f"Architect Agent failed: {response.error}"
+                if attempt == MAX_RETRIES:
+                    state.errors.append(error_msg)
+                    return state
+                last_error = response.error
+                continue
+
+            try:
+                manifest = self._parse_manifest(response.text)
+                state.manifest = manifest
+                self._save_manifest(state)
+                return state
+            except Exception as e:
+                last_error = str(e)
+                if attempt == MAX_RETRIES:
+                    state.errors.append(f"Failed to parse manifest: {str(e)}")
+                    return state
+
+        return state
 
 
 def create_architect_agent(client: Optional[GeminiClient] = None) -> ArchitectAgent:

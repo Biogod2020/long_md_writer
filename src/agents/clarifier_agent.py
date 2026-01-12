@@ -139,6 +139,35 @@ class ClarifierAgent:
         
         return questions[:5] if questions else [{"id": "q1", "category": "general", "question": "Could you describe your target audience and the desired depth of content?"}]
 
+    async def run_async(self, state: AgentState) -> list[dict]:
+        """
+        异步版本 - 避免 asyncio.run() 嵌套问题
+        """
+        parts = []
+        parts.append({"text": "# User's Initial Input\n" + state.raw_materials + "\n\n"})
+
+        if state.reference_docs:
+            parts.append({"text": f"# Uploaded Files\nThe user has uploaded {len(state.reference_docs)} file(s).\n"})
+
+        if state.images:
+            parts.extend(state.images)
+            parts.append({"text": "\n(Images provided above)\n"})
+
+        parts.append({"text": "\nBased on the above input, generate 3-5 clarifying questions to better understand the user's requirements.\n"})
+
+        # 使用异步生成
+        response = await self.client.generate_async(
+            parts=parts,
+            system_instruction=CLARIFIER_SYSTEM_PROMPT,
+            temperature=0.7,
+            stream=True
+        )
+
+        if not response.success:
+            return [{"id": "error", "category": "error", "question": f"Failed to generate questions: {response.error}"}]
+
+        return self._parse_questions(response.text)
+
 
 def create_clarifier_agent(client: Optional[GeminiClient] = None) -> ClarifierAgent:
     """Create a ClarifierAgent instance."""

@@ -644,7 +644,7 @@ Please identify visual bugs in this section and suggest fixes for either the sec
 {json.dumps(file_list, indent=2)}
 
 # Complete HTML Source Code (with markers)
-{html_code[:80000]}
+{html_code}
 
 I have provided {len(screenshot_paths)} screenshots showing different sections of the webpage (scrolled from top to bottom).
 Please review ALL attached screenshots and provide comprehensive feedback on visual issues.
@@ -790,7 +790,7 @@ Please review ALL attached screenshots and provide comprehensive feedback on vis
 
 ## Global CSS
 ```css
-{css_code[:3000]}
+{css_code}
 ```
 
 Analyze the attached {len(screenshot_paths)} screenshots and identify any visual issues.

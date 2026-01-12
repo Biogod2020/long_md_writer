@@ -146,7 +146,7 @@ Sections: {[s.title for s in state.manifest.sections]}
 {json.dumps([{"id": s.id, "metadata": s.metadata} for s in state.manifest.sections if s.metadata], indent=2)}
 
 ## Content Preview
-{full_content[:4000]}
+{full_content}
 
 ---
 
@@ -182,10 +182,10 @@ Include all core interactive features and follow the module pattern.
     def _get_content_preview(self, state: AgentState) -> str:
         """Get preview of completed markdown sections."""
         parts = []
-        for md_path in state.completed_md_sections[:3]:  # First 3 sections
+        for md_path in state.completed_md_sections:  # All sections - no limit
             try:
                 content = Path(md_path).read_text(encoding="utf-8")
-                parts.append(content[:1500])
+                parts.append(content)  # Full content - no truncation
             except:
                 pass
         return "\n\n---\n\n".join(parts)

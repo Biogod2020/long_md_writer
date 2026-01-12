@@ -81,10 +81,7 @@ class OutlineAgent:
         if state.raw_materials:
             # Include raw materials regardless of whether project_brief exists
             # This provides the original source content for more accurate outline design
-            raw_preview = state.raw_materials[:20000]  # Increased limit for better coverage
-            if len(state.raw_materials) > 20000:
-                raw_preview += "\n\n[... content truncated ...]"
-            parts.append({"text": "# Original Source Materials (Reference)\n" + raw_preview + "\n\n"})
+            parts.append({"text": "# Original Source Materials (Reference)\n" + state.raw_materials + "\n\n"})
         
         parts.append({"text": "Based on the above Project Brief and source materials, design a comprehensive document outline.\n"})
         

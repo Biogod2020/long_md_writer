@@ -116,7 +116,7 @@ class VisionSelector:
         img_contexts_str = ""
         for img in images:
             desc_text = descriptions_map.get(img.name, "No description")
-            img_contexts_str += f"- Image {img.name}: {desc_text[:150]}...\n"
+            img_contexts_str += f"- Image {img.name}: {desc_text}\n"
         
         prompt = f"""You are an expert visual evaluator for academic and technical publications.
 

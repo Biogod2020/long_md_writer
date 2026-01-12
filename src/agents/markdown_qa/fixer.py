@@ -56,7 +56,7 @@ async def run_markdown_fixer(
 {file_content}
 
 # REFERENCE CONTEXT (Optional)
-{context[:2000] if context else "(None)"} 
+{context if context else "(None)"} 
 
 ---
 Identify the text block to change and generate the JSON patch.

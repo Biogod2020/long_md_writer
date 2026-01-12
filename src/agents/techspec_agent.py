@@ -74,7 +74,7 @@ class TechSpecAgent:
             for doc in state.reference_docs:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
-                    ref_texts.append(f"## {doc}\n{text[:6000]}...\n")
+                    ref_texts.append(f"## {doc}\n{text}\n")
                 except:
                     pass
             parts.append({"text": "".join(ref_texts)})
@@ -108,6 +108,62 @@ class TechSpecAgent:
             state.manifest.model_dump_json(indent=2),
             encoding="utf-8"
         )
+
+    async def run_async(self, state: AgentState) -> AgentState:
+        """异步版本 - 避免 asyncio.run() 嵌套问题"""
+        if not state.manifest:
+            state.errors.append("TechSpecAgent: No outline/manifest available")
+            return state
+
+        parts = []
+
+        # 1. Full Input Context
+        context_parts = ["# Input Context\n"]
+        context_parts.append(f"## RAW REQUEST\n{state.raw_materials}\n")
+
+        if state.project_brief:
+            context_parts.append(f"## PROJECT BRIEF\n{state.project_brief}\n")
+
+        if state.clarifier_answers:
+            context_parts.append("## CLARIFICATION ANSWERS\n")
+            for qid, ans in state.clarifier_answers.items():
+                context_parts.append(f"- Q: {qid}\n- A: {ans}\n")
+
+        parts.append({"text": "\n".join(context_parts)})
+
+        # 2. Approved Manifest (Outline + Philosophy)
+        manifest_json = state.manifest.model_dump_json(indent=2)
+        parts.append({"text": f"# APPROVED MANIFEST\n```json\n{manifest_json}\n```\n"})
+
+        # 3. Reference materials
+        if state.reference_docs:
+            ref_texts = ["# REFERENCE MATERIALS\n"]
+            for doc in state.reference_docs:
+                try:
+                    text = Path(doc).read_text(encoding="utf-8")
+                    ref_texts.append(f"## {doc}\n{text}\n")
+                except:
+                    pass
+            parts.append({"text": "".join(ref_texts)})
+
+        parts.append({"text": "\nGenerate a SOTA Technical Specification based on all provided context.\n"})
+
+        response = await self.client.generate_async(
+            parts=parts,
+            system_instruction=TECHSPEC_SYSTEM_PROMPT,
+            temperature=0.7,
+            stream=True
+        )
+
+        if not response.success:
+            state.errors.append(f"TechSpecAgent failed: {response.error}")
+            return state
+
+        # Update manifest description
+        state.manifest.description = response.text
+        self._save_manifest(state)
+
+        return state
 
 
 def create_techspec_agent(client: Optional[GeminiClient] = None) -> TechSpecAgent:

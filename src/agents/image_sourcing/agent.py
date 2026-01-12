@@ -119,8 +119,8 @@ class ImageSourcingAgent:
 
                 # 1. Strategy (Query generation)
                 strategy = self.strategy_gen.generate(
-                    description, 
-                    html_context[:2000],
+                    description,
+                    html_context,  # Full context - no truncation
                     failed_queries=all_failed_queries if all_failed_queries else None
                 )
                 queries = strategy.get("queries", [description])

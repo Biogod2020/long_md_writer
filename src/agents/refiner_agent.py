@@ -69,7 +69,7 @@ class RefinerAgent:
             for doc_path in state.reference_docs:
                 try:
                     content = Path(doc_path).read_text(encoding="utf-8")
-                    ref_text.append(f"## {Path(doc_path).name}\n{content[:10000]}...\n\n")
+                    ref_text.append(f"## {Path(doc_path).name}\n{content}\n\n")
                 except Exception:
                     pass
             parts.append({"text": "".join(ref_text)})
@@ -95,6 +95,52 @@ class RefinerAgent:
             stream=True  # 启用流式生成以避免 500 SSL 超时
         )
         
+        if response.success:
+            return response.text
+        else:
+            return f"Refinement failed: {response.error}"
+
+    async def run_async(self, state: AgentState, clarification_answers: Optional[dict] = None, feedback: Optional[str] = None) -> str:
+        """异步版本"""
+        parts = []
+
+        if state.project_brief:
+            parts.append({"text": "# Current Project Brief\n" + state.project_brief + "\n\n"})
+            if feedback:
+                parts.append({"text": "# User Feedback\n" + feedback + "\n\nPlease refine the brief based on this feedback.\n\n"})
+
+        parts.append({"text": "# User's Original Input\n" + state.raw_materials + "\n\n"})
+
+        if state.reference_docs:
+            from pathlib import Path
+            ref_text = ["# Uploaded Reference Materials\n"]
+            for doc_path in state.reference_docs:
+                try:
+                    content = Path(doc_path).read_text(encoding="utf-8")
+                    ref_text.append(f"## {Path(doc_path).name}\n{content}\n\n")
+                except Exception:
+                    pass
+            parts.append({"text": "".join(ref_text)})
+
+        if state.images:
+            parts.extend(state.images)
+            parts.append({"text": "\n(Images provided above)\n\n"})
+
+        if clarification_answers:
+            qa_text = ["# Clarification Q&A\n"]
+            for qid, answer in clarification_answers.items():
+                qa_text.append(f"- **{qid}**: {answer}\n")
+            parts.append({"text": "".join(qa_text) + "\n"})
+
+        parts.append({"text": "\nBased on all the above, generate a comprehensive Project Brief.\n"})
+
+        response = await self.client.generate_async(
+            parts=parts,
+            system_instruction=REFINER_SYSTEM_PROMPT,
+            temperature=0.7,
+            stream=True
+        )
+
         if response.success:
             return response.text
         else:

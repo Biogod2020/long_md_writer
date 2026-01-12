@@ -42,7 +42,7 @@ First, carefully analyze the following:
 - Image Description: "{description}"
 - Surrounding Article Context (HTML snippet):
 ```html
-{context[:1500]}
+{context}
 ```
 {failed_queries_section}
 **Step 2: Strategic Query Design (Keywords Only)**

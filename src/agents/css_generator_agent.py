@@ -122,7 +122,7 @@ class CSSGeneratorAgent:
 {design_tokens_section}
 
 ## Content Preview
-{full_content[:6000]}
+{full_content}
 
 ---
 
@@ -163,7 +163,7 @@ Include both the CSS code and the Style Mapping JSON.
         for md_path in state.completed_md_sections:
             try:
                 content = Path(md_path).read_text(encoding="utf-8")
-                parts.append(content[:2000])
+                parts.append(content)  # Full content - no truncation
             except:
                 pass
         return "\n\n---\n\n".join(parts)
