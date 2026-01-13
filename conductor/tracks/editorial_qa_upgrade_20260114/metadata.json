@@ -1,0 +1,8 @@
+{
+  "track_id": "editorial_qa_upgrade_20260114",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-14T00:00:00Z",
+  "updated_at": "2026-01-14T00:00:00Z",
+  "description": "Implement Render-Aware Full-Context Review & Fixer in Editorial QA"
+}
