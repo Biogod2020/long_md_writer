@@ -6,7 +6,7 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 - [x] Task: Create a mock renderer for Editorial QA tests (simulating Playwright output) 5d8203b
 - [x] Task: Implement full-context text gathering utility (merging preceding chapters) 0ac551b
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Render Simulation' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Render Simulation' (Protocol in workflow.md)
 
 ## Phase 2: Render-Aware Critic Upgrade
 

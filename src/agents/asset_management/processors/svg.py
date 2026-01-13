@@ -5,33 +5,30 @@ Handles SVG generation and extraction.
 """
 
 import re
+import asyncio
 from typing import Optional
 from pathlib import Path
 
 from ....core.gemini_client import GeminiClient
 
 
-SVG_GENERATION_PROMPT = """你是一个专业的 SVG 矢量图形设计师。请根据以下描述生成一个教育性质的 SVG 图形。
+SVG_GENERATION_PROMPT = """You are a professional SVG designer and illustrator. Create high-quality vector graphics that are clear, accurate, and aesthetically pleasing.
 
-## 描述
+## Content Description
 {description}
 
-## 风格要求
-- 简洁清晰，适合教学用途
-- 使用柔和的配色方案
-- 包含必要的标注和文字说明
-- 图形大小建议: 800x600 或适合内容的尺寸
+## Design Principles
+1. **Legibility & Clarity**: Ensure all text and elements are easily readable. Use adequate contrast and prevent overlaps between text and paths.
+2. **Visual Balance**: Maintain a balanced composition with consistent alignment and professional spacing.
+3. **Detail & Hierarchy**: Use appropriate line weights and color gradients to establish a clear visual hierarchy.
+4. **Professional Aesthetics**: Aim for a modern, clean look. Avoid overly simplistic or "childish" shapes unless specified.
 
 {style_hints}
 
-## 输出格式
-请直接输出完整的 SVG 代码，不要包含任何解释文字。SVG 必须是有效的 XML 格式。
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" ...>
-  ...
-</svg>
-```
+## Technical Requirements
+- Output ONLY valid SVG code.
+- Ensure the SVG is responsive (use viewBox).
+- Avoid external assets or fonts; use standard web-safe fonts if text is needed.
 """
 
 
@@ -55,18 +52,8 @@ async def generate_svg_async(
     description: str,
     style_hints: str = ""
 ) -> Optional[str]:
-    """
-    异步生成 SVG 图形
-
-    Args:
-        client: Gemini API 客户端
-        description: 图形描述
-        style_hints: 额外的风格提示
-
-    Returns:
-        SVG 代码或 None
-    """
-    hints_section = f"## 额外风格要求\n{style_hints}" if style_hints else ""
+    """异步生成 SVG 图形"""
+    hints_section = f"## Additional Style\n{style_hints}" if style_hints else ""
     prompt = SVG_GENERATION_PROMPT.format(
         description=description,
         style_hints=hints_section
@@ -75,18 +62,18 @@ async def generate_svg_async(
     try:
         response = await client.generate_async(
             prompt=prompt,
-            system_instruction="你是一个专业的 SVG 矢量图形设计师。请生成清晰、教育性强的 SVG 图形。",
+            system_instruction="You are a professional SVG designer. Create accurate, readable, and aesthetically pleasing vector graphics.",
             temperature=0.5
         )
 
         if not response.success:
-            print(f"[SVG Processor] API 错误: {response.error}")
+            print(f"[SVG Processor] API error: {response.error}")
             return None
 
         return extract_svg(response.text)
 
     except Exception as e:
-        print(f"[SVG Processor] 生成失败: {e}")
+        print(f"[SVG Processor] Generation failed: {e}")
         return None
 
 
@@ -96,7 +83,7 @@ def generate_svg(
     style_hints: str = ""
 ) -> Optional[str]:
     """同步生成 SVG 图形"""
-    hints_section = f"## 额外风格要求\n{style_hints}" if style_hints else ""
+    hints_section = f"## Additional Style\n{style_hints}" if style_hints else ""
     prompt = SVG_GENERATION_PROMPT.format(
         description=description,
         style_hints=hints_section
@@ -105,10 +92,116 @@ def generate_svg(
     try:
         response = client.generate(
             prompt,
-            system_instruction="你是一个专业的 SVG 矢量图形设计师。请生成清晰、教育性强的 SVG 图形。"
+            system_instruction="You are a professional SVG designer. Create accurate, readable, and aesthetically pleasing vector graphics."
         )
         return extract_svg(response.text)
 
     except Exception as e:
-        print(f"[SVG Processor] 生成失败: {e}")
+        print(f"[SVG Processor] Generation failed: {e}")
         return None
+
+
+# ============================================================================
+# SVG Repair (Full Regeneration with Visual Context)
+# ============================================================================
+
+SVG_REPAIR_PROMPT = """You are a senior SVG specialist. Your task is to fix and improve the provided SVG based on specific audit feedback.
+
+## Original Intent
+{original_intent}
+
+## Refinement Goals
+- **Correctness**: Resolve all scientific, technical, or logical errors.
+- **Visual Refinement**: Improve clarity, fix alignment/overlaps, and enhance overall professional appearance.
+- **Consistency**: Ensure the design remains cohesive and follows standard best practices.
+
+## Audit Feedback
+### Issues:
+{issues}
+
+### Suggestions:
+{suggestions}
+
+## Current SVG Code (Reference)
+{failed_svg_code}
+
+## Task
+Output the COMPLETE and fixed SVG code. Apply both the functional fixes and aesthetic polish mentioned in the feedback. 
+Return ONLY valid SVG code, no conversational filler or markdown explanations.
+"""
+
+
+async def repair_svg_async(
+    client: GeminiClient,
+    original_intent: str,
+    failed_svg_code: str,
+    issues: list[str],
+    suggestions: list[str],
+    rendered_image_b64: Optional[str] = None,
+    max_retries: int = 2
+) -> Optional[str]:
+    """
+    Repair an SVG by generating a complete fixed version.
+    
+    If rendered_image_b64 is provided, the model can "see" the visual issues
+    and make more accurate fixes.
+    """
+    issues_text = "\n".join(f"- {issue}" for issue in issues) if issues else "- None specified"
+    suggestions_text = "\n".join(f"- {s}" for s in suggestions) if suggestions else "- None specified"
+    
+    prompt = SVG_REPAIR_PROMPT.format(
+        original_intent=original_intent,
+        failed_svg_code=failed_svg_code[:8000],  # Limit to avoid token overflow
+        issues=issues_text,
+        suggestions=suggestions_text
+    )
+    
+    # Build multi-modal parts if image is provided
+    if rendered_image_b64:
+        parts = [
+            {"text": "## Current Rendered Image (What needs fixing)\nLook at this image to understand the visual problems:"},
+            {"inlineData": {"mimeType": "image/png", "data": rendered_image_b64}},
+            {"text": prompt}
+        ]
+    else:
+        parts = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            if parts:
+                response = await client.generate_async(
+                    parts=parts,
+                    system_instruction="You are a senior SVG illustrator. Elevate the aesthetics and fix all errors. Output a complete fixed SVG.",
+                    temperature=0.2
+                )
+            else:
+                response = await client.generate_async(
+                    prompt=prompt,
+                    system_instruction="You are a senior SVG illustrator. Output a complete fixed SVG with textbook-grade aesthetics.",
+                    temperature=0.2
+                )
+
+            if not response.success:
+                if attempt < max_retries:
+                    print(f"[SVG Repair] Retry {attempt + 1}/{max_retries}...")
+                    await asyncio.sleep(1)
+                    continue
+                return None
+
+            result = extract_svg(response.text)
+            if result:
+                return result
+            
+            if attempt < max_retries:
+                print(f"[SVG Repair] No valid SVG in response, retrying...")
+                continue
+            return None
+
+        except Exception as e:
+            if attempt < max_retries:
+                await asyncio.sleep(1)
+                continue
+            print(f"[SVG Repair] Repair failed: {e}")
+            return None
+    
+    return None

@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [ ] Track: Implement Render-Aware Full-Context Review & Fixer in Editorial QA
+## [~] Track: Implement Render-Aware Full-Context Review & Fixer in Editorial QA
 *Link: [./conductor/tracks/editorial_qa_upgrade_20260114/](./conductor/tracks/editorial_qa_upgrade_20260114/)*

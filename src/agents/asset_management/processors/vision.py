@@ -30,7 +30,7 @@ VISION_TAGGING_PROMPT = """You are a professional visual content analyst and qua
      - "Abstract oil painting exploring color theory and geometric patterns"
 
 2. **tags**: Provide 3-5 descriptive keywords (lowercase).
-   - Examples: ["anatomy", "physiology", "pathology", "cardiology", "biochemistry"]
+   - Examples: ["architecture", "technology", "nature", "infographic", "abstract"]
 
 3. **quality_level**: Evaluate the visual quality.
    - HIGH: Professional, clear, no watermarks, suitable for high-end publication.
@@ -150,7 +150,7 @@ def analyze_image(client: GeminiClient, image_path: Path) -> dict:
         return _parse_vision_response(response.text, default_result)
 
     except Exception as e:
-        print(f"[Vision Processor] 分析失败: {e}")
+        print(f"[Vision Processor] Analysis failed: {e}")
         return default_result
 
 
@@ -189,5 +189,5 @@ async def analyze_image_async(client: GeminiClient, image_path: Path) -> dict:
         return _parse_vision_response(response.text, default_result)
 
     except Exception as e:
-        print(f"[Vision Processor] 分析失败: {e}")
+        print(f"[Vision Processor] Analysis failed: {e}")
         return default_result

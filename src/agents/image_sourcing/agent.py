@@ -17,6 +17,7 @@ from .strategy import StrategyGenerator
 from .search import GoogleImageSearcher
 from .downloader import ImageDownloader
 from .vision import VisionSelector
+from .local_selector import LocalSelector
 
 
 class ImageSourcingAgent:
@@ -29,6 +30,7 @@ class ImageSourcingAgent:
         
         self.strategy_gen = StrategyGenerator(self.client, debug=debug)
         self.vision_selector = VisionSelector(self.client, debug=debug)
+        self.local_selector = LocalSelector(self.client, debug=debug)
 
     def run(self, state: AgentState, preserve_candidates: bool = False) -> AgentState:
         """Process all HTML sections and replace image placeholders with real sourced images."""
@@ -43,18 +45,21 @@ class ImageSourcingAgent:
         assets_dir = Path(state.workspace_path) / "assets" / "images"
         assets_dir.mkdir(parents=True, exist_ok=True)
 
+        # Get UAR for local matching
+        uar = state.get_uar()
+
         for html_path in state.completed_html_sections:
             try:
                 html_file = Path(html_path)
                 content = html_file.read_text(encoding="utf-8")
-                updated_content = self._process_section(content, assets_dir, preserve_candidates)
+                updated_content = self._process_section(content, assets_dir, preserve_candidates, uar)
                 html_file.write_text(updated_content, encoding="utf-8")
             except Exception as e:
                 state.errors.append(f"ImageSourcingAgent: Error processing {html_path}: {e}")
 
         return state
 
-    def _process_section(self, html_content: str, assets_dir: Path, preserve_candidates: bool = False) -> str:
+    def _process_section(self, html_content: str, assets_dir: Path, preserve_candidates: bool = False, uar = None) -> str:
         """Finds placeholders and replaces them in parallel."""
         placeholder_regex = re.compile(
             r'(<div[^>]*class="img-placeholder"[^>]*data-img-id="([^"]+)"[^>]*>.*?'
@@ -75,7 +80,7 @@ class ImageSourcingAgent:
             future_to_placeholder = {
                 executor.submit(
                     self._source_single_image, 
-                    img_id, description, assets_dir, html_content, preserve_candidates
+                    img_id, description, assets_dir, html_content, preserve_candidates, uar
                 ): (full_tag, img_id) 
                 for full_tag, img_id, description in matches
             }
@@ -96,13 +101,36 @@ class ImageSourcingAgent:
         return html_content
 
     def _source_single_image(self, img_id: str, description: str, assets_dir: Path, 
-                             html_context: str, preserve_candidates: bool) -> Optional[str]:
+                             html_context: str, preserve_candidates: bool, uar = None) -> Optional[str]:
         """Worker function to source a single image. Uses its own browser instance."""
         description = description.strip()
         print(f"    [Thread] Sourcing: {img_id}")
 
-        # Each thread gets its own Browser instance for thread safety
-        # block_resources=True speeds up search/navigation by disabling images
+        # 1. Local Lookup (Priority)
+        if uar:
+            print(f"    [{img_id}] Checking local UAR...")
+            import asyncio
+            # In ThreadPoolExecutor, we need to handle async calls
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                candidates = uar.intent_match_candidates(description, limit=10)
+                best_local, reasoning = loop.run_until_complete(
+                    self.local_selector.select_best_async(candidates, description)
+                )
+                
+                if best_local:
+                    print(f"    [{img_id}] ✓ LOCAL HIT: {best_local.id} ({reasoning})")
+                    # Use existing asset
+                    replacement_html = f'<figure class="image-container" id="{img_id}">\n  {best_local.to_img_tag()}\n  <figcaption>{description}</figcaption>\n</figure>'
+                    return replacement_html
+                else:
+                    print(f"    [{img_id}] No local match: {reasoning}")
+            finally:
+                loop.close()
+
+        # 2. Web Search (Fallback)
+        print(f"    [{img_id}] Starting web search...")
         with BrowserManager(headless=self.headless, debug=self.debug, block_resources=True) as bm:
             searcher = GoogleImageSearcher(bm, debug=self.debug)
             downloader = ImageDownloader(bm, debug=self.debug)
