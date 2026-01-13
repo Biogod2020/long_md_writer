@@ -80,3 +80,9 @@ secrets.json
 
 # Profile data
 profiles/
+
+# Temporary/debug files
+dummy.md
+last_request_payload.json
+docs/NODES_INFO.md
+
