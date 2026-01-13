@@ -75,8 +75,11 @@ async def run_markdown_critic(
 # Project Brief
 {state.project_brief}
 
-# Raw Materials
-{state.raw_materials}
+# 🎯 User Intent
+{state.user_intent}
+
+# 📚 Reference Materials
+{state.reference_materials}
 
 # Available Files
 {json.dumps(file_list, indent=2)}
