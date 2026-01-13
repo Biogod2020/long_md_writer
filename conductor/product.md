@@ -14,3 +14,4 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 - **Multi-Agent Orchestration**: A sophisticated ecosystem of specialized agents (Architect, SME Writer, Asset Critic, etc.) working in parallel to handle complex publishing tasks.
 - **Visual Quality Assurance (VQA)**: Automated VLM-based auditing that manages focus-aware cropping, image sourcing, and visual compliance.
 - **Context-Aware Generation**: Implementation of "Full-Context Perception" to eliminate AI hallucinations and ensure cross-chapter terminology consistency.
+- **Autonomous Remediation**: Closed-loop "Critic-Fixer" architecture for Editorial QA, allowing the system to self-correct visual crop mismatches and semantic inconsistencies without human intervention.
