@@ -1,0 +1,114 @@
+"""
+Asset Management Utilities
+
+Shared helper functions for asset processing.
+"""
+
+from pathlib import Path
+from typing import Optional
+
+from ...core.types import AssetEntry, CropMetadata
+
+
+def generate_figure_html(asset: AssetEntry, caption: str) -> str:
+    """
+    生成图片的 HTML figure 标签
+
+    Args:
+        asset: 资产条目
+        caption: 图片说明
+
+    Returns:
+        HTML figure 代码
+    """
+    # SVG 技术图表使用 contain 避免裁剪标注文字
+    if asset.local_path and asset.local_path.lower().endswith('.svg'):
+        if asset.crop_metadata.object_fit == "cover":
+            asset.crop_metadata.object_fit = "contain"
+
+    img_tag = asset.to_img_tag()
+    return f'''<figure>
+{img_tag}
+<figcaption>{caption}</figcaption>
+</figure>'''
+
+
+def generate_placeholder_html(directive_id: str, description: str, placeholder_type: str = "svg") -> str:
+    """
+    生成占位符 HTML（用于测试模式）
+
+    Args:
+        directive_id: 指令 ID
+        description: 描述文本
+        placeholder_type: 占位符类型 (svg, mermaid, web-image)
+
+    Returns:
+        占位符 HTML 代码
+    """
+    short_desc = description[:50] + "..." if len(description) > 50 else description
+    return f'''<figure>
+<div class="{placeholder_type}-placeholder" data-directive-id="{directive_id}">
+  [{placeholder_type.upper()} 占位符: {short_desc}]
+</div>
+<figcaption>{description}</figcaption>
+</figure>'''
+
+
+def generate_mermaid_html(mermaid_code: str, caption: str) -> str:
+    """
+    生成 Mermaid 图表的 HTML
+
+    Args:
+        mermaid_code: Mermaid 代码
+        caption: 图表说明
+
+    Returns:
+        HTML figure 代码
+    """
+    return f'''<figure>
+<div class="mermaid">
+{mermaid_code}
+</div>
+<figcaption>{caption}</figcaption>
+</figure>'''
+
+
+def resolve_asset_path(
+    asset: AssetEntry,
+    workspace_path: Path
+) -> Optional[Path]:
+    """
+    解析资产的完整路径
+
+    Args:
+        asset: 资产条目
+        workspace_path: 工作目录路径
+
+    Returns:
+        完整路径或 None
+    """
+    if not asset.local_path:
+        return None
+
+    local_path = Path(asset.local_path)
+
+    # 如果已经是绝对路径
+    if local_path.is_absolute():
+        return local_path if local_path.exists() else None
+
+    # 尝试相对于 workspace
+    full_path = workspace_path / local_path
+    if full_path.exists():
+        return full_path
+
+    # 尝试相对于 workspace 的父目录
+    full_path = workspace_path.parent / local_path
+    if full_path.exists():
+        return full_path
+
+    # 尝试相对于项目根目录
+    full_path = workspace_path.parent.parent / local_path
+    if full_path.exists():
+        return full_path
+
+    return None
