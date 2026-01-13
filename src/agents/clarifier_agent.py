@@ -50,11 +50,11 @@ class ClarifierAgent:
         parts = []
         
         # 1. User's raw input
-        parts.append({"text": "# User's Initial Input\n" + state.raw_materials + "\n\n"})
+        parts.append({"text": "# 🎯 User Intent (Instruction)\n" + state.user_intent + "\n\n"})
         
         # 2. Uploaded files summary
-        if state.reference_docs:
-            parts.append({"text": f"# Uploaded Files\nThe user has uploaded {len(state.reference_docs)} file(s).\n"})
+        if state.reference_doc_paths:
+            parts.append({"text": f"# Uploaded Files\nThe user has uploaded {len(state.reference_doc_paths)} file(s).\n"})
         
         # 3. Images if any
         if state.images:
@@ -144,10 +144,10 @@ class ClarifierAgent:
         异步版本 - 避免 asyncio.run() 嵌套问题
         """
         parts = []
-        parts.append({"text": "# User's Initial Input\n" + state.raw_materials + "\n\n"})
+        parts.append({"text": "# 🎯 User Intent (Instruction)\n" + state.user_intent + "\n\n"})
 
-        if state.reference_docs:
-            parts.append({"text": f"# Uploaded Files\nThe user has uploaded {len(state.reference_docs)} file(s).\n"})
+        if state.reference_doc_paths:
+            parts.append({"text": f"# Uploaded Files\nThe user has uploaded {len(state.reference_doc_paths)} file(s).\n"})
 
         if state.images:
             parts.extend(state.images)

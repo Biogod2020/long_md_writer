@@ -75,13 +75,11 @@ class OutlineAgent:
         if state.project_brief:
             parts.append({"text": "# Project Brief\n" + state.project_brief + "\n\n"})
         else:
-            parts.append({"text": "# Raw Requirements\n" + state.raw_materials + "\n\n"})
+            parts.append({"text": "# 🎯 User Intent (Instruction)\n" + state.user_intent + "\n\n"})
         
-        # 3. Raw Materials (ALWAYS include as reference for deeper context)
-        if state.raw_materials:
-            # Include raw materials regardless of whether project_brief exists
-            # This provides the original source content for more accurate outline design
-            parts.append({"text": "# Original Source Materials (Reference)\n" + state.raw_materials + "\n\n"})
+        # 3. Reference Materials (ALWAYS include as reference for deeper context)
+        if state.reference_materials:
+            parts.append({"text": "# 📚 Reference Materials\n" + state.reference_materials + "\n\n"})
         
         parts.append({"text": "Based on the above Project Brief and source materials, design a comprehensive document outline.\n"})
         

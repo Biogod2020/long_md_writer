@@ -44,7 +44,7 @@ class RefinerAgent:
         Run the Refiner.
         
         Args:
-            state: AgentState with raw_materials and images.
+            state: AgentState with user_intent and images.
             clarification_answers: Dict mapping question IDs to user answers.
             feedback: Optional user feedback for refinement.
             
@@ -59,14 +59,18 @@ class RefinerAgent:
             if feedback:
                 parts.append({"text": "# User Feedback\n" + feedback + "\n\n" + "Please refine the brief based on this feedback.\n\n"})
         
-        # 2. User's original input
-        parts.append({"text": "# User's Original Input\n" + state.raw_materials + "\n\n"})
+        # 2. User's Intent (Instruction)
+        parts.append({"text": "# 🎯 User Intent (Instruction)\n" + state.user_intent + "\n\n"})
         
-        # 2. Uploaded reference documents
-        if state.reference_docs:
+        # 3. Reference Materials (Full Text)
+        if state.reference_materials:
+            parts.append({"text": "# 📚 Reference Materials (Full Text)\n" + state.reference_materials + "\n\n"})
+        
+        # 4. (Legacy) Uploaded reference documents by path
+        if state.reference_doc_paths:
             from pathlib import Path
-            ref_text = ["# Uploaded Reference Materials\n"]
-            for doc_path in state.reference_docs:
+            ref_text = ["# Uploaded Reference Documents (Paths)\n"]
+            for doc_path in state.reference_doc_paths:
                 try:
                     content = Path(doc_path).read_text(encoding="utf-8")
                     ref_text.append(f"## {Path(doc_path).name}\n{content}\n\n")
@@ -109,12 +113,15 @@ class RefinerAgent:
             if feedback:
                 parts.append({"text": "# User Feedback\n" + feedback + "\n\nPlease refine the brief based on this feedback.\n\n"})
 
-        parts.append({"text": "# User's Original Input\n" + state.raw_materials + "\n\n"})
+        parts.append({"text": "# 🎯 User Intent (Instruction)\n" + state.user_intent + "\n\n"})
 
-        if state.reference_docs:
+        if state.reference_materials:
+            parts.append({"text": "# 📚 Reference Materials (Full Text)\n" + state.reference_materials + "\n\n"})
+
+        if state.reference_doc_paths:
             from pathlib import Path
-            ref_text = ["# Uploaded Reference Materials\n"]
-            for doc_path in state.reference_docs:
+            ref_text = ["# Uploaded Reference Documents (Paths)\n"]
+            for doc_path in state.reference_doc_paths:
                 try:
                     content = Path(doc_path).read_text(encoding="utf-8")
                     ref_text.append(f"## {Path(doc_path).name}\n{content}\n\n")

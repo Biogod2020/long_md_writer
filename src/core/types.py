@@ -589,11 +589,12 @@ class AgentState(BaseModel):
     job_id: str = Field(..., description="任务 ID")
     workspace_path: str = Field(..., description="工作目录路径")
     
-    # 输入
-    raw_materials: str = Field(default="", description="原始素材/用户需求 (文本)")
+    # 输入 (SOTA 2.0: 严格分离用户意图与参考资料)
+    user_intent: str = Field(default="", description="用户意图/指令 (告诉 AI 做什么)")
+    reference_materials: str = Field(default="", description="参考资料全文 (知识/数据，供创作参考)")
     project_brief: str = Field(default="", description="经过 Refine 的项目需求书")
     images: list[dict] = Field(default_factory=list, description="图片素材 (base64 encoded inlineData)")
-    reference_docs: list[str] = Field(default_factory=list, description="参考资料路径列表")
+    reference_doc_paths: list[str] = Field(default_factory=list, description="参考资料文件路径列表 (仅用于追踪)")
     
     # 数据契约
     manifest: Optional[Manifest] = Field(default=None, description="项目清单")
@@ -674,13 +675,13 @@ class AgentState(BaseModel):
         """
         parts = []
         
-        # 1. Original request (always present)
-        if self.raw_materials:
-            parts.append(f"# 原始用户请求\n{self.raw_materials}")
+        # 1. User Intent (instruction from user)
+        if self.user_intent:
+            parts.append(f"# 🎯 用户意图 (Instruction)\n{self.user_intent}")
         
         # 2. Clarification Q&A (if answered)
         if self.clarifier_questions and self.clarifier_answers:
-            qa_lines = ["# 用户澄清问答"]
+            qa_lines = ["# ❓ 用户澄清问答"]
             for q in self.clarifier_questions:
                 qid = q.get('id', '')
                 question = q.get('question', '')
@@ -691,7 +692,7 @@ class AgentState(BaseModel):
         
         # 3. Approved Brief (if exists)
         if self.project_brief:
-            parts.append(f"# 已审核的项目简报\n{self.project_brief}")
+            parts.append(f"# 📝 已审核的项目简报\n{self.project_brief}")
 
         return "\n\n---\n\n".join(parts) if parts else ""
 
@@ -760,9 +761,10 @@ class AgentState(BaseModel):
         供 Writer Agent 使用，包含:
         1. 完整规划 (Manifest)
         2. 提炼后的意图 (Brief)
-        3. 原始素材 (Raw Materials)
-        4. 资产注册表摘要 (UAR Summary)
-        5. 已完成章节内容
+        3. 用户意图 (User Intent)
+        4. 参考资料全文 (Reference Materials)
+        5. 资产注册表摘要 (UAR Summary)
+        6. 已完成章节内容
 
         注意: Vision Part (图像素材) 需要单独通过 multimodal 方式注入
         """
@@ -786,15 +788,19 @@ class AgentState(BaseModel):
         if self.project_brief:
             parts.append(f"## 📝 项目简报 (Brief)\n\n{self.project_brief}")
 
-        # 3. 原始素材
-        if self.raw_materials:
-            parts.append(f"## 📚 原始素材\n\n{self.raw_materials}")
+        # 3. 用户意图
+        if self.user_intent:
+            parts.append(f"## 🎯 用户意图\n\n{self.user_intent}")
 
-        # 4. UAR 摘要
+        # 4. 参考资料全文
+        if self.reference_materials:
+            parts.append(f"## 📚 参考资料\n\n{self.reference_materials}")
+
+        # 5. UAR 摘要
         if self.asset_registry:
             parts.append(self.asset_registry.to_summary())
 
-        # 5. 已完成章节
+        # 6. 已完成章节
         completed_content = self.get_completed_sections_content()
         if completed_content:
             parts.append(f"## ✍️ 已完成章节\n\n{completed_content}")

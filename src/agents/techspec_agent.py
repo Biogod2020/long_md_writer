@@ -52,7 +52,7 @@ class TechSpecAgent:
         
         # 1. Full Input Context
         context_parts = ["# Input Context\n"]
-        context_parts.append(f"## RAW REQUEST\n{state.raw_materials}\n")
+        context_parts.append(f"## 🎯 USER INTENT\n{state.user_intent}\n")
         
         if state.project_brief:
             context_parts.append(f"## PROJECT BRIEF\n{state.project_brief}\n")
@@ -68,10 +68,14 @@ class TechSpecAgent:
         manifest_json = state.manifest.model_dump_json(indent=2)
         parts.append({"text": f"# APPROVED MANIFEST\n```json\n{manifest_json}\n```\n"})
         
-        # 3. Reference materials
-        if state.reference_docs:
-            ref_texts = ["# REFERENCE MATERIALS\n"]
-            for doc in state.reference_docs:
+        # 3. Reference materials (full text)
+        if state.reference_materials:
+            parts.append({"text": f"# 📚 REFERENCE MATERIALS\n{state.reference_materials}\n"})
+        
+        # 4. Reference docs by path (legacy)
+        if state.reference_doc_paths:
+            ref_texts = ["# ADDITIONAL REFERENCE FILES\n"]
+            for doc in state.reference_doc_paths:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
                     ref_texts.append(f"## {doc}\n{text}\n")
@@ -119,7 +123,7 @@ class TechSpecAgent:
 
         # 1. Full Input Context
         context_parts = ["# Input Context\n"]
-        context_parts.append(f"## RAW REQUEST\n{state.raw_materials}\n")
+        context_parts.append(f"## 🎯 USER INTENT\n{state.user_intent}\n")
 
         if state.project_brief:
             context_parts.append(f"## PROJECT BRIEF\n{state.project_brief}\n")
@@ -135,10 +139,14 @@ class TechSpecAgent:
         manifest_json = state.manifest.model_dump_json(indent=2)
         parts.append({"text": f"# APPROVED MANIFEST\n```json\n{manifest_json}\n```\n"})
 
-        # 3. Reference materials
-        if state.reference_docs:
-            ref_texts = ["# REFERENCE MATERIALS\n"]
-            for doc in state.reference_docs:
+        # 3. Reference materials (full text)
+        if state.reference_materials:
+            parts.append({"text": f"# 📚 REFERENCE MATERIALS\n{state.reference_materials}\n"})
+
+        # 4. Reference docs by path (legacy)
+        if state.reference_doc_paths:
+            ref_texts = ["# ADDITIONAL REFERENCE FILES\n"]
+            for doc in state.reference_doc_paths:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
                     ref_texts.append(f"## {doc}\n{text}\n")

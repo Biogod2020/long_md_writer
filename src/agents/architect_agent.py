@@ -211,10 +211,14 @@ class ArchitectAgent:
         if state.user_context:
             final_parts.append({"text": state.user_context})
         
-        # 3. Reference docs (if any)
-        if state.reference_docs:
-            ref_parts = ["# 参考资料\n"]
-            for doc in state.reference_docs:
+        # 3. Reference Materials (full text)
+        if state.reference_materials:
+            final_parts.append({"text": f"# 📚 参考资料全文\n{state.reference_materials}\n"})
+        
+        # 4. Reference docs by path (legacy/追踪)
+        if state.reference_doc_paths:
+            ref_parts = ["# 额外参考文件\n"]
+            for doc in state.reference_doc_paths:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
                     ref_parts.append(f"### File: {doc}\n{text}\n")

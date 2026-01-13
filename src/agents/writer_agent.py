@@ -300,15 +300,24 @@ class WriterAgent:
                     text_parts.append(f"\n[读取失败: {md_path}]\n")
 
         # ================================================================
-        # 6. 原始素材参考
+        # 6. 用户意图 (必须遵循的指令)
         # ================================================================
-        text_parts.append("\n# 📚 原始素材参考\n")
-        text_parts.append("*以下是用户提供的原始资料，请基于这些内容进行创作*\n\n")
-        text_parts.append(state.raw_materials)
+        text_parts.append("\n# 🎯 用户意图 (必须遵循)\n")
+        text_parts.append("*以下是用户的核心诉求，请严格遵循*\n\n")
+        text_parts.append(state.user_intent)
         text_parts.append("\n")
 
         # ================================================================
-        # 7. 当前章节任务
+        # 7. 参考资料 (供创作参考的知识/数据)
+        # ================================================================
+        if state.reference_materials:
+            text_parts.append("\n# 📚 参考资料\n")
+            text_parts.append("*以下是用户提供的背景知识和数据，请基于这些内容进行创作*\n\n")
+            text_parts.append(state.reference_materials)
+            text_parts.append("\n")
+
+        # ================================================================
+        # 8. 当前章节任务
         # ================================================================
         text_parts.append(f"\n# 🎯 当前任务：撰写 {section.id} (命名空间: {namespace})\n")
         text_parts.append(f"**章节标题**: {section.title}\n")
