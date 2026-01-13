@@ -12,23 +12,36 @@ from pathlib import Path
 from src.orchestration.workflow_markdown import run_sota2_workflow
 from src.core.gemini_client import GeminiClient
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Magnum Opus SOTA 2.0 - Markdown 语义生成流水线",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  # 只使用用户意图 (指令)
+  python main_markdown.py --intent "写一篇关于 AI 的科普文章"
+
+  # 使用意图 + 参考资料
+  python main_markdown.py --intent "请将这份资料整理成教材" --reference inputs/raw_data.md
+
+  # 多个参考资料
+  python main_markdown.py --intent "汇总医学指南" --reference doc1.md --reference doc2.md
+""",
     )
     
     parser.add_argument(
-        "--input", "-i",
+        "--intent", "-i",
         type=str,
         required=True,
-        help="输入文件路径（包含原始素材/需求）"
+        help="用户意图/指令 (告诉 AI 做什么)"
     )
     
     parser.add_argument(
-        "--user-prompt", "-u",
+        "--reference", "-r",
         type=str,
-        help="额外的用户需求描述"
+        action="append",
+        help="参考资料文件路径 (可多次指定，将合并为一个完整的 reference_materials)"
     )
     
     parser.add_argument(
@@ -64,31 +77,59 @@ def main():
     )
     
     parser.add_argument(
+        "--global-uar",
+        type=str,
+        help="全局资产库索引路径 (例如: data/global_asset_lib/master_assets.json)"
+    )
+    
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="开启调试模式"
     )
 
+
     args = parser.parse_args()
     
-    input_path = Path(args.input)
-    if not input_path.exists():
-        print(f"Error: Input file {args.input} not found.")
-        sys.exit(1)
-        
-    raw_materials = input_path.read_text(encoding="utf-8")
+    # 读取用户意图
+    user_intent = args.intent
+    
+    # 读取参考资料 (合并所有文件)
+    reference_materials = ""
+    if args.reference:
+        ref_parts = []
+        for ref_path in args.reference:
+            ref_file = Path(ref_path)
+            if not ref_file.exists():
+                print(f"Warning: Reference file {ref_path} not found, skipping.")
+                continue
+            try:
+                content = ref_file.read_text(encoding="utf-8")
+                ref_parts.append(f"## 来源: {ref_file.name}\n\n{content}")
+            except Exception as e:
+                print(f"Warning: Failed to read {ref_path}: {e}")
+        if ref_parts:
+            reference_materials = "\n\n---\n\n".join(ref_parts)
+    
+    print(f"\n🎯 用户意图: {user_intent[:100]}...")
+    if reference_materials:
+        print(f"📚 参考资料: {len(args.reference)} 个文件, 共 {len(reference_materials)} 字符")
+    else:
+        print(f"📚 参考资料: (无)")
     
     try:
         asyncio.run(run_sota2_workflow(
-            raw_materials=raw_materials,
-            user_prompt=args.user_prompt or "",
+            user_intent=user_intent,
+            reference_materials=reference_materials,
             assets_input_dir=args.assets_dir,
             workspace_base=args.output,
             job_id=args.job_id,
             skip_vision=args.skip_vision,
             skip_asset_audit=args.skip_audit,
-            debug_mode=args.debug
+            debug_mode=args.debug,
+            global_uar_path=args.global_uar,
         ))
+
     except KeyboardInterrupt:
         print("\nInterrupted by user.")
     except Exception as e:

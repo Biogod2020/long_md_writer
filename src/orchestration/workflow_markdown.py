@@ -23,14 +23,12 @@ from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState, AssetSource
 
 # SOTA 2.0 Agents
-from ..agents.asset_indexer_agent import AssetIndexerAgent
+from ..agents.asset_management import AssetIndexerAgent, AssetFulfillmentAgent, AssetCriticAgent
 from ..agents.clarifier_agent import ClarifierAgent
 from ..agents.refiner_agent import RefinerAgent
 from ..agents.architect_agent import ArchitectAgent
 from ..agents.techspec_agent import TechSpecAgent
 from ..agents.writer_agent import WriterAgent
-from ..agents.asset_fulfillment_agent import AssetFulfillmentAgent
-from ..agents.asset_critic_agent import AssetCriticAgent
 from ..agents.editorial_qa_agent import EditorialQAAgent
 from ..agents.markdown_qa_agent import MarkdownQAAgent
 
@@ -405,27 +403,29 @@ def create_sota2_workflow(
 
 
 async def run_sota2_workflow(
-    raw_materials: str,
-    user_prompt: str = "",
+    user_intent: str,
+    reference_materials: str = "",
     assets_input_dir: str = "inputs",
     workspace_base: str = "./workspace",
     job_id: Optional[str] = None,
     skip_vision: bool = False,
     skip_asset_audit: bool = False,
     debug_mode: bool = False,
+    global_uar_path: Optional[str] = None,
 ) -> AgentState:
     """
     运行 SOTA 2.0 完整工作流
 
     Args:
-        raw_materials: 原始素材
-        user_prompt: 用户需求
+        user_intent: 用户意图/指令 (告诉 AI 做什么)
+        reference_materials: 参考资料全文 (知识/数据，供创作参考)
         assets_input_dir: 资产输入目录
         workspace_base: 工作目录基础路径
         job_id: 任务 ID
         skip_vision: 跳过 VLM 贴标
         skip_asset_audit: 跳过资产审计
         debug_mode: 调试模式
+        global_uar_path: 全局 UAR 路径 (用于跨项目资产复用)
     """
     # 生成 job_id
     if not job_id:
@@ -442,20 +442,19 @@ async def run_sota2_workflow(
     print(f" SOTA 2.0 Workflow - {job_id}")
     print(f"{'='*70}")
     print(f"📁 工作目录: {workspace_path}")
+    if global_uar_path:
+        print(f"🔗 全局资产库: {global_uar_path}")
 
-    # 组合输入
-    full_input = raw_materials
-    if user_prompt:
-        full_input = f"# 用户需求\n\n{user_prompt}\n\n# 原始素材\n\n{raw_materials}"
-
-    # 初始化状态
+    # 初始化状态 (SOTA 2.0: 严格分离 user_intent 与 reference_materials)
     initial_state = AgentState(
         job_id=job_id,
         workspace_path=str(workspace_path),
-        raw_materials=full_input,
-        project_brief=user_prompt,
+        user_intent=user_intent,
+        reference_materials=reference_materials,
         debug_mode=debug_mode,
+        uar_path=global_uar_path,  # 挂载全局 UAR
     )
+
 
     # 创建客户端和工作流
     client = GeminiClient()
