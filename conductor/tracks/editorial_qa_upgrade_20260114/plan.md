@@ -10,10 +10,10 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 2: Render-Aware Critic Upgrade
 
-- [ ] Task: Write tests for visual audit (identifying crop mismatches in rendered images)
-- [ ] Task: Upgrade `EditorialCritic` to accept visual inputs (screenshots)
-- [ ] Task: Write tests for full-context semantic consistency
-- [ ] Task: Upgrade `EditorialCritic` to process full preceding text
+- [x] Task: Write tests for visual audit (identifying crop mismatches in rendered images) 81e9481
+- [x] Task: Upgrade `EditorialCritic` to accept visual inputs (screenshots) 81e9481
+- [x] Task: Write tests for full-context semantic consistency 81e9481
+- [x] Task: Upgrade `EditorialCritic` to process full preceding text 81e9481
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Render-Aware Critic Upgrade' (Protocol in workflow.md)
 
 ## Phase 3: Editorial Fixer Implementation
