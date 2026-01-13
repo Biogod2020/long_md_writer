@@ -21,7 +21,7 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Write tests for `EditorialFixer` surgical patching edc25a7
 - [x] Task: Implement `EditorialFixer` (Search/Replace logic for semantic fixes) edc25a7
 - [x] Task: Integrate Critic and Fixer into a closed loop in `EditorialQAAgent` edc25a7
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Editorial Fixer Implementation' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Editorial Fixer Implementation' (Protocol in workflow.md)
 
 ## Phase 4: Integration & SOTA Verification
 
