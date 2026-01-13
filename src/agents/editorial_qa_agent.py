@@ -13,6 +13,7 @@ EditorialQAAgent: SOTA 2.0 Phase E 全量语义综审
 
 import re
 import json
+import asyncio
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
@@ -179,18 +180,12 @@ class EditorialQAAgent:
         content: str,
         namespace: str,
         full_context: Optional[str] = None
-    ) -> tuple[AgentState, QAReport]:
+    ) -> tuple[AgentState, QAReport, str]:
         """
         异步执行 QA 审核 (Critic-Fixer Loop)
 
-        Args:
-            state: Agent 状态
-            content: 待审核的 Markdown 内容
-            namespace: 章节命名空间
-            full_context: 全量前文上下文文本（可选）
-
         Returns:
-            (更新后的状态, QA报告)
+            (更新后的状态, QA报告, 最终的Markdown内容)
         """
         iteration = 0
         max_iterations = 3
@@ -213,7 +208,11 @@ class EditorialQAAgent:
             screenshot_path = None
             if self.renderer:
                 try:
-                    screenshot_path = self.renderer.render_to_image(current_content, f"qa_{namespace}_{iteration}")
+                    # Check if renderer is async
+                    if asyncio.iscoroutinefunction(self.renderer.render_to_image):
+                        screenshot_path = await self.renderer.render_to_image(current_content, f"qa_{namespace}_{iteration}")
+                    else:
+                        screenshot_path = self.renderer.render_to_image(current_content, f"qa_{namespace}_{iteration}")
                 except Exception as e:
                     print(f"    ❌ 渲染失败: {e}")
 
@@ -258,7 +257,7 @@ class EditorialQAAgent:
             current_content = fixed_content
             # 更新状态中的内容（在这里我们只在内存中迭代）
 
-        return state, last_report
+        return state, last_report, current_content
 
     async def _run_fixer_loop(self, content: str, issues: list[QAIssue], full_context: Optional[str]) -> str:
         """运行 Fixer 尝试修复所有错误级别的问题"""
@@ -295,7 +294,7 @@ class EditorialQAAgent:
         content: str,
         namespace: str,
         full_context: Optional[str] = None
-    ) -> tuple[AgentState, QAReport]:
+    ) -> tuple[AgentState, QAReport, str]:
         """同步版本"""
         import asyncio
         try:
@@ -454,6 +453,9 @@ class EditorialQAAgent:
 
         context_section = ""
         if full_context:
+            context_size = len(full_context)
+            if context_size > 100000:
+                print(f"  [EditorialQA] ⚠️ 警告: 前文上下文过大 ({context_size} 字符)，可能导致 Token 溢出或性能下降。")
             context_section = f"## 全书前文上下文\n\n```markdown\n{full_context}\n```"
 
         prompt = EDITORIAL_QA_PROMPT.format(
@@ -465,7 +467,16 @@ class EditorialQAAgent:
             # 构造多模态消息
             message_parts = [{"text": prompt}]
             if image_path and image_path.exists():
-                message_parts.append(image_path)
+                import base64
+                with open(image_path, "rb") as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode("utf-8")
+                
+                message_parts.append({
+                    "inline_data": {
+                        "mime_type": "image/png",
+                        "data": img_data
+                    }
+                })
 
             response = await self.client.generate_async(
                 prompt=message_parts,

@@ -25,6 +25,6 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 4: Integration & SOTA Verification
 
-- [ ] Task: End-to-end test: Audit a section with a "broken" crop and "wrong" term, verify auto-fix
-- [ ] Task: Performance optimization for full-context injection
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration & SOTA Verification' (Protocol in workflow.md)
+- [~] Task: End-to-end test: Audit a section with a "broken" crop and "wrong" term, verify auto-fix
+- [~] Task: Performance optimization for full-context injection
+- [~] Task: Conductor - User Manual Verification 'Phase 4: Integration & SOTA Verification' (Protocol in workflow.md)
