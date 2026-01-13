@@ -2,11 +2,11 @@
 
 This plan follows the TDD and verification protocols defined in `conductor/workflow.md`.
 
-## Phase 1: Infrastructure & Render Simulation
+## Phase 1: Infrastructure ## Phase 1: Infrastructure & Render Simulation Render Simulation [checkpoint: ed88f92]
 
 - [x] Task: Create a mock renderer for Editorial QA tests (simulating Playwright output) 5d8203b
 - [x] Task: Implement full-context text gathering utility (merging preceding chapters) 0ac551b
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Render Simulation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure - [~] Task: Conductor - User Manual Verification 'Phase 1: Infrastructure & Render Simulation' (Protocol in workflow.md) Render Simulation' (Protocol in workflow.md) ed88f92
 
 ## Phase 2: Render-Aware Critic Upgrade
 
