@@ -23,8 +23,8 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Integrate Critic and Fixer into a closed loop in `EditorialQAAgent` edc25a7
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Editorial Fixer Implementation' (Protocol in workflow.md) 9b993ad
 
-## Phase 4: Integration & SOTA Verification
+## Phase 4: Integration ## Phase 4: Integration & SOTA Verification SOTA Verification [checkpoint: b1a7e02]
 
-- [~] Task: End-to-end test: Audit a section with a "broken" crop and "wrong" term, verify auto-fix
-- [~] Task: Performance optimization for full-context injection
-- [~] Task: Conductor - User Manual Verification 'Phase 4: Integration & SOTA Verification' (Protocol in workflow.md)
+- [x] Task: End-to-end test: Audit a section with a "broken" crop and "wrong" term, verify auto-fix b1a7e02
+- [x] Task: Performance optimization for full-context injection b1a7e02
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Integration - [~] Task: Conductor - User Manual Verification 'Phase 4: Integration & SOTA Verification' (Protocol in workflow.md) SOTA Verification' (Protocol in workflow.md) b1a7e02
