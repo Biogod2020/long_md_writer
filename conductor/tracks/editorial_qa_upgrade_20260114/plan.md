@@ -14,13 +14,13 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Upgrade `EditorialCritic` to accept visual inputs (screenshots) 81e9481
 - [x] Task: Write tests for full-context semantic consistency 81e9481
 - [x] Task: Upgrade `EditorialCritic` to process full preceding text 81e9481
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Render-Aware Critic Upgrade' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Render-Aware Critic Upgrade' (Protocol in workflow.md)
 
 ## Phase 3: Editorial Fixer Implementation
 
-- [ ] Task: Write tests for `EditorialFixer` surgical patching
-- [ ] Task: Implement `EditorialFixer` (Search/Replace logic for semantic fixes)
-- [ ] Task: Integrate Critic and Fixer into a closed loop in `EditorialQAAgent`
+- [x] Task: Write tests for `EditorialFixer` surgical patching edc25a7
+- [x] Task: Implement `EditorialFixer` (Search/Replace logic for semantic fixes) edc25a7
+- [x] Task: Integrate Critic and Fixer into a closed loop in `EditorialQAAgent` edc25a7
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Editorial Fixer Implementation' (Protocol in workflow.md)
 
 ## Phase 4: Integration & SOTA Verification
