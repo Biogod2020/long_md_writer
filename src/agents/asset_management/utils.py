@@ -10,13 +10,18 @@ from typing import Optional
 from ...core.types import AssetEntry, CropMetadata
 
 
-def generate_figure_html(asset: AssetEntry, caption: str) -> str:
+def generate_figure_html(
+    asset: AssetEntry,
+    caption: str,
+    md_subdir: str = "md"
+) -> str:
     """
     生成图片的 HTML figure 标签
 
     Args:
         asset: 资产条目
         caption: 图片说明
+        md_subdir: markdown 文件所在的子目录名称 (用于计算相对路径)
 
     Returns:
         HTML figure 代码
@@ -26,7 +31,8 @@ def generate_figure_html(asset: AssetEntry, caption: str) -> str:
         if asset.crop_metadata.object_fit == "cover":
             asset.crop_metadata.object_fit = "contain"
 
-    img_tag = asset.to_img_tag()
+    # 计算从 md_subdir 到资产的正确相对路径
+    img_tag = asset.to_img_tag(md_subdir=md_subdir)
     return f'''<figure>
 {img_tag}
 <figcaption>{caption}</figcaption>

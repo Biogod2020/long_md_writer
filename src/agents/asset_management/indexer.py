@@ -244,9 +244,16 @@ class AssetIndexerAgent:
         # 生成资产 ID
         asset_id = uar.generate_id("u", image_path.stem)
 
-        # 计算相对路径
+        # 计算相对路径 - 存储完整的项目根目录相对路径
+        # 例如: assets/images/candidates_xxx/img_1.png
         try:
-            relative_path = image_path.relative_to(base_dir.parent)
+            # 尝试从 assets 目录开始的路径
+            parts = image_path.parts
+            if "assets" in parts:
+                assets_idx = parts.index("assets")
+                relative_path = Path(*parts[assets_idx:])
+            else:
+                relative_path = image_path.relative_to(base_dir.parent)
         except ValueError:
             relative_path = image_path
 

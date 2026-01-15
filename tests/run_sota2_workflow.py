@@ -27,36 +27,41 @@ ASSETS_DIR = Path(__file__).parent.parent / "assets" / "images" / "candidates_ec
 
 
 def load_inputs():
-    """加载所有输入文件"""
+    """加载所有输入文件
+
+    Returns:
+        user_intent: 用户意图/指令 (告诉 AI 做什么)
+        reference_materials: 参考资料全文 (知识/数据，供创作参考)
+    """
     print("\n--- 加载输入文件 ---")
 
-    # 加载用户 prompt
+    # 加载用户意图 (prompt.txt)
     prompt_file = INPUTS_DIR / "prompt.txt"
-    user_prompt = ""
+    user_intent = ""
     if prompt_file.exists():
-        user_prompt = prompt_file.read_text(encoding="utf-8")
-        print(f"  ✓ prompt.txt ({len(user_prompt)} 字符)")
+        user_intent = prompt_file.read_text(encoding="utf-8")
+        print(f"  ✓ prompt.txt (用户意图: {len(user_intent)} 字符)")
 
-    # 加载原始素材
-    raw_files = [
-        "Cardiovascular_markdown.md",
-        "ECG Pathology and Clinical Features.md",
-        "ecg_qa.md",
-        "从偶极子到心电图.html",
+    # 加载参考资料
+    reference_files = [
+        "从偶极子到心电图.html",      # 风格参考
+        "ecg_qa.md",                    # QA 知识
+        "ECG Pathology and Clinical Features.md",  # 病理特征
+        "Cardiovascular_markdown.md",   # 心血管知识
     ]
 
     materials = []
-    for filename in raw_files:
+    for filename in reference_files:
         file_path = INPUTS_DIR / filename
         if file_path.exists():
             content = file_path.read_text(encoding="utf-8")
             materials.append(f"# 📄 {filename}\n\n{content}\n")
             print(f"  ✓ {filename} ({len(content):,} 字符)")
 
-    raw_materials = "\n\n---\n\n".join(materials)
-    print(f"\n  总素材长度: {len(raw_materials):,} 字符")
+    reference_materials = "\n\n---\n\n".join(materials)
+    print(f"\n  总参考资料长度: {len(reference_materials):,} 字符")
 
-    return user_prompt, raw_materials
+    return user_intent, reference_materials
 
 
 async def main():
@@ -85,15 +90,15 @@ async def main():
 """)
 
     # 加载输入
-    user_prompt, raw_materials = load_inputs()
+    user_intent, reference_materials = load_inputs()
 
     # 运行工作流
     print("\n--- 启动 SOTA 2.0 工作流 ---")
 
     try:
         final_state = await run_sota2_workflow(
-            raw_materials=raw_materials,
-            user_prompt=user_prompt,
+            user_intent=user_intent,
+            reference_materials=reference_materials,
             assets_input_dir=str(ASSETS_DIR),
             workspace_base="./workspace",
             skip_vision=False,  # 启用 VLM 贴标

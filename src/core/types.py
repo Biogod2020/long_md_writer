@@ -140,7 +140,7 @@ class AssetEntry(BaseModel):
         description="被拒绝使用的历史记录 [{section_id, reason, suggested_action}]"
     )
 
-    def to_img_tag(self, class_name: Optional[str] = None) -> str:
+    def to_img_tag(self, class_name: Optional[str] = None, md_subdir: Optional[str] = None) -> str:
         """
         生成完整的 <img> HTML 标签 (Writer-Direct-Inject 协议)
 
@@ -150,11 +150,29 @@ class AssetEntry(BaseModel):
              style="object-position: 30% 20%; object-fit: cover; width: 100%"
              class="figure-main">
 
+        Args:
+            class_name: 可选的 CSS 类名
+            md_subdir: markdown 文件所在的子目录 (如 "md")，用于计算正确的相对路径
+
         Returns:
             HTML img 标签字符串，如果 local_path 无效则返回带占位符的标签
         """
         # 确保 src 有有效值
         src_path = self.local_path or self.original_url or f"missing-asset-{self.id}"
+
+        # 如果指定了 md_subdir，调整相对路径
+        if md_subdir and src_path and not src_path.startswith(("http://", "https://", "/")):
+            # 从 md/ 子目录返回上一级
+            if src_path.startswith("generated_assets/"):
+                # workspace 内的生成资产: ../generated_assets/xxx
+                src_path = f"../{src_path}"
+            elif src_path.startswith("assets/"):
+                # 项目根目录的资产: ../../../assets/xxx (workspace/job_id/md → project_root)
+                src_path = f"../../../{src_path}"
+            elif not src_path.startswith("../"):
+                # 其他 workspace 内的相对路径
+                src_path = f"../{src_path}"
+
         parts = [f'<img src="{src_path}"']
 
         # Alt text
@@ -236,7 +254,18 @@ class AssetEntry(BaseModel):
         if self.unsuitable_for:
             lines.append(f"  - 不适用: {', '.join(self.unsuitable_for)}")
         if self.local_path:
-            lines.append(f"  - 路径: {self.local_path}")
+            # 显示从 md/ 目录可用的相对路径
+            display_path = self.local_path
+            if display_path.startswith("assets/"):
+                # 项目根目录的资产: ../../../assets/xxx
+                display_path = f"../../../{display_path}"
+            elif display_path.startswith("generated_assets/"):
+                # workspace 内的生成资产: ../generated_assets/xxx
+                display_path = f"../{display_path}"
+            elif not display_path.startswith(("http://", "https://", "/", "../")):
+                # 其他相对路径
+                display_path = f"../{display_path}"
+            lines.append(f"  - 路径: {display_path}")
         return "\n".join(lines)
 
 

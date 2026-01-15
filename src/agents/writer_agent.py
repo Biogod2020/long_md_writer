@@ -61,11 +61,13 @@ WRITER_SYSTEM_PROMPT = """你是一位资深技术写手，负责撰写高质量
 
 #### 情况 A: 找到合适的高质量资产 → 直接注入 `<img>` 标签
 
+**重要**: 请使用 UAR 中显示的完整路径，不要修改！
+
 ```markdown
 这里是正文内容...
 
 <figure>
-<img src="assets/images/xxx.png" alt="描述" style="object-position: 50% 50%; object-fit: cover; width: 100%" data-asset-id="资产ID">
+<img src="../../../assets/images/xxx.png" alt="描述" style="object-position: 50% 50%; object-fit: cover; width: 100%" data-asset-id="资产ID">
 <figcaption>图 X: 说明文字</figcaption>
 </figure>
 
@@ -353,7 +355,8 @@ class WriterAgent:
 请在合适的位置插入图像，遵循以下规则：
 
 1. **直接使用 UAR 资产**: 如果上面的 UAR 中有合适的资产，直接写 `<img>` 标签
-   - 格式: `<img src="路径" alt="描述" style="object-position: 50% 50%; object-fit: cover" data-asset-id="资产ID">`
+   - **重要**: 使用 UAR 中显示的完整路径，不要自己构造！
+   - 格式: `<img src="UAR中显示的路径" alt="描述" style="object-position: 50% 50%; object-fit: cover" data-asset-id="资产ID">`
 
 2. **声明新资产需求**: 如果没有合适资产或质量不达标，使用 `:::visual` 指令
    - 所有新资产 ID 必须以 `{namespace}-` 开头，例如 `{namespace}-fig-xxx`

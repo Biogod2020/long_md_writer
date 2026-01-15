@@ -240,11 +240,14 @@ class SOTA2NodeFactory:
             section_name = Path(md_path).stem
             namespace = section_name.replace("sec-", "s").replace("-", "")
 
-            state, qa_report = await self.editorial_qa.run_async(
+            state, qa_report, updated_content = await self.editorial_qa.run_async(
                 state, content, namespace
             )
+            # 将修复后的内容写回文件
+            if updated_content != content:
+                Path(md_path).write_text(updated_content, encoding="utf-8")
 
-            if qa_report.is_valid:
+            if qa_report.passed:
                 print(f"    ✅ {section_name}: 审核通过")
             else:
                 print(f"    ⚠️ {section_name}: {len(qa_report.issues)} 个问题")
@@ -321,12 +324,10 @@ def create_sota2_workflow(
         return "architect"
 
     def should_continue_writing(state: AgentState) -> Literal["writer", "fulfillment"]:
-        """判断是否继续写作"""
-        if state.errors:
-            return "fulfillment"
-        if state.all_sections_written():
-            return "fulfillment"
-        return "writer"
+        """判断是否继续写作 - 每个章节写完后都要经过 Fulfillment"""
+        # 每个章节写完后都必须经过 Fulfillment 处理 :::visual 指令
+        # should_continue_section_loop 会决定是否继续写下一章
+        return "fulfillment"
 
     def should_continue_section_loop(state: AgentState) -> Literal["writer", "editorial_qa"]:
         """判断是否继续章节循环 (Writer → Fulfillment → Critic)"""

@@ -7,7 +7,7 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Create `tests/test_asset_reuse_scoring.py` to verify scoring logic against mock UAR data. ef71f07
 - [x] Task: Implement `AssetFulfillmentAgent._calculate_reuse_score()` using VLM/LLM semantic comparison. ef71f07
 - [x] Task: Implement `AssetFulfillmentAgent._query_uar_for_candidates()` to retrieve potential matches. ef71f07
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Contextual Scoring & UAR Lookup' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 1: Contextual Scoring & UAR Lookup' (Protocol in workflow.md)
 
 ## Phase 2: Reuse Logic & Frequency Control
 
