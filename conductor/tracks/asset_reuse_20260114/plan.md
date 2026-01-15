@@ -21,4 +21,4 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Create `tests/test_asset_reuse_e2e.py` simulating a workflow with repeated visual intents. a1a2d70
 - [x] Task: Verify that identical intents reuse the file ID. a1a2d70
 - [x] Task: Verify that distinct intents generate new files. a1a2d70
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Integration & E2E Testing' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Integration & E2E Testing' (Protocol in workflow.md)
