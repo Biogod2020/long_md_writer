@@ -101,6 +101,9 @@ class AssetFulfillmentAgent:
 
         for directive in directives:
             try:
+                # 决策：复用 vs. 生成
+                directive = await self._decide_fulfillment_strategy(directive, uar)
+
                 # 异步执行履约
                 result = await self._fulfill_directive_async(directive, uar, output_path, namespace, workspace_path)
 
@@ -384,3 +387,38 @@ class AssetFulfillmentAgent:
         从 UAR 中获取可复用的候选资产
         """
         return uar.get_reusable_assets()[:limit]
+
+    async def _decide_fulfillment_strategy(self, directive: VisualDirective, uar) -> VisualDirective:
+        """
+        根据现有资产的匹配得分和使用频率，决定履约策略 (复用 vs. 生成)
+        """
+        # 如果 Writer 已经指定了使用现有资产，则尊重 Writer 的决策
+        if directive.action == AssetFulfillmentAction.USE_EXISTING and directive.matched_asset_id:
+            return directive
+
+        # 获取候选资产
+        candidates = self._query_uar_for_candidates(uar)
+        if not candidates:
+            return directive
+
+        best_score = 0
+        best_asset = None
+
+        # 计算得分
+        for asset in candidates:
+            score = await self._calculate_reuse_score(directive.description, asset)
+            if score > best_score:
+                best_score = score
+                best_asset = asset
+
+        print(f"  [AssetFulfillment] 最佳匹配资产: {best_asset.id if best_asset else 'None'} (得分: {best_score})")
+
+        # 90+ 阈值判断
+        if best_score >= 90 and best_asset:
+            # 检查使用频率（简单逻辑：如果已经用了 3 次以上，可能需要生成新变体，除非是特定请求）
+            # 这里先实现基础复用逻辑
+            directive.action = AssetFulfillmentAction.USE_EXISTING
+            directive.matched_asset_id = best_asset.id
+            print(f"  [AssetFulfillment] 🚀 自动复用资产: {best_asset.id}")
+
+        return directive
