@@ -331,3 +331,56 @@ class AssetFulfillmentAgent:
 
         directive.error = "网络搜索功能尚未实现"
         return directive
+
+    async def _calculate_reuse_score(self, intent: str, asset: AssetEntry) -> int:
+        """
+        使用 LLM 计算现有资产与新意图之间的语义匹配得分 (0-100)
+        """
+        prompt = f"""请评估以下“视觉意图”与“现有资产”之间的匹配程度。
+
+### 视觉意图 (需求)
+{intent}
+
+### 现有资产 (已有)
+- ID: {asset.id}
+- 语义标签: {asset.semantic_label}
+- 标签: {", ".join(asset.tags)}
+
+### 评分标准
+- 100: 完全匹配，可以直接复用。
+- 90-99: 极度匹配，虽然描述略有差异但核心视觉内容一致。
+- 70-89: 部分匹配，可以复用但可能不是最佳选择。
+- 0-69: 不匹配，建议重新生成或搜索。
+
+请以 JSON 格式输出评分结果：
+```json
+{{
+  "score": 0-100,
+  "reason": "评分理由简述"
+}}
+```
+"""
+        try:
+            response = await self.client.generate_async(
+                prompt=prompt,
+                system_instruction="你是一位专业的视觉资产评估专家。请客观评估资产复用得分。",
+                temperature=0.0
+            )
+            
+            if response.success:
+                # 尝试解析 JSON
+                match = re.search(r'\{[\s\S]*\}', response.text)
+                if match:
+                    data = json.loads(match.group())
+                    return int(data.get("score", 0))
+            
+            return 0
+        except Exception as e:
+            print(f"  [AssetFulfillment] 评分出错: {e}")
+            return 0
+
+    def _query_uar_for_candidates(self, uar, limit: int = 10) -> list[AssetEntry]:
+        """
+        从 UAR 中获取可复用的候选资产
+        """
+        return uar.get_reusable_assets()[:limit]
