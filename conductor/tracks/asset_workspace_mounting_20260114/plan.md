@@ -24,8 +24,8 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [ ] Task: Enhance the scoring prompt in `_calculate_reuse_score` to prioritize User-Provided/Whitelisted assets.
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Unified Asset Aggregation & Prompt Prioritization' (Protocol in workflow.md) bdb8456
 
-## Phase 4: Integration & Promotion Workflow
+## Phase 4: Integration & Promotion Workflow [checkpoint: 739abf6]
 
 - [x] Task: End-to-end test: Mount a workspace, select assets, generate new ones, and verify multi-chapter reuse. d5e30c3
 - [x] Task: Implement a prototype "Promotion" command to copy session assets to a workspace. d5e30c3
-- [~] Task: Conductor - User Manual Verification 'Phase 4: Integration & Promotion Workflow' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Integration & Promotion Workflow' (Protocol in workflow.md) 739abf6
