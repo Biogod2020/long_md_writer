@@ -83,10 +83,12 @@ class AssetFulfillmentAgent:
         # 确保 UAR 已初始化
         uar = state.get_uar()
 
-        # 确保输出目录存在
+        # 确保输出子目录存在
         workspace_path = Path(state.workspace_path)
-        output_path = workspace_path / self.output_dir
-        output_path.mkdir(parents=True, exist_ok=True)
+        gen_path = workspace_path / "agent_generated"
+        src_path = workspace_path / "agent_sourced"
+        gen_path.mkdir(parents=True, exist_ok=True)
+        src_path.mkdir(parents=True, exist_ok=True)
 
         # 解析所有 :::visual 指令
         directives = self._parse_visual_directives(section_content)
@@ -105,7 +107,7 @@ class AssetFulfillmentAgent:
                 directive = await self._decide_fulfillment_strategy(directive, uar)
 
                 # 异步执行履约
-                result = await self._fulfill_directive_async(directive, uar, output_path, namespace, workspace_path)
+                result = await self._fulfill_directive_async(directive, uar, gen_path, src_path, namespace, workspace_path)
 
                 if result.fulfilled and result.result_html:
                     adjusted_start = result.start_pos + offset
@@ -198,7 +200,8 @@ class AssetFulfillmentAgent:
         self,
         directive: VisualDirective,
         uar,
-        output_path: Path,
+        gen_path: Path,
+        src_path: Path,
         namespace: str,
         workspace_path: Path
     ) -> VisualDirective:
@@ -212,13 +215,13 @@ class AssetFulfillmentAgent:
             return await self._fulfill_use_existing_async(directive, uar, namespace, workspace_path)
 
         if directive.action == AssetFulfillmentAction.GENERATE_SVG:
-            return await self._fulfill_generate_svg_async(directive, uar, output_path, namespace, workspace_path)
+            return await self._fulfill_generate_svg_async(directive, uar, gen_path, namespace, workspace_path)
 
         if directive.action == AssetFulfillmentAction.GENERATE_MERMAID:
             return await self._fulfill_generate_mermaid_async(directive, namespace)
 
         if directive.action == AssetFulfillmentAction.SEARCH_WEB:
-            return self._fulfill_search_web(directive, uar, output_path, namespace)
+            return self._fulfill_search_web(directive, uar, src_path, namespace)
 
         directive.error = f"未知的 action 类型: {directive.action}"
         return directive

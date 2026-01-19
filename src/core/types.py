@@ -326,68 +326,95 @@ class VisualIntentDeclaration(BaseModel):
 
 class UniversalAssetRegistry(BaseModel):
     """
-    统一资产注册表 (UAR) - 系统的"视觉大脑"
+    统一资产注册表 (UAR) - 系统的"视觉大脑" (SOTA 2.0 升级版)
 
-    核心职责：
-    1. 资产注册与持久化
-    2. 语义匹配查询 (intent_match)
-    3. 跨章节资产复用管理
+    支持：
+    1. 模块化挂载 (Mounting multiple workspaces)
+    2. 白名单管理 (HITL Selection)
+    3. 运行态即时复用
     """
-    assets: dict[str, AssetEntry] = Field(default_factory=dict, description="资产映射表 {id: AssetEntry}")
-    _persist_path: Optional[str] = PrivateAttr(default=None)  # 持久化路径 (不序列化)
+    # 核心资产池 (当前 Session 产出)
+    assets: dict[str, AssetEntry] = Field(default_factory=dict, description="当前 Session 资产映射表")
+    
+    # 挂载的外部库 {workspace_name: {asset_id: AssetEntry}}
+    mounted_workspaces: dict[str, dict[str, AssetEntry]] = Field(default_factory=dict)
+    
+    # 白名单 (允许在本项目中复用的外部资产 ID)
+    whitelisted_ids: set[str] = Field(default_factory=set)
+    
+    # 用户强制提供的资产 ID (inputs/ 目录)
+    user_provided_ids: set[str] = Field(default_factory=set)
+
+    _persist_path: Optional[str] = PrivateAttr(default=None)
 
     model_config = {"arbitrary_types_allowed": True}
 
     def set_persist_path(self, path: str) -> None:
-        """设置持久化路径"""
+        """设置持久化路径 (通常是当前 workspace/assets.json)"""
         self._persist_path = path
 
+    def mount_workspace(self, name: str, assets_json_path: str) -> bool:
+        """挂载一个外部资产库"""
+        path = Path(assets_json_path)
+        if not path.exists():
+            return False
+        
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            ws_assets = {}
+            for aid, adata in data.get("assets", {}).items():
+                # 兼容性处理
+                if "crop_metadata" in adata and adata["crop_metadata"]:
+                    adata["crop_metadata"] = CropMetadata(**adata["crop_metadata"])
+                ws_assets[aid] = AssetEntry(**adata)
+            
+            self.mounted_workspaces[name] = ws_assets
+            return True
+        except Exception as e:
+            print(f"  [UAR] 挂载失败 {name}: {e}")
+            return False
+
+    def add_to_whitelist(self, asset_id: str) -> None:
+        """将资产加入本项目白名单"""
+        self.whitelisted_ids.add(asset_id)
+
     def register_immediate(self, entry: AssetEntry) -> None:
-        """
-        产出即持久化：注册资产并立即写入 assets.json
-        """
+        """注册当前 Session 产出的资产"""
         self.assets[entry.id] = entry
         self._persist()
 
-    def register_batch(self, entries: list[AssetEntry]) -> None:
-        """批量注册资产"""
-        for entry in entries:
-            self.assets[entry.id] = entry
-        self._persist()
-
     def get_asset(self, asset_id: str) -> Optional[AssetEntry]:
-        """根据 ID 获取资产"""
-        return self.assets.get(asset_id)
+        """全局查找资产 (Session -> Mounted)"""
+        if asset_id in self.assets:
+            return self.assets[asset_id]
+        
+        for ws in self.mounted_workspaces.values():
+            if asset_id in ws:
+                return ws[asset_id]
+        return None
 
-    def get_assets_by_source(self, source: AssetSource) -> list[AssetEntry]:
-        """根据来源获取资产列表"""
-        return [a for a in self.assets.values() if a.source == source]
-
-    def get_reusable_assets(self) -> list[AssetEntry]:
-        """获取所有可复用的资产"""
-        return [a for a in self.assets.values() if a.can_reuse()]
-
-    def get_assets_for_section(self, section_id: str) -> list[AssetEntry]:
-        """获取某章节使用的所有资产"""
-        return [a for a in self.assets.values() if section_id in a.used_in_sections]
-
-    def find_by_tags(self, tags: list[str]) -> list[AssetEntry]:
-        """根据标签查找资产"""
-        return [a for a in self.assets.values() if any(t in a.tags for t in tags)]
-
-    def intent_match_candidates(self, semantic_query: str, limit: int = 5) -> list[AssetEntry]:
+    def get_all_candidates(self) -> list[AssetEntry]:
         """
-        获取候选资产列表供 LLM 语义匹配
-
-        注意：此方法返回候选列表，实际的语义匹配由 LLM 完成
-        调用方应将 semantic_query 和候选列表一起发送给 LLM 进行判断
+        获取所有可用于复用的候选资产。
+        优先级权重将在 Prompt 中处理，此处返回：
+        1. 本次 Session 产出的所有资产 (Free to use)
+        2. 用户提供的输入资产 (Mandatory)
+        3. 被选入白名单的挂载库资产
         """
-        # 只返回可复用且已通过 VQA 的资产
-        candidates = [
-            a for a in self.assets.values()
-            if a.can_reuse() and a.vqa_status in (AssetVQAStatus.PASS, AssetVQAStatus.SKIPPED)
-        ]
-        return candidates[:limit]
+        candidates = []
+        
+        # 1. Session 资产 (含用户输入的)
+        candidates.extend(self.assets.values())
+        
+        # 2. 挂载库中处于白名单的资产
+        for ws_assets in self.mounted_workspaces.values():
+            for aid, asset in ws_assets.items():
+                if aid in self.whitelisted_ids and aid not in self.assets:
+                    candidates.append(asset)
+        
+        return candidates
 
     def generate_id(self, namespace: str, semantic_hint: str) -> str:
         """
