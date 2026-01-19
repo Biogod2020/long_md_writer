@@ -16,13 +16,13 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [ ] Task: Implement optional Tier 1 "Broad Search" using Gemini Flash to suggest additional assets.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Interactive Manual Selection & Optional AI Discovery' (Protocol in workflow.md) 64fba48
 
-## Phase 3: Unified Asset Aggregation & Prompt Prioritization
+## Phase 3: Unified Asset Aggregation & Prompt Prioritization [checkpoint: bdb8456]
 
 - [~] Task: Create `tests/test_intra_session_reuse.py` to verify unified aggregation logic.
 - [ ] Task: Update `AssetFulfillmentAgent` to register new assets immediately into the session registry.
 - [ ] Task: Update `_decide_fulfillment_strategy` to aggregate all asset types into a single candidate list.
 - [ ] Task: Enhance the scoring prompt in `_calculate_reuse_score` to prioritize User-Provided/Whitelisted assets.
-- [~] Task: Conductor - User Manual Verification 'Phase 3: Unified Asset Aggregation & Prompt Prioritization' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Unified Asset Aggregation & Prompt Prioritization' (Protocol in workflow.md) bdb8456
 
 ## Phase 4: Integration & Promotion Workflow
 
