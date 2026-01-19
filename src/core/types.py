@@ -380,6 +380,14 @@ class UniversalAssetRegistry(BaseModel):
         """将资产加入本项目白名单"""
         self.whitelisted_ids.add(asset_id)
 
+    def get_assets_by_source(self, source: AssetSource) -> list[AssetEntry]:
+        """根据来源获取资产列表 (仅限当前 Session)"""
+        return [a for a in self.assets.values() if a.source == source]
+
+    def get_reusable_assets(self) -> list[AssetEntry]:
+        """获取所有可复用的资产 (仅限当前 Session)"""
+        return [a for a in self.assets.values() if a.can_reuse()]
+
     def register_immediate(self, entry: AssetEntry) -> None:
         """注册当前 Session 产出的资产"""
         self.assets[entry.id] = entry
