@@ -338,10 +338,17 @@ class AssetFulfillmentAgent:
         directive.error = "网络搜索功能尚未实现"
         return directive
 
-    async def _calculate_reuse_score(self, intent: str, asset: AssetEntry) -> int:
+    async def _calculate_reuse_score(self, intent: str, asset: AssetEntry, uar=None) -> int:
         """
         使用 LLM 计算现有资产与新意图之间的语义匹配得分 (0-100)
         """
+        # 确定资产优先级类型
+        priority_type = "普通 (Session Produced)"
+        if uar and asset.id in uar.user_provided_ids:
+            priority_type = "最高 (User Provided - 必须优先考虑)"
+        elif uar and asset.id in uar.whitelisted_ids:
+            priority_type = "高 (Whitelisted - 优先考虑)"
+
         prompt = f"""请评估以下“视觉意图”与“现有资产”之间的匹配程度。
 
 ### 视觉意图 (需求)
@@ -351,18 +358,20 @@ class AssetFulfillmentAgent:
 - ID: {asset.id}
 - 语义标签: {asset.semantic_label}
 - 标签: {", ".join(asset.tags)}
+- 优先级类型: {priority_type}
 
-### 评分标准
-- 100: 完全匹配，可以直接复用。
-- 90-99: 极度匹配，虽然描述略有差异但核心视觉内容一致。
-- 70-89: 部分匹配，可以复用但可能不是最佳选择。
-- 0-69: 不匹配，建议重新生成或搜索。
+### 评分标准与优先级指导
+1. **语义匹配 (权重 80%)**: 评估资产内容是否满足意图。
+2. **优先级权重 (权重 20%)**: 
+   - 如果优先级是“最高”或“高”，且语义匹配良好（>80分），请给予额外的加分，确保其总分更容易达到 90+ 阈值。
+   - 用户提供的资产 (User Provided) 具有最高权威性，应作为首选。
 
+### 输出格式
 请以 JSON 格式输出评分结果：
 ```json
 {{
   "score": 0-100,
-  "reason": "评分理由简述"
+  "reason": "评分理由简述，请说明优先级如何影响了最终得分"
 }}
 ```
 """
@@ -387,9 +396,9 @@ class AssetFulfillmentAgent:
 
     def _query_uar_for_candidates(self, uar, limit: int = 10) -> list[AssetEntry]:
         """
-        从 UAR 中获取可复用的候选资产
+        从 UAR 中获取可复用的候选资产 (包含 Session 产出、用户输入和白名单资产)
         """
-        return uar.get_reusable_assets()[:limit]
+        return uar.get_all_candidates()[:limit]
 
     async def _decide_fulfillment_strategy(self, directive: VisualDirective, uar) -> VisualDirective:
         """
@@ -409,7 +418,7 @@ class AssetFulfillmentAgent:
 
         # 计算得分
         for asset in candidates:
-            score = await self._calculate_reuse_score(directive.description, asset)
+            score = await self._calculate_reuse_score(directive.description, asset, uar)
             if score > best_score:
                 best_score = score
                 best_asset = asset

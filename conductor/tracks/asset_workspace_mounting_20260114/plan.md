@@ -18,11 +18,11 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 3: Unified Asset Aggregation & Prompt Prioritization
 
-- [ ] Task: Create `tests/test_intra_session_reuse.py` to verify unified aggregation logic.
+- [~] Task: Create `tests/test_intra_session_reuse.py` to verify unified aggregation logic.
 - [ ] Task: Update `AssetFulfillmentAgent` to register new assets immediately into the session registry.
 - [ ] Task: Update `_decide_fulfillment_strategy` to aggregate all asset types into a single candidate list.
 - [ ] Task: Enhance the scoring prompt in `_calculate_reuse_score` to prioritize User-Provided/Whitelisted assets.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Unified Asset Aggregation & Prompt Prioritization' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 3: Unified Asset Aggregation & Prompt Prioritization' (Protocol in workflow.md)
 
 ## Phase 4: Integration & Promotion Workflow
 
