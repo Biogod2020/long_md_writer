@@ -26,6 +26,6 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 4: Integration & Promotion Workflow
 
-- [ ] Task: End-to-end test: Mount a workspace, select assets, generate new ones, and verify multi-chapter reuse.
-- [ ] Task: Implement a prototype "Promotion" command to copy session assets to a workspace.
+- [x] Task: End-to-end test: Mount a workspace, select assets, generate new ones, and verify multi-chapter reuse. d5e30c3
+- [x] Task: Implement a prototype "Promotion" command to copy session assets to a workspace. d5e30c3
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration & Promotion Workflow' (Protocol in workflow.md)
