@@ -9,12 +9,12 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [ ] Task: Standardize output paths to include `agent_generated/` and `agent_sourced/` in `AssetFulfillmentAgent`.
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Modular UAR & Path Refactoring' (Protocol in workflow.md) 94183ee
 
-## Phase 2: Interactive Manual Selection & Optional AI Discovery
+## Phase 2: Interactive Manual Selection & Optional AI Discovery [checkpoint: 64fba48]
 
 - [~] Task: Create `tests/test_asset_discovery_selection.py` for manual and AI-assisted selection logic.
 - [ ] Task: Implement Terminal/CLI interface for browsing and manually selecting assets from mounted workspaces.
 - [ ] Task: Implement optional Tier 1 "Broad Search" using Gemini Flash to suggest additional assets.
-- [~] Task: Conductor - User Manual Verification 'Phase 2: Interactive Manual Selection & Optional AI Discovery' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Interactive Manual Selection & Optional AI Discovery' (Protocol in workflow.md) 64fba48
 
 ## Phase 3: Unified Asset Aggregation & Prompt Prioritization
 
