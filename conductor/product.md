@@ -15,4 +15,4 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 - **Visual Quality Assurance (VQA)**: Automated VLM-based auditing that manages focus-aware cropping, image sourcing, and visual compliance.
 - **Context-Aware Generation**: Implementation of "Full-Context Perception" to eliminate AI hallucinations and ensure cross-chapter terminology consistency.
 - **Autonomous Remediation**: Closed-loop "Critic-Fixer" architecture for Editorial QA, allowing the system to self-correct visual crop mismatches and semantic inconsistencies without human intervention.
-- **Intelligent Asset Reuse**: Advanced semantic matching and frequency-aware deduplication to ensure visual consistency and minimize redundant asset generation.
+- **Modular Asset Management**: A hierarchical "Workspace Mounting" system with Human-in-the-Loop selection, simultaneous multi-pool aggregation, and instant intra-session reuse to maximize asset consistency and production efficiency.
