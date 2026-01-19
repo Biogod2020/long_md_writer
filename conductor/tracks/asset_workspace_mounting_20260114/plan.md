@@ -11,10 +11,10 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 2: Interactive Manual Selection & Optional AI Discovery
 
-- [ ] Task: Create `tests/test_asset_discovery_selection.py` for manual and AI-assisted selection logic.
+- [~] Task: Create `tests/test_asset_discovery_selection.py` for manual and AI-assisted selection logic.
 - [ ] Task: Implement Terminal/CLI interface for browsing and manually selecting assets from mounted workspaces.
 - [ ] Task: Implement optional Tier 1 "Broad Search" using Gemini Flash to suggest additional assets.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Interactive Manual Selection & Optional AI Discovery' (Protocol in workflow.md)
+- [~] Task: Conductor - User Manual Verification 'Phase 2: Interactive Manual Selection & Optional AI Discovery' (Protocol in workflow.md)
 
 ## Phase 3: Unified Asset Aggregation & Prompt Prioritization
 
