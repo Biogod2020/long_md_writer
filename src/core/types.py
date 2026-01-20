@@ -26,6 +26,13 @@ class AssetSource(str, Enum):
     WEB = "WEB"        # 网络搜索获取
 
 
+class AssetPriority(str, Enum):
+    """资产优先级枚举 (SOTA 2.0)"""
+    MANDATORY = "MANDATORY"    # 强制性资产 (必须出现在文中)
+    SUGGESTED = "SUGGESTED"    # 建议性资产 (可选，评分高则用)
+    AUTONOMOUS = "AUTONOMOUS"  # 发现性资产 (由 AI 完全自主决定)
+
+
 class AssetVQAStatus(str, Enum):
     """资产视觉质检状态"""
     PENDING = "PENDING"    # 待审核
@@ -95,7 +102,9 @@ class AssetEntry(BaseModel):
     """
     id: str = Field(..., description="唯一标识符，带命名空间前缀 (如 's1-ecg-diagram')")
     source: AssetSource = Field(..., description="资产来源")
+    priority: AssetPriority = Field(default=AssetPriority.SUGGESTED, description="资产优先级 (MANDATORY/SUGGESTED/AUTONOMOUS)")
     local_path: Optional[str] = Field(default=None, description="本地物理路径 (相对于 workspace)")
+    base64_data: Optional[str] = Field(default=None, description="图像 Base64 数据缓存 (用于多模态注入)")
     original_url: Optional[str] = Field(default=None, description="原始 URL (仅 WEB 来源)")
     semantic_label: str = Field(..., description="语义描述，用于意图匹配 (如 '心电图 P 波形成示意图')")
     content_hash: Optional[str] = Field(default=None, description="内容指纹 (用于去重)")

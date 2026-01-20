@@ -22,6 +22,7 @@ from ...core.types import (
     AgentState,
     AssetEntry,
     AssetSource,
+    AssetPriority,
     AssetVQAStatus,
     AssetQualityLevel,
     ReusePolicy,
@@ -29,6 +30,7 @@ from ...core.types import (
     UniversalAssetRegistry,
 )
 from .processors.vision import analyze_image, analyze_image_async
+import base64
 
 
 # 支持的图片格式
@@ -106,25 +108,53 @@ class AssetIndexerAgent:
 
     async def run_async(self, state: AgentState) -> AgentState:
         """
-        异步执行资产索引与选择 (Modular Mounting Upgrade)
+        异步执行资产索引与选择 (Modular Mounting Upgrade + Intent-Layered Support)
         """
         print(f"[AssetIndexer] 开始扫描输入目录: {self.input_dir}")
 
         # 1. 初始化 UAR 并扫描本地 inputs
         uar = state.initialize_uar()
-        scan_path = self._resolve_scan_path(state)
-        if scan_path and scan_path.exists():
-            image_files = self._scan_images(scan_path)
-            entries = []
-            for img_path in image_files:
-                entry = await self._process_image_async(img_path, scan_path, uar)
-                if entry:
-                    entries.append(entry)
-                    # 用户提供的资产自动进入白名单且标记为 Mandatory
-                    uar.register_immediate(entry)
-                    uar.add_to_whitelist(entry.id)
-                    uar.user_provided_ids.add(entry.id)
-            print(f"[AssetIndexer] 成功注册 {len(entries)} 个本地输入资产")
+        root_scan_path = self._resolve_scan_path(state)
+        
+        if root_scan_path and root_scan_path.exists():
+            # 扫描策略：
+            # 1. inputs/mandatory/ -> Priority.MANDATORY
+            # 2. inputs/suggested/ -> Priority.SUGGESTED
+            # 3. inputs/*.png (根目录) -> Priority.SUGGESTED (兼容旧版)
+            
+            subdirs = {
+                "mandatory": AssetPriority.MANDATORY,
+                "suggested": AssetPriority.SUGGESTED,
+                ".": AssetPriority.SUGGESTED # 根目录图片
+            }
+            
+            total_indexed = 0
+            for dirname, priority in subdirs.items():
+                scan_path = root_scan_path / dirname
+                if not scan_path.exists():
+                    continue
+                
+                # 只扫描当前文件夹，不递归（子文件夹逻辑由 subdirs 映射处理）
+                image_files = []
+                for ext in SUPPORTED_IMAGE_EXTENSIONS:
+                    image_files.extend(scan_path.glob(f"*{ext}"))
+                    image_files.extend(scan_path.glob(f"*{ext.upper()}"))
+                
+                print(f"[AssetIndexer] 扫描目录 {dirname}: 发现 {len(image_files)} 个图片")
+                
+                for img_path in sorted(image_files):
+                    try:
+                        entry = await self._process_image_async(img_path, root_scan_path, uar, priority=priority)
+                        if entry:
+                            uar.register_immediate(entry)
+                            uar.add_to_whitelist(entry.id)
+                            uar.user_provided_ids.add(entry.id)
+                            total_indexed += 1
+                    except Exception as e:
+                        print(f"  ✗ 处理失败 {img_path.name}: {e}")
+                        state.errors.append(f"AssetIndexer: {img_path.name} - {e}")
+            
+            print(f"[AssetIndexer] 成功注册 {total_indexed} 个本地输入资产")
 
         # 2. 处理挂载的工作区
         if uar.mounted_workspaces:
@@ -308,7 +338,8 @@ class AssetIndexerAgent:
         self,
         image_path: Path,
         base_dir: Path,
-        uar: UniversalAssetRegistry
+        uar: UniversalAssetRegistry,
+        priority: AssetPriority = AssetPriority.SUGGESTED
     ) -> Optional[AssetEntry]:
         """处理单个图片文件（异步）"""
         # 计算内容哈希
@@ -326,7 +357,7 @@ class AssetIndexerAgent:
         else:
             vision_result = await analyze_image_async(self.client, image_path)
 
-        return self._create_asset_entry(image_path, base_dir, uar, content_hash, vision_result)
+        return self._create_asset_entry(image_path, base_dir, uar, content_hash, vision_result, priority=priority)
 
     def _get_default_vision_result(self, image_path: Path) -> dict:
         """生成默认的视觉分析结果"""
@@ -346,16 +377,15 @@ class AssetIndexerAgent:
         base_dir: Path,
         uar: UniversalAssetRegistry,
         content_hash: str,
-        vision_result: dict
+        vision_result: dict,
+        priority: AssetPriority = AssetPriority.SUGGESTED
     ) -> AssetEntry:
         """创建资产条目"""
         # 生成资产 ID
         asset_id = uar.generate_id("u", image_path.stem)
 
         # 计算相对路径 - 存储完整的项目根目录相对路径
-        # 例如: assets/images/candidates_xxx/img_1.png
         try:
-            # 尝试从 assets 目录开始的路径
             parts = image_path.parts
             if "assets" in parts:
                 assets_idx = parts.index("assets")
@@ -364,6 +394,14 @@ class AssetIndexerAgent:
                 relative_path = image_path.relative_to(base_dir.parent)
         except ValueError:
             relative_path = image_path
+
+        # 缓存图像 Base64 数据 (用于多模态注入)
+        base64_data = None
+        try:
+            with open(image_path, "rb") as f:
+                base64_data = base64.b64encode(f.read()).decode("utf-8")
+        except Exception as e:
+            print(f"  [AssetIndexer] 无法读取图片数据进行缓存: {e}")
 
         # 构建裁切元数据
         crop_metadata = CropMetadata()
@@ -382,7 +420,9 @@ class AssetIndexerAgent:
         return AssetEntry(
             id=asset_id,
             source=AssetSource.USER,
+            priority=priority,
             local_path=str(relative_path),
+            base64_data=base64_data,
             semantic_label=vision_result["semantic_label"],
             content_hash=content_hash,
             crop_metadata=crop_metadata,
