@@ -27,5 +27,5 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 - [x] Task: Write tests for `EditorialQA` coverage audit (detecting missing Mandatory assets.) 85ba880
 - [x] Task: Implement Mandatory Asset Validator in `EditorialQAAgent`. 85ba880
-- [ ] Task: End-to-end test: Full run with one mandatory asset, verify it appears in the final text and passes QA.
+- [x] Task: End-to-end test: Full run with one mandatory asset, verify it appears in the final text and passes QA. 7b6032a
 - [x] Task: Conductor - User Manual Verification 'Phase 4: Enforcement & SOTA Verification' (Protocol in workflow.md) 83d923f
