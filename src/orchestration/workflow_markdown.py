@@ -412,7 +412,7 @@ async def run_sota2_workflow(
     skip_vision: bool = False,
     skip_asset_audit: bool = False,
     debug_mode: bool = False,
-    global_uar_path: Optional[str] = None,
+    mounted_workspaces: Optional[dict[str, str]] = None, # {name: path}
 ) -> AgentState:
     """
     运行 SOTA 2.0 完整工作流
@@ -426,7 +426,7 @@ async def run_sota2_workflow(
         skip_vision: 跳过 VLM 贴标
         skip_asset_audit: 跳过资产审计
         debug_mode: 调试模式
-        global_uar_path: 全局 UAR 路径 (用于跨项目资产复用)
+        mounted_workspaces: 挂载的多个外部资产库 {名称: assets.json路径}
     """
     # 生成 job_id
     if not job_id:
@@ -437,24 +437,34 @@ async def run_sota2_workflow(
     workspace_path = Path(workspace_base) / job_id
     workspace_path.mkdir(parents=True, exist_ok=True)
     (workspace_path / "md").mkdir(exist_ok=True)
-    (workspace_path / "generated_assets").mkdir(exist_ok=True)
+    (workspace_path / "agent_generated").mkdir(exist_ok=True)
+    (workspace_path / "agent_sourced").mkdir(exist_ok=True)
 
     print(f"\n{'='*70}")
     print(f" SOTA 2.0 Workflow - {job_id}")
     print(f"{'='*70}")
     print(f"📁 工作目录: {workspace_path}")
-    if global_uar_path:
-        print(f"🔗 全局资产库: {global_uar_path}")
+    
+    if mounted_workspaces:
+        print(f"🔗 挂载资产库:")
+        for name, path in mounted_workspaces.items():
+            print(f"    - {name}: {path}")
 
-    # 初始化状态 (SOTA 2.0: 严格分离 user_intent 与 reference_materials)
+    # 初始化状态
     initial_state = AgentState(
         job_id=job_id,
         workspace_path=str(workspace_path),
         user_intent=user_intent,
         reference_materials=reference_materials,
         debug_mode=debug_mode,
-        uar_path=global_uar_path,  # 挂载全局 UAR
+        uar_path=str(workspace_path / "assets.json"),
     )
+
+    # 预挂载工作区
+    uar = initial_state.get_uar()
+    if mounted_workspaces:
+        for name, path in mounted_workspaces.items():
+            uar.mount_workspace(name, path)
 
 
     # 创建客户端和工作流

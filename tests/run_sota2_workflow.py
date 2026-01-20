@@ -95,15 +95,21 @@ async def main():
     # 运行工作流
     print("\n--- 启动 SOTA 2.0 工作流 ---")
 
+    # 定义挂载的资产库
+    mounted = {
+        "cardiology_global": str(INPUTS_DIR.parent / "data" / "global_asset_lib" / "master_assets.json")
+    }
+
     try:
         final_state = await run_sota2_workflow(
             user_intent=user_intent,
             reference_materials=reference_materials,
             assets_input_dir=str(ASSETS_DIR),
             workspace_base="./workspace",
-            skip_vision=False,  # 启用 VLM 贴标
-            skip_asset_audit=False,  # 启用资产审计
+            skip_vision=False,
+            skip_asset_audit=False,
             debug_mode=True,
+            mounted_workspaces=mounted
         )
 
         print("\n" + "=" * 70)
