@@ -9,12 +9,12 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Implement `inputs/mandatory/` directory scanning logic. 87e5c6f
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Visual Base & Intent Categorization' (Protocol in workflow.md) ada66ca
 
-## Phase 2: Multimodal Architecting (Planning)
+## Phase 2: Multimodal Architecting (Planning) [checkpoint: c53d5f8]
 
 - [x] Task: Write tests for `ArchitectAgent` visual assignment (ensuring Mandatory assets appear in Manifest.) fca7b69
 - [x] Task: Upgrade `ArchitectAgent._build_prompt_parts` to add Base64 imagery for Mandatory assets while keeping all other context inputs intact. fca7b69
 - [x] Task: Update `Manifest` model to include `assigned_assets` in section metadata. fca7b69
-- [~] Task: Conductor - User Manual Verification 'Phase 2: Multimodal Architecting (Planning)' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Multimodal Architecting (Planning)' (Protocol in workflow.md) c53d5f8
 
 ## Phase 3: Multimodal Writing Loop (Execution)
 
