@@ -2,12 +2,12 @@
 
 This plan follows the TDD and verification protocols defined in `conductor/workflow.md`.
 
-## Phase 1: Visual Base & Intent Categorization
+## Phase 1: Visual Base & Intent Categorization [checkpoint: ada66ca]
 
 - [x] Task: Create `tests/test_modular_asset_scoring.py` to verify intent-based filtering. 87e5c6f
 - [x] Task: Update `AssetEntry` and `AssetIndexerAgent` to support `priority` tags and Base64 caching. 87e5c6f
 - [x] Task: Implement `inputs/mandatory/` directory scanning logic. 87e5c6f
-- [~] Task: Conductor - User Manual Verification 'Phase 1: Visual Base & Intent Categorization' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Visual Base & Intent Categorization' (Protocol in workflow.md) ada66ca
 
 ## Phase 2: Multimodal Architecting (Planning)
 
