@@ -350,6 +350,23 @@ class WriterAgent:
         # 8. 图像资产使用指导
         # ================================================================
         text_parts.append("\n# 🖼️ 图像资产使用指导\n")
+        
+        # SOTA 2.0: 特化注入分配给本章的强制性图片
+        assigned_ids = section.metadata.get("assigned_assets", [])
+        assigned_assets = []
+        if assigned_ids and state.asset_registry:
+            for aid in assigned_ids:
+                asset = state.asset_registry.get_asset(aid)
+                if asset:
+                    assigned_assets.append(asset)
+
+        if assigned_assets:
+            text_parts.append("\n## 🎯 本章硬性分配资产 (Assigned Assets)\n")
+            text_parts.append("以下图片已由架构师分配给本章节。你**必须**在文中引用它们，并根据图片的视觉细节进行深度解说。\n\n")
+            for a in assigned_assets:
+                text_parts.append(f"- **[{a.id}]**: {a.semantic_label}\n")
+            text_parts.append("\n")
+
         text_parts.append(f""")
 
 请在合适的位置插入图像，遵循以下规则：
@@ -361,7 +378,7 @@ class WriterAgent:
 2. **声明新资产需求**: 如果没有合适资产或质量不达标，使用 `:::visual` 指令
    - 所有新资产 ID 必须以 `{namespace}-` 开头，例如 `{namespace}-fig-xxx`
 
-3. **下方有参考图像**: 如果你看到参考图像，请判断是否适合直接使用（检查 UAR 中的对应条目）
+3. **下方有参考图像**: 如果你看到参考图像（包含本章分配的图），请判断是否适合直接使用。**对于分配给本章的图，请务必根据其视觉细节写出具体的描述文字。**
 
 请开始撰写这个章节的完整 Markdown 内容。
 """)
@@ -370,20 +387,29 @@ class WriterAgent:
         # 构建最终输出 (支持多模态)
         # ================================================================
         text_content = "".join(text_parts)
+        multimodal_parts = [{"text": text_content}]
 
-        # 如果有图像素材，构建多模态请求
+        # 1. 注入本章分配的图片的真实数据 (High Priority)
+        if assigned_assets:
+            multimodal_parts.append({"text": "\n\n# 🖼️ 本章分配图片的视觉细节\n*请仔细阅读以下图片的视觉内容并进行看图写作*\n\n"})
+            for a in assigned_assets:
+                if a.base64_data:
+                    multimodal_parts.append({
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": a.base64_data
+                        }
+                    })
+                    multimodal_parts.append({"text": f"\n*(本章分配图: {a.id})*\n\n"})
+
+        # 2. 注入全局参考图像 (Lower Priority)
         if state.images:
-            multimodal_parts = [{"text": text_content}]
-
-            # 添加参考图像
-            multimodal_parts.append({"text": "\n\n# 📷 参考图像\n*以下是用户提供的参考图像，请判断是否适合使用*\n\n"})
+            multimodal_parts.append({"text": "\n\n# 📷 全局参考图像\n*以下是用户提供的其他参考图像，仅供参考*\n\n"})
             for i, img in enumerate(state.images):
-                multimodal_parts.append(img)  # 直接添加图像 dict
+                multimodal_parts.append(img)
                 multimodal_parts.append({"text": f"\n*(参考图 {i+1})*\n\n"})
 
-            return multimodal_parts
-
-        return text_content
+        return multimodal_parts if len(multimodal_parts) > 1 else text_content
 
     def _build_prompt(self, state: AgentState, section: SectionInfo) -> str:
         """
