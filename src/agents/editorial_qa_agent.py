@@ -313,7 +313,7 @@ class EditorialQAAgent:
         """执行本地静态检查"""
         issues = []
 
-        # 检查未履约的 :::visual
+        # 检查未履约的 :::visual 指令
         issues.extend(self._check_unfulfilled_visuals(content))
 
         # 检查 img 标签
@@ -325,6 +325,43 @@ class EditorialQAAgent:
         # 检查断裂的引用
         issues.extend(self._check_broken_refs(content))
 
+        # SOTA 2.0: 检查强制性资产覆盖率
+        issues.extend(self._check_mandatory_assets(content, state))
+
+        return issues
+
+    def _check_mandatory_assets(self, content: str, state: AgentState) -> list[QAIssue]:
+        """检查所有 MANDATORY 资产是否已在正文中引用"""
+        issues = []
+        uar = state.get_uar()
+        
+        # 找出本章节分配的 Mandatory 资产 (从 Manifest 中查找)
+        assigned_ids = []
+        if state.manifest:
+            # 根据 namespace 找到当前章节
+            for sec in state.manifest.sections:
+                sec_ns = sec.id.replace("sec-", "s").replace("-", "")
+                if sec_ns == namespace or sec.id == namespace:
+                    assigned_ids = sec.metadata.get("assigned_assets", [])
+                    break
+        
+        # 如果 Manifest 没分配，检查全局 Mandatory 池 (Fallback)
+        if not assigned_ids:
+            assigned_ids = [a.id for a in uar.assets.values() if a.priority == "MANDATORY"]
+
+        for aid in assigned_ids:
+            # 检查 ID 是否出现在 <img> 标签或 :::visual 指令中
+            if f'data-asset-id="{aid}"' not in content and f'"matched_asset": "{aid}"' not in content:
+                asset = uar.get_asset(aid)
+                label = asset.semantic_label if asset else aid
+                issues.append(QAIssue(
+                    issue_type=QAIssueType.BROKEN_REFERENCE,
+                    severity=QASeverity.ERROR,
+                    location="全量文本",
+                    message=f"缺少强制性资产: [{aid}] ({label})",
+                    suggestion=f"请在文中合适位置插入该图片，它是用户要求的必备素材。"
+                ))
+        
         return issues
 
     def _check_unfulfilled_visuals(self, content: str) -> list[QAIssue]:
