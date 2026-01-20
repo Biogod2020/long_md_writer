@@ -23,9 +23,9 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 - [x] Task: Implement "Visual Contextualization" instructions in the Writer's System Prompt. c1418bd
 - [x] Task: Conductor - User Manual Verification 'Phase 3: Multimodal Writing Loop (Execution)' (Protocol in workflow.md) 8f235ca
 
-## Phase 4: Enforcement & SOTA Verification
+## Phase 4: Enforcement & SOTA Verification [checkpoint: 83d923f]
 
 - [x] Task: Write tests for `EditorialQA` coverage audit (detecting missing Mandatory assets.) 85ba880
 - [x] Task: Implement Mandatory Asset Validator in `EditorialQAAgent`. 85ba880
 - [ ] Task: End-to-end test: Full run with one mandatory asset, verify it appears in the final text and passes QA.
-- [~] Task: Conductor - User Manual Verification 'Phase 4: Enforcement & SOTA Verification' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Enforcement & SOTA Verification' (Protocol in workflow.md) 83d923f
