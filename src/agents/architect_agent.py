@@ -196,24 +196,40 @@ class ArchitectAgent:
         Build prompt parts using Context Chain (Residual Connection).
         
         关键规划节点使用 state.user_context 注入完整用户意图。
+        支持多模态注入 MANDATORY 资产。
         """
         final_parts = []
         
-        # 1. Revision Mode (if manifest exists)
-        if state.manifest:
-            current_json = state.manifest.model_dump_json(indent=2)
-            revision_context = f"# Revision Mode\nModify existing Manifest based on feedback:\n\n{current_json}\n"
-            if feedback:
-                revision_context += f"\nFEEDBACK: {feedback}\n"
-            final_parts.append({"text": revision_context})
-        
-        # 2. USER CONTEXT (Residual Connection) - 核心用户意图注入
+        # 1. USER CONTEXT (Residual Connection) - 核心用户意图注入
         if state.user_context:
             final_parts.append({"text": state.user_context})
         
+        # 2. MANDATORY ASSETS (Multimodal Injection)
+        uar = state.get_uar()
+        mandatory_assets = [a for a in uar.assets.values() if a.priority == "MANDATORY"]
+        
+        if mandatory_assets:
+            instr = "\n## ⚠️ 强制性资产清单 (Required Assets)\n"
+            instr += "以下资产由用户提供且**必须**在 Manifest 中进行规划。请在合适的章节 metadata 中，通过 `assigned_assets` 字段（资产 ID 列表）进行硬性分配。\n\n"
+            for a in mandatory_assets:
+                instr += f"- **[{a.id}]**: {a.semantic_label}\n"
+            
+            final_parts.append({"text": instr})
+            
+            # 注入图片数据
+            for a in mandatory_assets:
+                if a.base64_data:
+                    final_parts.append({
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": a.base64_data
+                        }
+                    })
+                    final_parts.append({"text": f"*(图片: {a.id})*\n"})
+
         # 3. Reference Materials (full text)
         if state.reference_materials:
-            final_parts.append({"text": f"# 📚 参考资料全文\n{state.reference_materials}\n"})
+            final_parts.append({"text": f"\n# 📚 参考资料全文\n{state.reference_materials}\n"})
         
         # 4. Reference docs by path (legacy/追踪)
         if state.reference_doc_paths:
@@ -227,12 +243,15 @@ class ArchitectAgent:
             if len(ref_parts) > 1:
                 final_parts.append({"text": "\n".join(ref_parts)})
         
-        # 4. Images (if any)
-        if hasattr(state, "images") and state.images:
-            final_parts.extend(state.images)
-            final_parts.append({"text": "\n(Visual references above)\n"})
+        # 5. Revision Mode (if manifest exists)
+        if state.manifest:
+            current_json = state.manifest.model_dump_json(indent=2)
+            revision_context = f"# Revision Mode\nModify existing Manifest based on feedback:\n\n{current_json}\n"
+            if feedback:
+                revision_context += f"\nFEEDBACK: {feedback}\n"
+            final_parts.append({"text": revision_context})
 
-        # 5. Task instruction
+        # 6. Task instruction
         if not state.manifest:
             final_parts.insert(0, {"text": "Generate a SOTA Manifest JSON based on the following user context. Be adaptive and creative with the structure and metadata.\n"})
             

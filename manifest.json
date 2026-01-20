@@ -1,0 +1,22 @@
+{
+  "project_title": "Heart Book",
+  "author": null,
+  "description": "Desc",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "Intro",
+      "summary": "Intro sum",
+      "estimated_words": 0,
+      "file_path": null,
+      "metadata": {
+        "assigned_assets": [
+          "m-heart-1"
+        ]
+      }
+    }
+  ],
+  "metadata": {},
+  "config": {},
+  "knowledge_map": {}
+}
