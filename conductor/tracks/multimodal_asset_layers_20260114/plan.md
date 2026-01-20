@@ -18,9 +18,9 @@ This plan follows the TDD and verification protocols defined in `conductor/workf
 
 ## Phase 3: Multimodal Writing Loop (Execution)
 
-- [ ] Task: Write tests for `WriterAgent`看图写作 (verifying visual adherence in generated text).
-- [ ] Task: Upgrade `WriterAgent._build_multimodal_prompt` to add targeted chapter-assigned imagery while keeping all other context inputs intact.
-- [ ] Task: Implement "Visual Contextualization" instructions in the Writer's System Prompt.
+- [x] Task: Write tests for `WriterAgent`看图写作 (verifying visual adherence in generated text.) c1418bd
+- [x] Task: Upgrade `WriterAgent._build_multimodal_prompt` to add targeted chapter-assigned imagery while keeping all other context inputs intact. c1418bd
+- [x] Task: Implement "Visual Contextualization" instructions in the Writer's System Prompt. c1418bd
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Multimodal Writing Loop (Execution)' (Protocol in workflow.md)
 
 ## Phase 4: Enforcement & SOTA Verification
