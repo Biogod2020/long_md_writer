@@ -8,6 +8,12 @@
 ## Agent Architecture
 - **Framework**: Custom multi-agent ecosystem utilizing specialized roles (Architect, SME Writer, Asset Critic, Editorial QA).
 - **Communication**: Asynchronous event-driven architecture using `asyncio`.
+- **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
+  - Native Multimodal `inline_data` support.
+  - Native JSON Schema enforcement.
+  - "Thinking" token (thoughts) capture and state integration.
+  - Intelligent connection pooling and exponential backoff for network resilience.
+  - High-concurrency parallel fulfillment with semaphore-based rate limiting.
 
 ## Frontend & Tooling
 - **Dashboard**: Streamlit (for project monitoring and manual intervention).
