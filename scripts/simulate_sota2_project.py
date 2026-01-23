@@ -65,8 +65,8 @@ async def simulate_workflow():
     start_uar_count = len(state.get_uar().assets)
     print(f"   📊 初始 UAR 资产数: {start_uar_count}")
     
-    # 执行同步
-    state = indexer.run(state)
+    # 执行同步 (使用 run_async)
+    state = await indexer.run_async(state)
     
     end_uar_count = len(state.get_uar().assets)
     print(f"   📊 运行后 UAR 资产数: {end_uar_count}")

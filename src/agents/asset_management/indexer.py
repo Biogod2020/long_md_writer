@@ -14,6 +14,8 @@ AssetIndexerAgent: SOTA 2.0 Phase 0 资产索引器
 
 import os
 import hashlib
+import asyncio
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -39,128 +41,127 @@ SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", 
 
 class AssetIndexerAgent:
     """
-    资产索引器 Agent
+    资产索引器 Agent (SOTA 性能优化版)
 
-    扫描输入目录，为图片素材生成语义标签，初始化 UAR
+    1. 支持 5 路并行 VLM 分析
+    2. 基于文件哈希的全局增量索引 (跳过已扫描文件)
     """
 
     def __init__(
         self,
         client: Optional[GeminiClient] = None,
         input_dir: str = "inputs",
-        skip_vision: bool = False
+        skip_vision: bool = False,
+        cache_dir: str = "data/asset_cache"
     ):
-        """
-        初始化资产索引器
-
-        Args:
-            client: Gemini API 客户端
-            input_dir: 输入目录路径
-            skip_vision: 跳过 Vision API 调用 (用于测试)
-        """
         self.client = client or GeminiClient()
         self.input_dir = input_dir
         self.skip_vision = skip_vision
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_file = self.cache_dir / "vision_cache.json"
+        self._cache = self._load_cache()
 
-    def run(self, state: AgentState) -> AgentState:
-        """
-        执行资产索引
-
-        Args:
-            state: Agent 状态
-
-        Returns:
-            更新后的状态 (包含初始化的 UAR)
-        """
-        print(f"[AssetIndexer] 开始扫描输入目录: {self.input_dir}")
-
-        # 初始化 UAR
-        uar = state.initialize_uar()
-
-        # 确定扫描路径
-        scan_path = self._resolve_scan_path(state)
-        if not scan_path or not scan_path.exists():
-            print(f"[AssetIndexer] 警告: 输入目录不存在: {scan_path}")
-            return state
-
-        # 扫描图片文件
-        image_files = self._scan_images(scan_path)
-        print(f"[AssetIndexer] 发现 {len(image_files)} 个图片文件")
-
-        # 处理每个图片
-        entries = []
-        for img_path in image_files:
+    def _load_cache(self) -> dict:
+        if self.cache_file.exists():
             try:
-                entry = self._process_image(img_path, scan_path, uar)
-                if entry:
-                    entries.append(entry)
-                    print(f"  ✓ {entry.id}: {entry.semantic_label[:30]}...")
-            except Exception as e:
-                print(f"  ✗ 处理失败 {img_path.name}: {e}")
-                state.errors.append(f"AssetIndexer: {img_path.name} - {e}")
+                return json.loads(self.cache_file.read_text(encoding="utf-8"))
+            except:
+                return {}
+        return {}
 
-        # 批量注册
-        if entries:
-            uar.register_batch(entries)
-            print(f"[AssetIndexer] 成功注册 {len(entries)} 个资产")
-
-        return state
+    def _save_cache(self):
+        self.cache_file.write_text(json.dumps(self._cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
     async def run_async(self, state: AgentState) -> AgentState:
-        """
-        异步执行资产索引与选择 (Modular Mounting Upgrade + Intent-Layered Support)
-        """
         print(f"[AssetIndexer] 开始扫描输入目录: {self.input_dir}")
 
-        # 1. 初始化 UAR 并扫描本地 inputs
         uar = state.initialize_uar()
         root_scan_path = self._resolve_scan_path(state)
         
-        if root_scan_path and root_scan_path.exists():
-            # 扫描策略：
-            # 1. inputs/mandatory/ -> Priority.MANDATORY
-            # 2. inputs/suggested/ -> Priority.SUGGESTED
-            # 3. inputs/*.png (根目录) -> Priority.SUGGESTED (兼容旧版)
-            
-            subdirs = {
-                "mandatory": AssetPriority.MANDATORY,
-                "suggested": AssetPriority.SUGGESTED,
-                ".": AssetPriority.SUGGESTED # 根目录图片
-            }
-            
-            total_indexed = 0
-            for dirname, priority in subdirs.items():
-                scan_path = root_scan_path / dirname
-                if not scan_path.exists():
-                    continue
-                
-                # 只扫描当前文件夹，不递归（子文件夹逻辑由 subdirs 映射处理）
-                image_files = []
-                for ext in SUPPORTED_IMAGE_EXTENSIONS:
-                    image_files.extend(scan_path.glob(f"*{ext}"))
-                    image_files.extend(scan_path.glob(f"*{ext.upper()}"))
-                
-                print(f"[AssetIndexer] 扫描目录 {dirname}: 发现 {len(image_files)} 个图片")
-                
-                for img_path in sorted(image_files):
-                    try:
-                        entry = await self._process_image_async(img_path, root_scan_path, uar, priority=priority)
-                        if entry:
-                            uar.register_immediate(entry)
-                            uar.add_to_whitelist(entry.id)
-                            uar.user_provided_ids.add(entry.id)
-                            total_indexed += 1
-                    except Exception as e:
-                        print(f"  ✗ 处理失败 {img_path.name}: {e}")
-                        state.errors.append(f"AssetIndexer: {img_path.name} - {e}")
-            
-            print(f"[AssetIndexer] 成功注册 {total_indexed} 个本地输入资产")
+        if not root_scan_path or not root_scan_path.exists():
+            return state
 
-        # 2. 处理挂载的工作区
+        # 收集待扫描文件
+        subdirs = ["mandatory", "suggested", "."]
+        all_files_to_process = []
+        for dirname in subdirs:
+            scan_path = root_scan_path / dirname
+            if not scan_path.exists(): continue
+            for ext in SUPPORTED_IMAGE_EXTENSIONS:
+                for img_path in scan_path.glob(f"*{ext}"):
+                    all_files_to_process.append((img_path, dirname))
+                for img_path in scan_path.glob(f"*{ext.upper()}"):
+                    all_files_to_process.append((img_path, dirname))
+
+        if not all_files_to_process:
+            print("[AssetIndexer] 未发现新图片")
+            return state
+
+        # 5路并行控制
+        semaphore = asyncio.Semaphore(5)
+        print(f"[AssetIndexer] 准备分析 {len(all_files_to_process)} 个文件 (5路并行)...")
+
+        async def indexed_task(img_path, dirname):
+            async with semaphore:
+                priority = AssetPriority.MANDATORY if dirname == "mandatory" else AssetPriority.SUGGESTED
+                # 1. 计算哈希
+                content_hash = self._compute_hash(img_path)
+                
+                # 2. 检查缓存
+                if content_hash in self._cache:
+                    print(f"  ⚡ 缓存命中 (Skip VLM): {img_path.name}")
+                    vision_result = self._cache[content_hash]
+                else:
+                    # 3. 检查已挂载工作区
+                    hit = None
+                    for ws in uar.mounted_workspaces.values():
+                        for a in ws.values():
+                            if a.content_hash == content_hash:
+                                hit = a
+                                break
+                        if hit: break
+                    
+                    if hit:
+                        print(f"  ⚡ 库命中 (Skip VLM): {img_path.name} -> {hit.id}")
+                        vision_result = {
+                            "semantic_label": hit.semantic_label,
+                            "tags": hit.tags,
+                            "quality_level": hit.quality_level,
+                            "suitable_for": hit.suitable_for,
+                            "unsuitable_for": hit.unsuitable_for
+                        }
+                    else:
+                        # 4. 真正调用 VLM
+                        print(f"  🔍 正在分析新文件: {img_path.name}")
+                        if self.skip_vision:
+                            vision_result = self._get_default_vision_result(img_path)
+                        else:
+                            vision_result = await analyze_image_async(self.client, img_path)
+                        
+                        # 更新缓存
+                        self._cache[content_hash] = vision_result
+
+                # 5. 创建条目并注册
+                entry = self._create_asset_entry(img_path, root_scan_path, uar, content_hash, vision_result, priority=priority)
+                if entry:
+                    uar.register_immediate(entry)
+                    uar.add_to_whitelist(entry.id)
+                    uar.user_provided_ids.add(entry.id)
+                return entry
+
+        tasks = [indexed_task(path, d) for path, d in all_files_to_process]
+        results = await asyncio.gather(*tasks)
+        
+        indexed_count = sum(1 for r in results if r)
+        print(f"[AssetIndexer] 扫描完成: 成功索引 {indexed_count} 个资产")
+        self._save_cache()
+
         if uar.mounted_workspaces:
             await self._interactive_selection_flow(state, uar)
 
         return state
+
 
     async def _interactive_selection_flow(self, state: AgentState, uar: UniversalAssetRegistry):
         """交互式资产选择流"""
@@ -449,8 +450,9 @@ def index_user_assets(state: AgentState, input_dir: str = "inputs") -> AgentStat
         state = index_user_assets(state, "inputs")
         print(state.asset_registry.to_summary())
     """
+    import asyncio
     indexer = AssetIndexerAgent(input_dir=input_dir)
-    return indexer.run(state)
+    return asyncio.run(indexer.run_async(state))
 
 
 async def index_user_assets_async(
