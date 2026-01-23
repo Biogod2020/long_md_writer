@@ -96,30 +96,39 @@ class ImageDownloader:
                             downloader_tab.wait.doc_loaded(timeout=5)
 
                         # B. INJECT COOKIES into a fast requests Session
-                        # This avoids the slow browser download UI causing bottlenecks
                         try:
-                            # Robust cookie extraction
+                            # Use dict format for easier session update
+                            raw_cookies = {}
                             try:
-                                raw_cookies = downloader_tab.cookies(as_dict=True)
+                                c_list = downloader_tab.cookies()
+                                for c in c_list:
+                                    if isinstance(c, dict):
+                                        raw_cookies[c.get('name')] = c.get('value')
                             except:
-                                # Fallback for older DrissionPage
-                                raw_c_list = downloader_tab.cookies
-                                raw_cookies = {}
-                                if isinstance(raw_c_list, list):
-                                    for c in raw_c_list:
-                                        if isinstance(c, dict): raw_cookies[c.get('name')] = c.get('value')
-                                
+                                pass
                         except:
                             raw_cookies = {}
                         
                         ua = downloader_tab.user_agent
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(url)
+                        domain_referer = f"{parsed_url.scheme}://{parsed_url.netloc}/"
                         
-                        # Create lightweight requests session
+                        # Create high-fidelity requests session
                         fast_session = requests.Session()
                         fast_session.headers.update({
                             "User-Agent": ua, 
-                            "Referer": "https://www.google.com/",
-                            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+                            "Referer": domain_referer,
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                            "Accept-Language": "en-US,en;q=0.9",
+                            "Sec-Ch-Ua": "\"Chromium\";v=\"122\", \"Not(A:Bar\";v=\"24\", \"Google Chrome\";v=\"122\"",
+                            "Sec-Ch-Ua-Mobile": "?0",
+                            "Sec-Ch-Ua-Platform": "\"macOS\"",
+                            "Sec-Fetch-Dest": "document",
+                            "Sec-Fetch-Mode": "navigate",
+                            "Sec-Fetch-Site": "none",
+                            "Sec-Fetch-User": "?1",
+                            "Upgrade-Insecure-Requests": "1"
                         })
                         fast_session.cookies.update(raw_cookies)
                         
@@ -139,14 +148,16 @@ class ImageDownloader:
                                     for chunk in resp.iter_content(chunk_size=8192):
                                         f.write(chunk)
                                         
-                                downloaded_path = final_path
-                                if self.debug: print(f"        [+] Fast session download success: {downloaded_path.name}")
-                                
-                                if desc:
-                                    (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
-                                self._resize_image(downloaded_path)
-                                local_paths[i] = downloaded_path
-                                download_success = True
+                                self._resize_image(final_path)
+                                if self._is_valid_image(final_path):
+                                    downloaded_path = final_path
+                                    if self.debug: print(f"        [+] Fast session download success: {downloaded_path.name}")
+                                    if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
+                                    local_paths[i] = downloaded_path
+                                    download_success = True
+                                else:
+                                    if self.debug: print(f"        [-] Fast session integrity check failed.")
+                                    final_path.unlink(missing_ok=True)
                             else:
                                 if self.debug: print(f"        [-] Fast session download failed: {resp.status_code}")
                         except Exception as e:
@@ -158,9 +169,12 @@ class ImageDownloader:
                             res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{i+1}")
                             if res and res[0]:
                                 downloaded_path = Path(res[1])
-                                if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
                                 self._resize_image(downloaded_path)
-                                local_paths[i] = downloaded_path
+                                if self._is_valid_image(downloaded_path):
+                                    if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
+                                    local_paths[i] = downloaded_path
+                                else:
+                                    downloaded_path.unlink(missing_ok=True)
 
                     except Exception as e:
                         if self.debug:
@@ -186,20 +200,26 @@ class ImageDownloader:
             from urllib.parse import unquote
             url = unquote(url)
             
+            # SOTA: 使用目标域名的根路径作为 Referer 绕过热链保护
+            parsed_url = urlparse(url)
+            referer = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+            
             user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
-                'Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0'
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+                'Mozilla/5.0 (X11; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0'
             ]
             
             headers = {
                 'User-Agent': random.choice(user_agents),
-                'Accept': 'image/avif,image/webp,image/apng/image/svg+xml,image/*,*/*;q=0.8',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.google.com/',
+                'Referer': referer,
                 'Sec-Fetch-Dest': 'image',
                 'Sec-Fetch-Mode': 'no-cors',
-                'Sec-Fetch-Site': 'cross-site'
+                'Sec-Fetch-Site': 'cross-site',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
             }
             
             time.sleep(random.uniform(0.1, 0.4))
@@ -213,7 +233,14 @@ class ImageDownloader:
                 if desc:
                     (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
                 self._resize_image(path)
-                return path
+                
+                # SOTA: Final integrity check
+                if self._is_valid_image(path):
+                    return path
+                else:
+                    if self.debug: print(f"      [Layer 1] Integrity check failed for {path.name}")
+                    path.unlink(missing_ok=True)
+                    return None
             elif self.debug:
                 # Diagnostic logging for failures
                 print(f"      [Layer 1] FAILED: {resp.status_code} for {url[:50]}...")
@@ -237,3 +264,32 @@ class ImageDownloader:
                     img.save(path, "JPEG", quality=80)
         except:
             pass
+
+    def _is_valid_image(self, file_path: Path) -> bool:
+        """Verify magic numbers and minimum file size."""
+        if not file_path.exists():
+            return False
+        
+        # SOTA: Minimum 2KB to filter out generic block pages or blank pixels
+        if file_path.stat().st_size < 2048:
+            return False
+            
+        try:
+            with open(file_path, 'rb') as f:
+                header = f.read(12)
+                # JPEG
+                if header.startswith(b'\xff\xd8\xff'):
+                    return True
+                # PNG
+                if header.startswith(b'\x89PNG\r\n\x1a\n'):
+                    return True
+                # WEBP
+                if header.startswith(b'RIFF') and b'WEBP' in header:
+                    return True
+                # GIF
+                if header.startswith(b'GIF87a') or header.startswith(b'GIF89a'):
+                    return True
+        except:
+            pass
+            
+        return False
