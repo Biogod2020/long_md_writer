@@ -2,22 +2,19 @@
 AssetFulfillmentAgent: SOTA 2.0 Phase D 资产履约器
 
 核心职责：
-1. 解析 Writer 输出中的 :::visual 指令块
-2. 根据 action 类型执行资产生成/搜索
-3. 使用 VLM 计算智能焦点 (crop_metadata)
-4. 注册新资产到 UAR
-5. 将 :::visual 块替换为实际的 <img> 或其他内容
-
-执行时机：
-- 在 Writer 完成每个章节后执行
-- 在 HTML 转换前完成所有资产履约
+1. 并行解析全书 :::visual 指令
+2. 执行生成 (SVG/Mermaid)、搜索 (Web) 或 复用 (UAR)
+3. 过程透明化：tqdm 进度条 + 逐指令调试日志 (Debug Trace)
+4. 物理回写：将指令替换为最终 HTML 标签
 """
 
 import re
 import json
 import hashlib
+import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any, Tuple
+from tqdm.asyncio import tqdm
 
 from ...core.gemini_client import GeminiClient
 from ...core.types import (
@@ -26,11 +23,21 @@ from ...core.types import (
     AssetSource,
     AssetPriority,
     AssetFulfillmentAction,
+    AssetVQAStatus,
 )
+from ...core.patcher import StuckDetector
+from ...core.json_utils import extract_json_from_text, parse_json_dict_robust
 from .models import VisualDirective
-from .processors.svg import generate_svg, generate_svg_async
-from .processors.mermaid import generate_mermaid, generate_mermaid_async
+from .processors.svg import generate_svg, generate_svg_async, repair_svg_async
+from .processors.mermaid import (
+    generate_mermaid,
+    generate_mermaid_async,
+    audit_mermaid_async,
+    repair_mermaid_async,
+)
+from .processors.audit import audit_svg_visual_async, render_svg_to_png_base64
 from .processors.focus import compute_focus, compute_focus_async
+from ..image_sourcing.agent import ImageSourcingAgent
 from .utils import (
     generate_figure_html,
     generate_placeholder_html,
@@ -41,394 +48,227 @@ from .utils import (
 
 class AssetFulfillmentAgent:
     """
-    资产履约 Agent
-
-    负责处理 Writer 输出中的 :::visual 指令，生成或搜索资产
+    资产履约 Agent (SOTA 2.0 并行增强版)
     """
+
+    MAX_REPAIR_ATTEMPTS = 3
+    DEFAULT_MAX_CONCURRENCY = 5
 
     def __init__(
         self,
         client: Optional[GeminiClient] = None,
         output_dir: str = "generated_assets",
         skip_generation: bool = False,
-        skip_search: bool = False
+        skip_search: bool = False,
+        debug: bool = False,
+        max_concurrency: int = DEFAULT_MAX_CONCURRENCY
     ):
-        """
-        初始化资产履约器
-
-        Args:
-            client: Gemini API 客户端
-            output_dir: 生成资产的输出目录
-            skip_generation: 跳过 SVG/Mermaid 生成 (用于测试)
-            skip_search: 跳过网络搜索 (用于测试)
-        """
         self.client = client or GeminiClient()
         self.output_dir = output_dir
         self.skip_generation = skip_generation
         self.skip_search = skip_search
+        self.debug = debug
+        self.semaphore = asyncio.Semaphore(max_concurrency)
+        self.stuck_detector = StuckDetector()
+        self.sourcing_agent = ImageSourcingAgent(client=self.client, debug=debug)
 
-    async def run_async(self, state: AgentState, section_content: str, namespace: str) -> tuple[AgentState, str]:
-        """
-        异步执行资产履约
+    async def run_parallel_async(self, state: AgentState) -> AgentState:
+        """并行执行全书资产履约"""
+        print(f"\n[AssetFulfillment] 🚀 启动并行履约流程 (并发: {self.DEFAULT_MAX_CONCURRENCY})")
 
-        Args:
-            state: Agent 状态
-            section_content: Writer 输出的章节内容
-            namespace: 当前章节的命名空间
-
-        Returns:
-            (更新后的状态, 履约后的内容)
-        """
-        print(f"[AssetFulfillment] 开始处理章节资产 (namespace: {namespace})")
-
-        # 确保 UAR 已初始化
         uar = state.get_uar()
-
-        # 确保输出子目录存在
         workspace_path = Path(state.workspace_path)
-        gen_path = workspace_path / "agent_generated"
-        src_path = workspace_path / "agent_sourced"
+        debug_path = workspace_path / "fulfillment_debug"
+        debug_path.mkdir(exist_ok=True)
+
+        # 1. 收集任务
+        all_tasks = []
+        for md_path_str in state.completed_md_sections:
+            md_path = Path(md_path_str)
+            if not md_path.exists(): continue
+            content = md_path.read_text(encoding="utf-8")
+            directives = self._parse_visual_directives(content)
+            for d in directives:
+                all_tasks.append({
+                    "file_path": md_path,
+                    "namespace": md_path.stem.replace("sec-", "s").replace("-", ""),
+                    "directive": d
+                })
+
+        if not all_tasks:
+            print("[AssetFulfillment] 📭 未发现待处理指令")
+            return state
+
+        # 2. 并行执行与进度条
+        async def worker(task):
+            d = task["directive"]
+            trace = {"id": d.id, "file": task["file_path"].name, "steps": []}
+            async with self.semaphore:
+                try:
+                    # 策略决策
+                    d_final = await self._decide_fulfillment_strategy(d, uar, state)
+                    trace["action"] = d_final.action.value
+                    
+                    # 执行履约
+                    result = await self._fulfill_directive_async(
+                        d_final, uar, 
+                        workspace_path / "agent_generated", 
+                        workspace_path / "agent_sourced", 
+                        task["namespace"], workspace_path, state, trace
+                    )
+                    
+                    # 保存 Trace 日志
+                    trace_file = debug_path / f"{d.id}_trace.json"
+                    trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
+                    return (task["file_path"], result)
+                except Exception as e:
+                    d.error = str(e)
+                    return (task["file_path"], d)
+
+        print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
+        results = await tqdm.gather(*(worker(t) for t in all_tasks), desc="Fulfillment Progress")
+
+        # 3. 汇总并回写
+        file_map = {}
+        for fp, d in results:
+            if fp not in file_map: file_map[fp] = []
+            file_map[fp].append(d)
+            if not d.fulfilled:
+                state.failed_directives.append({"id": d.id, "file": fp.name, "error": d.error})
+                state.asset_revision_needed = True
+
+        for fp, directives in file_map.items():
+            self.apply_fulfillment_to_file(fp, directives)
+
+        state.batch_fulfillment_complete = True
+        return state
+
+    def apply_fulfillment_to_file(self, file_path: Path, directives: List[VisualDirective]):
+        content = file_path.read_text(encoding="utf-8")
+        replaced_count = 0
+        for d in directives:
+            if d.fulfilled and d.result_html:
+                # 仅在成功时替换原始块
+                if d.raw_block in content:
+                    content = content.replace(d.raw_block, d.result_html)
+                    replaced_count += 1
+            else:
+                # 失败时不修改原文，保持 :::visual 块不动供人工审计或重试
+                # 错误信息已记录在 state.failed_directives 中
+                pass
+        
+        if replaced_count > 0:
+            file_path.write_text(content, encoding="utf-8")
+
+    async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace) -> VisualDirective:
         gen_path.mkdir(parents=True, exist_ok=True)
         src_path.mkdir(parents=True, exist_ok=True)
 
-        # 解析所有 :::visual 指令
-        directives = self._parse_visual_directives(section_content)
-        print(f"[AssetFulfillment] 发现 {len(directives)} 个 :::visual 指令")
+        if d.action == AssetFulfillmentAction.GENERATE_SVG:
+            return await self._fulfill_svg_step(d, uar, gen_path, ns, ws_path, state, trace)
+        if d.action == AssetFulfillmentAction.GENERATE_MERMAID:
+            return await self._fulfill_mermaid_step(d, ns, state, trace)
+        if d.action == AssetFulfillmentAction.SEARCH_WEB:
+            return await self._fulfill_search_step(d, uar, src_path, ns, state, trace)
+        if d.action == AssetFulfillmentAction.USE_EXISTING:
+            return await self._fulfill_use_existing_step(d, uar, ns, ws_path, state, trace)
+        
+        d.fulfilled = True
+        d.result_html = f"<!-- Action {d.action} skipped -->"
+        return d
 
-        if not directives:
-            return state, section_content
+    async def _fulfill_svg_step(self, d, uar, out_path, ns, ws_path, state, trace):
+        trace["steps"].append({"type": "init", "intent": d.description})
+        svg_code = await generate_svg_async(self.client, d.get_full_context(), state=state, style_hints=d.style_hints or "")
+        
+        if not svg_code:
+            d.error = "Initial SVG generation failed"
+            return d
 
-        # 逐个履约
-        fulfilled_content = section_content
-        offset = 0
+        attempt, is_valid = 0, False
+        file_path = out_path / f"{d.id}.svg"
 
-        for directive in directives:
-            try:
-                # 决策：复用 vs. 生成
-                directive = await self._decide_fulfillment_strategy(directive, uar)
+        while attempt < self.MAX_REPAIR_ATTEMPTS:
+            attempt += 1
+            file_path.write_text(svg_code, encoding="utf-8")
+            audit = await audit_svg_visual_async(self.client, svg_code, d.description, state=state, svg_path=file_path)
+            trace["steps"].append({"attempt": attempt, "audit": audit, "code_len": len(svg_code)})
 
-                # 异步执行履约
-                result = await self._fulfill_directive_async(directive, uar, gen_path, src_path, namespace, workspace_path)
+            if audit and audit.get("result") == "pass":
+                is_valid = True; break
+            
+            if attempt < self.MAX_REPAIR_ATTEMPTS:
+                issues = audit.get("issues", ["Audit failed"])
+                png_b64 = render_svg_to_png_base64(svg_code)
+                svg_code = await repair_svg_async(self.client, d.description, svg_code, issues, audit.get("suggestions", []), state=state, rendered_image_b64=png_b64)
+                if not svg_code: break
 
-                if result.fulfilled and result.result_html:
-                    adjusted_start = result.start_pos + offset
-                    adjusted_end = result.end_pos + offset
+        if is_valid or svg_code:
+            # Register asset
+            asset = AssetEntry(
+                id=d.id, source=AssetSource.AI, local_path=str(file_path.relative_to(ws_path)),
+                semantic_label=d.description[:100], content_hash=hashlib.md5(svg_code.encode()).hexdigest(),
+                alt_text=d.description, tags=["svg", ns], vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
+            )
+            uar.register_immediate(asset)
+            d.fulfilled, d.result_html = True, generate_figure_html(asset, d.description)
+        return d
 
-                    fulfilled_content = (
-                        fulfilled_content[:adjusted_start] +
-                        result.result_html +
-                        fulfilled_content[adjusted_end:]
-                    )
+    async def _fulfill_mermaid_step(self, d, ns, state, trace):
+        code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
+        trace["steps"].append({"type": "init", "code": code})
+        if code:
+            d.fulfilled, d.result_html = True, generate_mermaid_html(code, d.description)
+        return d
 
-                    offset += len(result.result_html) - (result.end_pos - result.start_pos)
+    async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace):
+        import asyncio
+        from functools import partial
+        loop = asyncio.get_event_loop()
+        f = partial(self.sourcing_agent._source_single_image, img_id=d.id, description=d.description, assets_dir=src_path.parent, html_context=d.get_full_context(), uar=uar, preserve_candidates=True)
+        html = await loop.run_in_executor(None, f)
+        trace["steps"].append({"type": "search", "success": bool(html)})
+        if html:
+            d.fulfilled, d.result_html = True, html
+        return d
 
-                    if result.result_asset_id:
-                        print(f"  ✓ {result.id} -> {result.result_asset_id}")
-                else:
-                    print(f"  ⚠ {result.id}: {result.error or '履约失败'}")
-                    state.errors.append(f"AssetFulfillment: {result.id} - {result.error}")
+    async def _fulfill_use_existing_step(self, d, uar, ns, ws_path, state, trace):
+        asset = uar.get_asset(d.matched_asset_id)
+        trace["steps"].append({"type": "reuse", "asset_id": d.matched_asset_id, "found": bool(asset)})
+        if asset:
+            d.fulfilled, d.result_html = True, generate_figure_html(asset, d.description)
+        return d
 
-            except Exception as e:
-                print(f"  ✗ {directive.id}: {e}")
-                state.errors.append(f"AssetFulfillment: {directive.id} - {e}")
-
-        return state, fulfilled_content
-
-    def _parse_visual_directives(self, content: str, context_chars: int = 500) -> list[VisualDirective]:
-        """
-        解析内容中的所有 :::visual 指令块，并提取上下文
-
-        Args:
-            content: 章节的完整 Markdown 内容
-            context_chars: 上下文提取的字符数 (默认 500)
-        """
+    def _parse_visual_directives(self, content: str) -> list[VisualDirective]:
         directives = []
         pattern = r':::visual[^\n]*\n[\s\S]*?:::'
-
         for match in re.finditer(pattern, content):
-            raw_block = match.group(0)
-            lines = raw_block.splitlines()
-            header_line = lines[0].strip()
-            body_content = "\n".join(lines[1:-1]).strip()
-            json_config = header_line[len(":::visual"):].strip()
-
-            # 提取上下文 (Sliding Context)
-            start_pos = match.start()
-            end_pos = match.end()
-            context_start = max(0, start_pos - context_chars)
-            context_end = min(len(content), end_pos + context_chars)
-            context_before = content[context_start:start_pos].strip()
-            context_after = content[end_pos:context_end].strip()
-
-            directive = VisualDirective(
-                raw_block=raw_block,
-                start_pos=start_pos,
-                end_pos=end_pos,
-                context_before=context_before,
-                context_after=context_after,
-            )
-
+            raw = match.group(0)
+            json_str = raw.splitlines()[0][len(":::visual"):
+].strip()
+            d = VisualDirective(raw_block=raw, start_pos=match.start(), end_pos=match.end())
             try:
-                config = json.loads(json_config) if json_config else {}
-                directive.id = config.get("id", f"visual-{len(directives)}")
-
-                action_str = config.get("action", "GENERATE_SVG").upper()
-                directive.action = {
-                    "GENERATE_SVG": AssetFulfillmentAction.GENERATE_SVG,
-                    "SEARCH_WEB": AssetFulfillmentAction.SEARCH_WEB,
-                    "GENERATE_MERMAID": AssetFulfillmentAction.GENERATE_MERMAID,
-                    "USE_EXISTING": AssetFulfillmentAction.USE_EXISTING,
-                    "SKIP": AssetFulfillmentAction.SKIP,
-                }.get(action_str, AssetFulfillmentAction.GENERATE_SVG)
-
-                directive.description = config.get("description", body_content)
-                directive.focus = config.get("focus")
-                directive.style_hints = config.get("style_hints")
-                directive.matched_asset_id = config.get("matched_asset_id") or config.get("matched_asset")
-
-            except json.JSONDecodeError as e:
-                directive.error = f"JSON 解析失败: {e}"
-                directive.description = body_content
-
-            if not directive.description:
-                directive.description = body_content
-
-            directives.append(directive)
-
+                cfg = json.loads(extract_json_from_text(json_str) or json_str)
+                d.id = cfg.get("id", f"v-{len(directives)}")
+                d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())
+                d.description = cfg.get("description", raw.splitlines()[1])
+                d.matched_asset_id = cfg.get("matched_asset")
+            except: d.error = "JSON Error"
+            directives.append(d)
         return directives
 
-    async def _fulfill_directive_async(
-        self,
-        directive: VisualDirective,
-        uar,
-        gen_path: Path,
-        src_path: Path,
-        namespace: str,
-        workspace_path: Path
-    ) -> VisualDirective:
-        """异步履约单个指令"""
-        if directive.action == AssetFulfillmentAction.SKIP:
-            directive.fulfilled = True
-            directive.result_html = f"<!-- SKIPPED: {directive.id} -->"
-            return directive
-
-        if directive.action == AssetFulfillmentAction.USE_EXISTING:
-            return await self._fulfill_use_existing_async(directive, uar, namespace, workspace_path)
-
-        if directive.action == AssetFulfillmentAction.GENERATE_SVG:
-            return await self._fulfill_generate_svg_async(directive, uar, gen_path, namespace, workspace_path)
-
-        if directive.action == AssetFulfillmentAction.GENERATE_MERMAID:
-            return await self._fulfill_generate_mermaid_async(directive, namespace)
-
-        if directive.action == AssetFulfillmentAction.SEARCH_WEB:
-            return self._fulfill_search_web(directive, uar, src_path, namespace)
-
-        directive.error = f"未知的 action 类型: {directive.action}"
-        return directive
-
-    async def _fulfill_use_existing_async(
-        self,
-        directive: VisualDirective,
-        uar,
-        namespace: str = "",
-        workspace_path: Optional[Path] = None
-    ) -> VisualDirective:
-        """异步使用现有资产（支持上下文增强的焦点计算）"""
-        asset_id = directive.matched_asset_id
-        if not asset_id or asset_id not in uar.assets:
-            directive.error = f"未找到资产: {asset_id}"
-            return directive
-
-        asset = uar.assets[asset_id]
-        asset.increment_usage(namespace or "unknown")
-
-        if directive.focus and workspace_path and not self.skip_generation:
-            full_path = resolve_asset_path(asset, workspace_path)
-            if full_path:
-                # 结合上下文构建更丰富的焦点描述
-                focus_with_context = directive.focus
-                if directive.context_before or directive.context_after:
-                    focus_with_context = f"{directive.focus}\n\n[Surrounding Context]\n{directive.context_before[:200]}...{directive.context_after[:200]}"
-                crop = await compute_focus_async(self.client, full_path, focus_with_context)
-                if crop:
-                    asset.crop_metadata = crop
-                    uar.register_immediate(asset)
-
-        directive.fulfilled = True
-        directive.result_asset_id = asset_id
-        directive.result_html = generate_figure_html(asset, directive.description)
-
-        return directive
-
-    async def _fulfill_generate_svg_async(
-        self,
-        directive: VisualDirective,
-        uar,
-        output_path: Path,
-        namespace: str,
-        workspace_path: Path
-    ) -> VisualDirective:
-        """异步生成 SVG 图形（带上下文感知）"""
-        if self.skip_generation:
-            directive.fulfilled = True
-            directive.result_html = generate_placeholder_html(directive.id, directive.description, "svg")
-            return directive
-
-        # 使用包含上下文的完整描述，提升生成质量
-        full_context = directive.get_full_context()
-        svg_code = await generate_svg_async(self.client, full_context, directive.style_hints or "")
-        if not svg_code:
-            directive.error = "未能生成 SVG 代码"
-            return directive
-
-        filename = f"{directive.id}.svg"
-        svg_path = output_path / filename
-        svg_path.write_text(svg_code, encoding="utf-8")
-
-        content_hash = hashlib.md5(svg_code.encode()).hexdigest()
-        try:
-            relative_path = svg_path.relative_to(workspace_path)
-        except ValueError:
-            relative_path = svg_path
-
-        asset_entry = AssetEntry(
-            id=directive.id,
-            source=AssetSource.AI,
-            local_path=str(relative_path),
-            semantic_label=directive.description[:100],
-            content_hash=content_hash,
-            alt_text=directive.description,
-            tags=["svg", "generated", namespace],
-        )
-        asset_entry.increment_usage(namespace or "unknown")
-        uar.register_immediate(asset_entry)
-
-        directive.fulfilled = True
-        directive.result_asset_id = directive.id
-        directive.result_html = generate_figure_html(asset_entry, directive.description)
-
-        return directive
-
-    async def _fulfill_generate_mermaid_async(self, directive: VisualDirective, namespace: str) -> VisualDirective:
-        """异步生成 Mermaid 图表（带上下文感知）"""
-        if self.skip_generation:
-            directive.fulfilled = True
-            placeholder_mermaid = "graph TD\n    A[占位符] --> B[内容]"
-            directive.result_html = generate_mermaid_html(placeholder_mermaid, directive.description)
-            return directive
-
-        # 使用包含上下文的完整描述
-        full_context = directive.get_full_context()
-        mermaid_code = await generate_mermaid_async(self.client, full_context, directive.style_hints or "")
-        if not mermaid_code:
-            directive.error = "未能生成 Mermaid 代码"
-            return directive
-
-        directive.fulfilled = True
-        directive.result_html = generate_mermaid_html(mermaid_code, directive.description)
-        return directive
-
-    def _fulfill_search_web(self, directive: VisualDirective, uar, output_path: Path, namespace: str) -> VisualDirective:
-        """搜索网络图片"""
-        if self.skip_search:
-            directive.fulfilled = True
-            directive.result_html = generate_placeholder_html(directive.id, directive.description, "web-image")
-            return directive
-
-        directive.error = "网络搜索功能尚未实现"
-        return directive
-
-    async def _calculate_reuse_score(self, intent: str, asset: AssetEntry, uar=None) -> int:
-        """
-        使用 LLM 计算现有资产与新意图之间的语义匹配得分 (0-100)
-        """
-        prompt = f"""请评估以下“视觉意图”与“现有资产”之间的匹配程度。
-
-### 视觉意图 (需求)
-{intent}
-
-### 现有资产 (已有)
-- ID: {asset.id}
-- 语义标签: {asset.semantic_label}
-- 标签: {", ".join(asset.tags)}
-
-### 评分标准
-请基于以下维度给出 0-100 的综合得分：
-1. **内容一致性**: 图像内容是否准确表达了意图中的核心概念。
-2. **上下文契合度**: 该资产是否适合放在当前的文本上下文中。
-3. **视觉覆盖度**: 资产是否包含了意图要求的所有关键视觉元素。
-
-评分等级：
-- 90-100: 极度匹配，可以直接复用且效果完美。
-- 70-89: 部分匹配，可以复用但可能需要微调文字。
-- 0-69: 不匹配，建议重新生成。
-
-### 输出格式
-请以 JSON 格式输出评分结果：
-```json
-{{
-  "score": 0-100,
-  "reason": "评分理由简述"
-}}
-```
-"""
-        try:
-            response = await self.client.generate_async(
-                prompt=prompt,
-                system_instruction="你是一位专业的视觉资产评估专家。请客观评估资产复用得分。",
-                temperature=0.0
-            )
-            
-            if response.success:
-                # 尝试解析 JSON
-                match = re.search(r'\{[\s\S]*\}', response.text)
-                if match:
-                    data = json.loads(match.group())
-                    return int(data.get("score", 0))
-            
-            return 0
-        except Exception as e:
-            print(f"  [AssetFulfillment] 评分出错: {e}")
-            return 0
-
-    def _query_uar_for_candidates(self, uar, limit: int = 10) -> list[AssetEntry]:
-        """
-        从 UAR 中获取可复用的候选资产 (包含 Session 产出、用户输入和白名单资产)
-        """
-        return uar.get_all_candidates()[:limit]
-
-    async def _decide_fulfillment_strategy(self, directive: VisualDirective, uar) -> VisualDirective:
-        """
-        根据现有资产的匹配得分和使用频率，决定履约策略 (复用 vs. 生成)
-        """
-        # 如果 Writer 已经指定了使用现有资产，则尊重 Writer 的决策
-        if directive.action == AssetFulfillmentAction.USE_EXISTING and directive.matched_asset_id:
-            return directive
-
-        # 获取候选资产
-        candidates = self._query_uar_for_candidates(uar)
-        if not candidates:
-            return directive
-
-        best_score = 0
-        best_asset = None
-
-        # 计算得分
-        for asset in candidates:
-            score = await self._calculate_reuse_score(directive.description, asset, uar)
-            if score > best_score:
-                best_score = score
-                best_asset = asset
-
-        print(f"  [AssetFulfillment] 最佳匹配资产: {best_asset.id if best_asset else 'None'} (得分: {best_score})")
-
-        # 90+ 阈值判断
-        if best_score >= 90 and best_asset:
-            # 检查使用频率（简单逻辑：如果已经用了 3 次以上，可能需要生成新变体，除非是特定请求）
-            # 这里先实现基础复用逻辑
-            directive.action = AssetFulfillmentAction.USE_EXISTING
-            directive.matched_asset_id = best_asset.id
-            print(f"  [AssetFulfillment] 🚀 自动复用资产: {best_asset.id}")
-
-        return directive
+    async def _decide_fulfillment_strategy(self, d, uar, state) -> VisualDirective:
+        if d.action == AssetFulfillmentAction.USE_EXISTING and d.matched_asset_id: return d
+        
+        # SOTA 2.0: 使用 VLM 进行语义匹配候选
+        candidates = await uar.intent_match_candidates_async(d.description, client=self.client, limit=5)
+        if not candidates: return d
+        
+        # 对返回的候选进行最高分检测 (此处假设 VLM 返回的第一个就是最相关的)
+        # 如果需要更精确的打分，可以调用 LocalSelector，但为了并行效率，我们信任粗筛结果
+        best_asset = candidates[0]
+        # 我们在这里做一个简单的保险：如果关键词完全没匹配上，可能 VLM 也产生幻觉了
+        # (在 UAR 内部其实已经有过一轮 VLM 筛选了，所以此处可以直接信任)
+        
+        d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+        return d

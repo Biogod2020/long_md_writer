@@ -81,7 +81,7 @@ async def simulate_workflow():
     print(f"   🔍 Writer 意图: '{test_query}'")
     
     # 获取候选清单 (底层逻辑：获取所有可复用资产)
-    candidates = uar.intent_match_candidates(test_query, limit=5)
+    candidates = uar.intent_match_candidates(test_query, client=client, limit=5)
     
     print(f"   📦 UAR 返回了 {len(candidates)} 个候选资产:")
     for i, asset in enumerate(candidates):

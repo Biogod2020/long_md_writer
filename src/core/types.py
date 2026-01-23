@@ -7,7 +7,7 @@ SOTA 2.0 升级：
 - CropMetadata: 裁切元数据
 """
 
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 from enum import Enum
 from pydantic import BaseModel, Field, PrivateAttr
 import json
@@ -499,6 +499,79 @@ class UniversalAssetRegistry(BaseModel):
 
         return registry
 
+    async def intent_match_candidates_async(self, query: str, client: Any, limit: int = 5) -> list[AssetEntry]:
+        """
+        使用 VLM (Gemini Flash) 对本地资产池进行语义粗筛
+        """
+        all_candidates = self.get_all_candidates()
+        if not all_candidates:
+            return []
+
+        # 构造资产列表摘要
+        catalog = []
+        for asset in all_candidates:
+            catalog.append({
+                "id": asset.id,
+                "label": asset.semantic_label,
+                "tags": asset.tags
+            })
+
+        prompt = f"""你是一位视觉资产检索专家。请根据用户的创作意图，从资产目录中筛选出最相关的 **Top {limit}** 个资产。
+
+### 用户创作意图
+{query}
+
+### 资产目录 (JSON)
+{json.dumps(catalog[:100], ensure_ascii=False)} 
+
+### 输出格式
+请直接输出 JSON 格式的 ID 列表：
+```json
+{{
+  "suggestions": ["id1", "id2", ...],
+  "reason": "筛选理由"
+}}
+```
+"""
+        try:
+            # 强制使用 Flash 模型进行粗筛
+            response = await client.generate_async(
+                prompt=prompt,
+                system_instruction="你是一位专业的资产检索助手。请快速准确地筛选相关资产。",
+                temperature=0.0
+            )
+            
+            if response.success:
+                import re
+                match = re.search(r'\{[\s\S]*\}', response.text)
+                if match:
+                    data = json.loads(match.group())
+                    suggestion_ids = data.get("suggestions", [])
+                    
+                    # 按照返回的顺序查找并返回 AssetEntry
+                    result = []
+                    for aid in suggestion_ids:
+                        asset = self.get_asset(aid)
+                        if asset:
+                            result.append(asset)
+                    return result[:limit]
+            return []
+        except Exception as e:
+            print(f"  [UAR] 语义匹配失败: {e}")
+            return []
+
+    def intent_match_candidates(self, query: str, client: Any, limit: int = 5) -> list[AssetEntry]:
+        """同步版本 (封装异步调用)"""
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_running():
+                # 如果已经在运行的事件循环中，使用 thread pool 或者直接 run (虽然不推荐在 async 中调用同步封装)
+                return [] # 这种情况下应直接调用 _async 版本
+            return asyncio.run(self.intent_match_candidates_async(query, client, limit))
+        except RuntimeError:
+            return asyncio.run(self.intent_match_candidates_async(query, client, limit))
+
     def to_summary(self, include_quality: bool = True) -> str:
         """
         生成资产注册表摘要 (用于 Prompt 注入)
@@ -520,12 +593,13 @@ class UniversalAssetRegistry(BaseModel):
 
         return "\n".join(lines)
 
-    def to_decision_context(self, visual_intent: str) -> str:
+    def to_decision_context(self, visual_intent: str, client: Any) -> str:
         """
         生成针对特定视觉意图的决策上下文
 
         Args:
             visual_intent: 视觉意图描述 (如 "心电图 P 波形成过程")
+            client: Gemini 客户端
 
         Returns:
             包含候选资产和决策指导的 Prompt 片段
@@ -533,7 +607,7 @@ class UniversalAssetRegistry(BaseModel):
         lines = [f"### 🎯 视觉需求: {visual_intent}", ""]
         lines.append("**可用候选资产:**")
 
-        candidates = self.intent_match_candidates(visual_intent, limit=5)
+        candidates = self.intent_match_candidates(visual_intent, client=client, limit=5)
         if not candidates:
             lines.append("*无匹配的现有资产*")
             lines.append("")
@@ -690,6 +764,9 @@ class AgentState(BaseModel):
     # 最终输出
     final_html_path: Optional[str] = Field(default=None, description="最终 HTML 文件路径")
     
+    # Reasoning
+    thoughts: str = Field(default="", description="AI 推理过程 (Thinking tokens)")
+
     # 错误处理
     errors: list[str] = Field(default_factory=list, description="错误日志")
     
@@ -704,6 +781,16 @@ class AgentState(BaseModel):
     vqa_needs_reassembly: bool = Field(default=False, description="是否需要重新拼装")
     md_qa_iterations: int = Field(default=0, description="Markdown QA 迭代次数")
     md_qa_needs_revision: bool = Field(default=False, description="是否需要 MD 返工")
+    
+    # Loop-specific metadata (e.g. retry flags, hashes)
+    loop_metadata: dict[str, Any] = Field(default_factory=dict, description="循环相关的元数据（如重试标志）")
+
+    # SOTA 2.0: 资产履约修复
+    batch_fulfillment_complete: bool = Field(default=False, description="全书批量履约是否完成")
+    failed_directives: list[dict] = Field(default_factory=list, description="履约失败的指令列表")
+    asset_revision_needed: bool = Field(default=False, description="是否需要人工干预修复资产")
+    failed_asset_id: Optional[str] = Field(default=None, description="失败的资产 ID")
+
     rewrite_needed: bool = Field(default=False, description="是否需要触发重写逻辑")
     rewrite_feedback: str = Field(default="", description="重写反馈意见")
     skip_markdown_qa: bool = Field(default=False, description="是否跳过 Markdown QA (默认为 False)")

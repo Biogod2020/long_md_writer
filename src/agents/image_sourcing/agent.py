@@ -114,7 +114,7 @@ class ImageSourcingAgent:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                candidates = uar.intent_match_candidates(description, limit=10)
+                candidates = uar.intent_match_candidates(description, client=self.client, limit=10)
                 best_local, reasoning = loop.run_until_complete(
                     self.local_selector.select_best_async(candidates, description)
                 )
