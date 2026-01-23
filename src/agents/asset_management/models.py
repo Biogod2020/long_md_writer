@@ -24,6 +24,7 @@ class VisualDirective:
     focus: Optional[str] = None
     style_hints: Optional[str] = None
     matched_asset_id: Optional[str] = None
+    reuse_score: int = 0  # 资产复用得分 (0-100)
 
     # 上下文感知 (Sliding Context)
     context_before: str = ""  # 指令块前的上下文文本

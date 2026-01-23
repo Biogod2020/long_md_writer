@@ -272,22 +272,41 @@ class AssetFulfillmentAgent:
                 d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())
                 d.description = cfg.get("description", raw.splitlines()[1])
                 d.matched_asset_id = cfg.get("matched_asset")
+                d.reuse_score = int(cfg.get("reuse_score", 0))
             except: d.error = "JSON Error"
             directives.append(d)
         return directives
 
     async def _decide_fulfillment_strategy(self, d, uar, state) -> VisualDirective:
-        if d.action == AssetFulfillmentAction.USE_EXISTING and d.matched_asset_id: return d
+        """
+        SOTA 2.0 策略决策引擎
         
-        # SOTA 2.0: 使用 VLM 进行语义匹配候选
+        原则：
+        1. 尊重 Writer 的明确复用意图 (如果评分够高)
+        2. 如果 Writer 要求生成或搜索，除非本地有“极其完美”的匹配，否则严禁劫持
+        """
+        # 场景 A: Writer 已经决定要复用
+        if d.action == AssetFulfillmentAction.USE_EXISTING and d.matched_asset_id:
+            # 如果分数太低 (小于 85)，说明 Writer 也是勉强为之，我们尝试找更好的或 fallback
+            if d.reuse_score >= 85:
+                return d
+            
+        # 场景 B: 寻找本地匹配 (作为第二意见)
         candidates = await uar.intent_match_candidates_async(d.description, client=self.client, limit=5)
-        if not candidates: return d
         
-        # 对返回的候选进行最高分检测 (此处假设 VLM 返回的第一个就是最相关的)
-        # 如果需要更精确的打分，可以调用 LocalSelector，但为了并行效率，我们信任粗筛结果
-        best_asset = candidates[0]
-        # 我们在这里做一个简单的保险：如果关键词完全没匹配上，可能 VLM 也产生幻觉了
-        # (在 UAR 内部其实已经有过一轮 VLM 筛选了，所以此处可以直接信任)
-        
-        d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+        if candidates:
+            best_asset = candidates[0]
+            # 这里我们需要一个逻辑：只有当匹配度极高时才“建议”或“强制”复用
+            # 这里的粗筛没有返回具体分数，我们暂时通过 ID 匹配来判断 Writer 是否已经看过了
+            
+            # 如果 Writer 要求生成 SVG 或 搜网图，我们非常谨慎
+            if d.action in [AssetFulfillmentAction.GENERATE_SVG, AssetFulfillmentAction.SEARCH_WEB]:
+                # 只有当本地资产 ID 包含在 Writer 的描述或匹配 ID 中时，我们才考虑截胡
+                # 实际上，既然 Writer 已经明确要求了新资产，说明本地那个“心脏解剖图”不满足本章特定需求
+                print(f"  [Fulfillment] 尊重 Writer 决定: 保持 {d.action.value} 动作 ({d.id})")
+                return d
+
+            # 只有在 Writer 没把握 (USE_EXISTING 但分数低) 时，我们才尝试换成更好的本地资产
+            d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+            
         return d
