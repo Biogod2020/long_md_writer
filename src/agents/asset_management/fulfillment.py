@@ -122,7 +122,18 @@ class AssetFulfillmentAgent:
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
                     return (task["file_path"], result)
                 except Exception as e:
+                    import traceback
+                    error_detail = traceback.format_exc()
                     d.error = str(e)
+                    trace["error"] = error_detail
+                    trace["status"] = "CRASHED"
+                    
+                    # 保存崩溃时的 Trace 日志
+                    trace_file = debug_path / f"{d.id}_trace.json"
+                    trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
+                    
+                    # 记录到 state.errors (全局重大错误)
+                    state.errors.append(f"Fulfillment Crash [{d.id}]: {str(e)}")
                     return (task["file_path"], d)
 
         print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
@@ -134,7 +145,15 @@ class AssetFulfillmentAgent:
             if fp not in file_map: file_map[fp] = []
             file_map[fp].append(d)
             if not d.fulfilled:
-                state.failed_directives.append({"id": d.id, "file": fp.name, "error": d.error})
+                # 增强失败报告结构：包含描述和前后文预览
+                state.failed_directives.append({
+                    "id": d.id, 
+                    "file": fp.name, 
+                    "error": d.error,
+                    "description": d.description,
+                    "action": d.action.value if hasattr(d.action, "value") else str(d.action),
+                    "context_preview": d.get_full_context()[:200] + "..."
+                })
                 state.asset_revision_needed = True
 
         for fp, directives in file_map.items():
