@@ -131,7 +131,7 @@ class ImageDownloader:
                         fast_session.cookies.update(raw_cookies)
                         
                         # C. Fast Download
-                        target_path = target_dir / f"img_{{i+1}}"
+                        target_path = target_dir / f"img_{i+1}"
                         download_success = False
                         
                         try:
@@ -227,10 +227,10 @@ class ImageDownloader:
             if resp.status_code == 200 and len(resp.content) > 2000:
                 c_type = resp.headers.get('Content-Type', '').lower()
                 ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
-                path = target_dir / f"img_{{index+1}}{ext}"
+                path = target_dir / f"img_{index+1}{ext}"
                 path.write_bytes(resp.content)
                 if desc:
-                    (target_dir / f"img_{{index+1}}.txt").write_text(desc, encoding='utf-8')
+                    (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
                 self._resize_image(path)
                 
                 # SOTA: Final integrity check
