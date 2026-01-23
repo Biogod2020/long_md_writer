@@ -17,9 +17,9 @@
     - 在 `AgentState` 中确保 `failed_directives` 记录了足够的人类审计信息（前后文预览）。
 - [x] **Task: Conductor - User Manual Verification 'Observability' (Protocol in workflow.md)** (ebdcf62)
 
-## Phase 3: 验证与 E2E 测试 (Verification)
-- [ ] **Task: 编写针对性单元测试**
+## Phase 3: 验证与 E2E 测试 (Verification) [checkpoint: 07ffb91]
+- [x] **Task: 编写针对性单元测试** (3b275fd)
     - 模拟 `intent_match_candidates` 场景，验证本地搜索逻辑。
-- [ ] **Task: 运行 E2E 验证任务**
+- [x] **Task: 运行 E2E 验证任务** (07ffb91)
     - 使用 `tests/debug_sota2_workflow.py` 重新运行，确认 500 错误被优雅捕获且文件内容安全。
-- [ ] **Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Final Verification' (Protocol in workflow.md)** (07ffb91)
