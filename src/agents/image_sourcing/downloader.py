@@ -1,6 +1,4 @@
-"""
-ImageDownloader: Robust multi-layer download strategy for image candidates.
-"""
+"ImageDownloader: Robust multi-layer download strategy for image candidates."
 
 import os
 import requests
@@ -11,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Dict, Optional
 import urllib3
+import json
 from .browser import BrowserManager
 
 # Disable insecure request warnings for proxy/SSL issues
@@ -75,7 +74,6 @@ class ImageDownloader:
             
             # Use the shared browser instance
             page = self.browser_manager.page
-            from DrissionPage import SessionPage
 
             try:
                 downloader_tab = page.new_tab()
@@ -121,9 +119,9 @@ class ImageDownloader:
                             "Referer": domain_referer,
                             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                             "Accept-Language": "en-US,en;q=0.9",
-                            "Sec-Ch-Ua": "\"Chromium\";v=\"122\", \"Not(A:Bar\";v=\"24\", \"Google Chrome\";v=\"122\"",
+                            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Bar";v="24", "Google Chrome";v="122"',
                             "Sec-Ch-Ua-Mobile": "?0",
-                            "Sec-Ch-Ua-Platform": "\"macOS\"",
+                            "Sec-Ch-Ua-Platform": '"macOS"',
                             "Sec-Fetch-Dest": "document",
                             "Sec-Fetch-Mode": "navigate",
                             "Sec-Fetch-Site": "none",
@@ -133,11 +131,11 @@ class ImageDownloader:
                         fast_session.cookies.update(raw_cookies)
                         
                         # C. Fast Download
-                        target_path = target_dir / f"img_{i+1}"
+                        target_path = target_dir / f"img_{{i+1}}"
                         download_success = False
                         
                         try:
-                            # Stream download to avoid memory issues
+                            # Stream download
                             resp = fast_session.get(url, stream=True, timeout=12, verify=False)
                             if resp.status_code == 200:
                                 c_type = resp.headers.get('Content-Type', '').lower()
@@ -157,16 +155,16 @@ class ImageDownloader:
                                     download_success = True
                                 else:
                                     if self.debug: print(f"        [-] Fast session integrity check failed.")
-                                    final_path.unlink(missing_ok=True)
+                                    if final_path.exists(): final_path.unlink()
                             else:
                                 if self.debug: print(f"        [-] Fast session download failed: {resp.status_code}")
                         except Exception as e:
                             if self.debug: print(f"        [-] Fast session error: {e}")
 
-                        # D. Slow Browser Download (Last Resort for TLS/Complex checks)
+                        # D. Slow Browser Download (Last Resort)
                         if not download_success:
                             if self.debug: print(f"        [!] Reverting to slow browser download for {i+1}...")
-                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{i+1}")
+                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{{i+1}}")
                             if res and res[0]:
                                 downloaded_path = Path(res[1])
                                 self._resize_image(downloaded_path)
@@ -174,7 +172,7 @@ class ImageDownloader:
                                     if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
                                     local_paths[i] = downloaded_path
                                 else:
-                                    downloaded_path.unlink(missing_ok=True)
+                                    if downloaded_path.exists(): downloaded_path.unlink()
 
                     except Exception as e:
                         if self.debug:
@@ -183,7 +181,8 @@ class ImageDownloader:
                 # Close the fallback tab
                 try:
                     downloader_tab.close()
-                except: pass
+                except:
+                    pass
 
             except Exception as e:
                 if self.debug:
@@ -195,9 +194,9 @@ class ImageDownloader:
         """Layer 1: Download using requests with headers."""
         try:
             # Handle unicode escapes and unquote
-            if '\\u' in url:
+            if r'\u' in url:
                 url = url.encode().decode('unicode_escape')
-            from urllib.parse import unquote
+            from urllib.parse import unquote, urlparse
             url = unquote(url)
             
             # SOTA: 使用目标域名的根路径作为 Referer 绕过热链保护
@@ -228,28 +227,29 @@ class ImageDownloader:
             if resp.status_code == 200 and len(resp.content) > 2000:
                 c_type = resp.headers.get('Content-Type', '').lower()
                 ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
-                path = target_dir / f"img_{index+1}{ext}"
+                path = target_dir / f"img_{{index+1}}{ext}"
                 path.write_bytes(resp.content)
                 if desc:
-                    (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
+                    (target_dir / f"img_{{index+1}}.txt").write_text(desc, encoding='utf-8')
                 self._resize_image(path)
                 
                 # SOTA: Final integrity check
                 if self._is_valid_image(path):
                     return path
                 else:
-                    if self.debug: print(f"      [Layer 1] Integrity check failed for {path.name}")
+                    if self.debug: 
+                        print(f"      [Layer 1] Integrity check FAILED for {path.name}. Headers: {dict(resp.headers)}")
                     path.unlink(missing_ok=True)
                     return None
             elif self.debug:
-                # Diagnostic logging for failures
-                print(f"      [Layer 1] FAILED: {resp.status_code} for {url[:50]}...")
-                print(f"      [Headers] {dict(resp.headers)}")
+                # SOTA Diagnostic: Capture the reason for failure
+                print(f"      [Layer 1] FAILED: {resp.status_code} for {url[:60]}...")
+                print(f"      [Layer 1] Response Headers: {json.dumps(dict(resp.headers), indent=2)}")
                 if len(resp.content) <= 2000:
-                    print(f"      [Warning] Response too small: {len(resp.content)} bytes")
+                    print(f"      [Layer 1] Warning: Payload too small ({len(resp.content)} bytes). Likely a block page.")
         except Exception as e:
             if self.debug:
-                print(f"      [Layer 1] Error downloading {url[:50]}: {e}")
+                print(f"      [Layer 1] CRITICAL ERROR downloading {url[:60]}: {e}")
         return None
 
     def _resize_image(self, path: Path):
