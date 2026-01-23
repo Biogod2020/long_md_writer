@@ -9,13 +9,13 @@
     - 增加“失败保留”逻辑，确保 `raw_block` 在失败时不被错误替换，仅记录错误。
 - [x] **Task: Conductor - User Manual Verification 'Core Restoration' (Protocol in workflow.md)** (7b62746)
 
-## Phase 2: 并行观测与异常增强 (Observability)
-- [ ] **Task: 增强异常捕获**
+## Phase 2: 并行观测与异常增强 (Observability) [checkpoint: ebdcf62]
+- [x] **Task: 增强异常捕获** (85f8526)
     - 在 `fulfillment.py` 的并行 `worker` 函数中，捕获所有异常并使用 `traceback` 或详细信息填充 `d.error`。
     - 确保 `trace.json` 中的 `steps` 记录每一个阶段的详细结果。
-- [ ] **Task: 完善失败报告结构**
+- [x] **Task: 完善失败报告结构** (85f8526)
     - 在 `AgentState` 中确保 `failed_directives` 记录了足够的人类审计信息（前后文预览）。
-- [ ] **Task: Conductor - User Manual Verification 'Observability' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Observability' (Protocol in workflow.md)** (ebdcf62)
 
 ## Phase 3: 验证与 E2E 测试 (Verification)
 - [ ] **Task: 编写针对性单元测试**
