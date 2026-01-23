@@ -194,7 +194,7 @@ class ImageDownloader:
             
             headers = {
                 'User-Agent': random.choice(user_agents),
-                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept': 'image/avif,image/webp,image/apng/image/svg+xml,image/*,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Referer': 'https://www.google.com/',
                 'Sec-Fetch-Dest': 'image',
@@ -214,8 +214,15 @@ class ImageDownloader:
                     (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
                 self._resize_image(path)
                 return path
-        except:
-            pass
+            elif self.debug:
+                # Diagnostic logging for failures
+                print(f"      [Layer 1] FAILED: {resp.status_code} for {url[:50]}...")
+                print(f"      [Headers] {dict(resp.headers)}")
+                if len(resp.content) <= 2000:
+                    print(f"      [Warning] Response too small: {len(resp.content)} bytes")
+        except Exception as e:
+            if self.debug:
+                print(f"      [Layer 1] Error downloading {url[:50]}: {e}")
         return None
 
     def _resize_image(self, path: Path):
