@@ -23,9 +23,12 @@
     - [x] Create `scripts/test_image_sourcing_intents.py`
     - [x] Result: 4/4 FAILED. Patterns: Async Conflict, VLM Silent Failure, WAF Blocks.
 - [~] Task: 修复压力测试揭示的致命 Pattern (Fix Fatal Patterns)
-    - [ ] **Pattern 1: Async Conflict**. 重构 `GeminiClient` 调用逻辑，解决 `asyncio.run` 在现有 Loop 中崩溃的问题。
-    - [ ] **Pattern 2: WAF Blocks**. 增强 `ImageDownloader`，引入 Session 清理重试和来源页 Referer 深度伪装。
-    - [ ] **Pattern 3: Filename Bug**. 修复 `downloader.py` 中的 `img_{index+1}` 字面量字符串错误。
+    - [x] **Pattern 1: Async Conflict**. 重构 `GeminiClient` 调用逻辑。 (0869af7)
+    - [x] **Pattern 3: Filename Bug**. 修复 `downloader.py` 中的字面量错误。 (0869af7)
+    - [ ] **Pattern 2: WAF Blocks & Resiliency**. 
+        - [ ] 实现 **顺位替补机制 (Candidate Rotation)**：如果首选图处理失败，自动尝试 Top 3 列表中的后续图片。
+        - [ ] 修复 **Status 567 & Timeout**：增加超时时间，实现“Header 降级”策略。
+        - [ ] 确保采购 Agent 具备“部分缺失容忍度”，并在 `failed_directives` 中详细归类报错原因。
 - [x] Task: 强化 AI 修复后的再审核逻辑 (Fix Missing Re-Audit Loop) (3426e56)
     - [x] 修改 `src/agents/markdown_qa_agent.py`，确保应用补丁后重置审批状态。
     - [x] 修改 `src/orchestration/workflow_markdown.py` 的路由逻辑，强制修复后回到 Critic 节点。
