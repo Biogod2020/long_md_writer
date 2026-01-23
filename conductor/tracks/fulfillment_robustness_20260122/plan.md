@@ -1,13 +1,13 @@
 # Implementation Plan: Fulfillment Robustness
 
-## Phase 1: 核心能力恢复 (Core Restoration)
+## Phase 1: 核心能力恢复 (Core Restoration) [checkpoint: 7b62746]
 - [x] **Task: 补全 UAR 接口** (65039a3)
     - 在 `src/core/types.py` 的 `UniversalAssetRegistry` 类中重新实现 `intent_match_candidates`。
     - 使用 Gemini Flash 进行语义粗筛逻辑。
 - [x] **Task: 物理回写逻辑加固** (65039a3)
     - 修改 `src/agents/asset_management/fulfillment.py` 中的 `apply_fulfillment_to_file`。
     - 增加“失败保留”逻辑，确保 `raw_block` 在失败时不被错误替换，仅记录错误。
-- [ ] **Task: Conductor - User Manual Verification 'Core Restoration' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Core Restoration' (Protocol in workflow.md)** (7b62746)
 
 ## Phase 2: 并行观测与异常增强 (Observability)
 - [ ] **Task: 增强异常捕获**
