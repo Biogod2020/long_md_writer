@@ -11,6 +11,7 @@
 - **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
   - Native Multimodal `inline_data` support.
   - Native JSON Schema enforcement.
+  - VLM-driven semantic candidate selection for local asset matching.
   - "Thinking" token (thoughts) capture and state integration.
   - Intelligent connection pooling and exponential backoff for network resilience.
   - High-concurrency parallel fulfillment with semaphore-based rate limiting.

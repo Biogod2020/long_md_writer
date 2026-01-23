@@ -7,8 +7,8 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 
 ## Project Goals
 - **Automated SOTA Publishing**: Achieve autonomous generation of visually stunning, interactive HTML5 documentation and educational materials.
-- **Asset Integrity & Compliance**: Guarantee visual consistency and precise asset sourcing through advanced Visual Quality Assurance (VQA) and the Universal Asset Registry (UAR).
-- **Workflow Decoupling**: Maintain a strict separation between content logic (Markdown) and presentation logic (HTML) to ensure industrial-grade scalability and flexibility.
+- **Asset Integrity & Compliance**: Guarantee visual consistency and precise asset sourcing through advanced Visual Quality Assurance (VQA) and the Universal Asset Registry (UAR). Features VLM-driven semantic matching to identify and reuse high-quality local assets before seeking external sources.
+- **Workflow Decoupling**: Maintain a strict separation between content logic (Markdown) and presentation logic (HTML). Uses a "Non-Destructive Fulfillment" policy where failed visual assets are preserved as retryable source blocks rather than being replaced by error messages.
 
 ## Key Features
 - **Multi-Agent Orchestration**: A sophisticated ecosystem of specialized agents (Architect, SME Writer, Asset Critic, etc.) working in parallel to handle complex publishing tasks.
