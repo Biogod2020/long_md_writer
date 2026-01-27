@@ -28,3 +28,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Fix parallel fulfillment bugs: physical write-back redundancy, missing UAR interface methods, and strengthen parallel exception handling/tracing.**
 *Link: [./tracks/fulfillment_robustness_20260122/](./tracks/fulfillment_robustness_20260122/)*
+
+---
+
+- [x] **Track: Fix Universal Asset Registry (UAR) race conditions during parallel asset fulfillment and improve reporting accuracy.**
+*Link: [./tracks/uar_parallel_safety_20260125/](./tracks/uar_parallel_safety_20260125/)*
