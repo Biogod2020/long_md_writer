@@ -109,18 +109,19 @@ class AssetFulfillmentAgent:
                     d_final = await self._decide_fulfillment_strategy(d, uar, state)
                     trace["action"] = d_final.action.value
                     
-                    # 执行履约
-                    result = await self._fulfill_directive_async(
+                    # 执行履约 (返回指令和新产生的资产条目)
+                    result_d, new_asset = await self._fulfill_directive_async(
                         d_final, uar, 
                         workspace_path / "agent_generated", 
                         workspace_path / "agent_sourced", 
-                        task["namespace"], workspace_path, state, trace
+                        task["namespace"], workspace_path, state, trace,
+                        target_file=task["file_path"]
                     )
                     
                     # 保存 Trace 日志
                     trace_file = debug_path / f"{d.id}_trace.json"
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
-                    return (task["file_path"], result)
+                    return (task["file_path"], result_d, new_asset)
                 except Exception as e:
                     import traceback
                     error_detail = traceback.format_exc()
@@ -132,20 +133,34 @@ class AssetFulfillmentAgent:
                     trace_file = debug_path / f"{d.id}_trace.json"
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
                     
-                    # 记录到 state.errors (全局重大错误)
+                    # 记录到 state.errors
                     state.errors.append(f"Fulfillment Crash [{d.id}]: {str(e)}")
-                    return (task["file_path"], d)
+                    return (task["file_path"], d, None)
 
         print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
         results = await tqdm.gather(*(worker(t) for t in all_tasks), desc="Fulfillment Progress")
 
-        # 3. 汇总并回写
+        # 3. 汇总并注册资产 (SOTA: 批量原子写入，防止 Race Condition)
         file_map = {}
-        for fp, d in results:
+        new_assets_count = 0
+        reused_count = 0
+        mermaid_count = 0
+        
+        for fp, d, asset in results:
             if fp not in file_map: file_map[fp] = []
             file_map[fp].append(d)
+            
+            if asset:
+                # 只有新产生的资产需要注册 (SVG, Web Sourced)
+                uar.register_immediate(asset)
+                new_assets_count += 1
+            elif d.fulfilled:
+                if d.action == AssetFulfillmentAction.USE_EXISTING:
+                    reused_count += 1
+                elif d.action == AssetFulfillmentAction.GENERATE_MERMAID:
+                    mermaid_count += 1
+
             if not d.fulfilled:
-                # 增强失败报告结构：包含描述和前后文预览
                 state.failed_directives.append({
                     "id": d.id, 
                     "file": fp.name, 
@@ -156,9 +171,11 @@ class AssetFulfillmentAgent:
                 })
                 state.asset_revision_needed = True
 
+        # 物理回写
         for fp, directives in file_map.items():
             self.apply_fulfillment_to_file(fp, directives)
 
+        print(f"[AssetFulfillment] ✅ 履约完成: 新增 {new_assets_count}, 复用 {reused_count}, Mermaid {mermaid_count}")
         state.batch_fulfillment_complete = True
         return state
 
@@ -172,37 +189,38 @@ class AssetFulfillmentAgent:
                     content = content.replace(d.raw_block, d.result_html)
                     replaced_count += 1
             else:
-                # 失败时不修改原文，保持 :::visual 块不动供人工审计或重试
-                # 错误信息已记录在 state.failed_directives 中
+                # 失败时不修改原文
                 pass
         
         if replaced_count > 0:
             file_path.write_text(content, encoding="utf-8")
 
-    async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace) -> VisualDirective:
+    async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         gen_path.mkdir(parents=True, exist_ok=True)
         src_path.mkdir(parents=True, exist_ok=True)
 
         if d.action == AssetFulfillmentAction.GENERATE_SVG:
-            return await self._fulfill_svg_step(d, uar, gen_path, ns, ws_path, state, trace)
+            return await self._fulfill_svg_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.GENERATE_MERMAID:
-            return await self._fulfill_mermaid_step(d, ns, state, trace)
+            res_d = await self._fulfill_mermaid_step(d, ns, state, trace)
+            return res_d, None
         if d.action == AssetFulfillmentAction.SEARCH_WEB:
-            return await self._fulfill_search_step(d, uar, src_path, ns, state, trace)
+            return await self._fulfill_search_step(d, uar, src_path, ns, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.USE_EXISTING:
-            return await self._fulfill_use_existing_step(d, uar, ns, ws_path, state, trace)
+            res_d = await self._fulfill_use_existing_step(d, uar, ns, ws_path, state, trace, target_file=target_file)
+            return res_d, None
         
         d.fulfilled = True
         d.result_html = f"<!-- Action {d.action} skipped -->"
-        return d
+        return d, None
 
-    async def _fulfill_svg_step(self, d, uar, out_path, ns, ws_path, state, trace):
+    async def _fulfill_svg_step(self, d, uar, out_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         trace["steps"].append({"type": "init", "intent": d.description})
         svg_code = await generate_svg_async(self.client, d.get_full_context(), state=state, style_hints=d.style_hints or "")
         
         if not svg_code:
             d.error = "Initial SVG generation failed"
-            return d
+            return d, None
 
         attempt, is_valid = 0, False
         file_path = out_path / f"{d.id}.svg"
@@ -223,15 +241,18 @@ class AssetFulfillmentAgent:
                 if not svg_code: break
 
         if is_valid or svg_code:
-            # Register asset
+            # SOTA: Return AssetEntry for aggregated registration
             asset = AssetEntry(
                 id=d.id, source=AssetSource.AI, local_path=str(file_path.relative_to(ws_path)),
                 semantic_label=d.description[:100], content_hash=hashlib.md5(svg_code.encode()).hexdigest(),
                 alt_text=d.description, tags=["svg", ns], vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
             )
-            uar.register_immediate(asset)
-            d.fulfilled, d.result_html = True, generate_figure_html(asset, d.description)
-        return d
+            # uar.register_immediate(asset) # DEPRECATED: Don't call inside worker
+            d.fulfilled, d.result_html = True, generate_figure_html(
+                asset, d.description, target_file=target_file, workspace_path=ws_path
+            )
+            return d, asset
+        return d, None
 
     async def _fulfill_mermaid_step(self, d, ns, state, trace):
         code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
@@ -240,22 +261,54 @@ class AssetFulfillmentAgent:
             d.fulfilled, d.result_html = True, generate_mermaid_html(code, d.description)
         return d
 
-    async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace):
+    async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         import asyncio
         from functools import partial
         loop = asyncio.get_event_loop()
-        f = partial(self.sourcing_agent._source_single_image, img_id=d.id, description=d.description, assets_dir=src_path.parent, html_context=d.get_full_context(), uar=uar, preserve_candidates=True)
+        f = partial(
+            self.sourcing_agent._source_single_image, 
+            img_id=d.id, 
+            description=d.description, 
+            assets_dir=src_path,
+            html_context=d.get_full_context(), 
+            uar=uar, 
+            preserve_candidates=True
+        )
         html = await loop.run_in_executor(None, f)
         trace["steps"].append({"type": "search", "success": bool(html)})
+        
         if html:
+            found_files = list(src_path.glob(f"{d.id}.*"))
+            if found_files:
+                img_file = found_files[0]
+                ws_path = Path(state.workspace_path)
+                asset = AssetEntry(
+                    id=d.id, 
+                    source=AssetSource.WEB, 
+                    local_path=str(img_file.relative_to(ws_path)),
+                    semantic_label=d.description[:100], 
+                    content_hash=hashlib.md5(img_file.read_bytes()).hexdigest(),
+                    alt_text=d.description, 
+                    tags=["sourced", ns], 
+                    vqa_status=AssetVQAStatus.PENDING
+                )
+                # Regenerate HTML with robust paths
+                html = generate_figure_html(
+                    asset, d.description, target_file=target_file, workspace_path=ws_path
+                )
+                d.fulfilled, d.result_html = True, html
+                return d, asset
+                
             d.fulfilled, d.result_html = True, html
-        return d
+        return d, None
 
-    async def _fulfill_use_existing_step(self, d, uar, ns, ws_path, state, trace):
+    async def _fulfill_use_existing_step(self, d, uar, ns, ws_path, state, trace, target_file: Optional[Path] = None):
         asset = uar.get_asset(d.matched_asset_id)
         trace["steps"].append({"type": "reuse", "asset_id": d.matched_asset_id, "found": bool(asset)})
         if asset:
-            d.fulfilled, d.result_html = True, generate_figure_html(asset, d.description)
+            d.fulfilled, d.result_html = True, generate_figure_html(
+                asset, d.description, target_file=target_file, workspace_path=ws_path
+            )
         return d
 
     def _parse_visual_directives(self, content: str) -> list[VisualDirective]:
