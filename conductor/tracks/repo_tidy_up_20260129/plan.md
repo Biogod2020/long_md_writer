@@ -21,9 +21,9 @@
     - [x] Verify test discovery and execution still works.
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Codebase' (Protocol in workflow.md) (3371478)
 
-## Phase 3: Final Sweep & Verification
-- [ ] Task: Verify project root cleanliness
-    - [ ] Confirm only essential config files (`.gitignore`, `requirements.txt`, etc.) and preserved TODOs remain.
-- [ ] Task: Verify original functions
-    - [ ] Run a smoke test for `scripts/main.py` and `scripts/main_markdown.py` to ensure they execute correctly.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Final Sweep' (Protocol in workflow.md)
+## Phase 3: Final Sweep & Verification [checkpoint: 748fd6a]
+- [x] Task: Verify project root cleanliness (3371478)
+    - [x] Confirm only essential config files (`.gitignore`, `requirements.txt`, etc.) and preserved TODOs remain.
+- [x] Task: Verify original functions (3371478)
+    - [x] Run a smoke test for `scripts/main.py` and `scripts/main_markdown.py` to ensure they execute correctly.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Final Sweep' (Protocol in workflow.md) (748fd6a)
