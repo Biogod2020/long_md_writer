@@ -79,10 +79,18 @@ async def run_clever_e2e():
             print("="*70)
             final_s = AgentState(**state_info.values)
             
-            # SOTA: Reporting Breakdown
+            # SOTA: Enhanced Reporting Breakdown
             uar = final_s.get_uar()
-            print(f"Final Assets in UAR: {len(uar.assets)}")
-            print(f"Stats by Source: {json.dumps(uar.model_dump().get('stats', {}), indent=2)}")
+            # 重新加载一次以确保获取最新的 stats (如果是从文件加载)
+            print(f"Final Assets Cataloged: {len(uar.assets)}")
+            print(f"  - New Assets Created: {len([a for a in uar.assets.values() if a.source in ['AI', 'WEB']])}")
+            print(f"  - Pre-existing Assets: {len([a for a in uar.assets.values() if a.source == 'USER'])}")
+            
+            if final_s.failed_directives:
+                print(f"\n❌ Fulfillment Failures: {len(final_s.failed_directives)}")
+                for fd in final_s.failed_directives:
+                    print(f"  - [{fd['id']}]: {fd['error']}")
+            
             return
 
         next_node = state_info.next[0]

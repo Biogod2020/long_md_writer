@@ -1,244 +1,93 @@
-#!/usr/bin/env python3
-"""
-SVG Generation + Visual QA + Repair Loop End-to-End Test
-
-This script simulates the full LangGraph workflow with repair loop:
-1. AssetFulfillmentAgent generates an SVG from a :::visual directive
-2. AssetCriticAgent audits the generated SVG
-3. If audit fails, regenerate SVG with critic feedback
-4. Repeat until pass or max attempts reached
-
-Usage:
-    python scripts/test_svg_e2e.py
-"""
-
-import sys
 import asyncio
+import os
 from pathlib import Path
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState, AssetEntry, AssetSource
-from src.agents.asset_management import AssetFulfillmentAgent, AssetCriticAgent
-from src.agents.asset_management.processors.svg import generate_svg_async, repair_svg_async
-from src.agents.asset_management.critic import AuditResult
-import hashlib
+from src.agents.asset_management.processors.audit import audit_svg_visual_async
+from src.core.types import AgentState
 
+import time
 
-# Test Markdown with :::visual directive
-ORIGINAL_INTENT = """A schematic diagram of the human heart showing the four chambers:
-- Left atrium (receives oxygenated blood from lungs)
-- Right atrium (receives deoxygenated blood from body)
-- Left ventricle (pumps oxygenated blood to body)
-- Right ventricle (pumps deoxygenated blood to lungs)
-
-Use red/pink color for oxygenated blood flow paths.
-Use blue color for deoxygenated blood flow paths.
-Include arrows indicating blood flow direction.
-Label each chamber clearly."""
-
-TEST_MARKDOWN = f"""
-# Chapter 1: Cardiac Anatomy
-
-The human heart is a muscular organ responsible for pumping blood throughout the body.
-It consists of four chambers that work together in a coordinated rhythm.
-
-:::visual {{"id": "s1-heart-diagram", "action": "GENERATE_SVG"}}
-{ORIGINAL_INTENT}
-:::
-
-The left ventricle has the thickest walls because it must pump blood 
-to the entire body through the aorta.
-"""
-
-
-
-
-
-async def run_e2e_test():
-    print("\n" + "=" * 70)
-    print(" 🧪 SVG Generation + Visual QA + Repair Loop E2E Test")
-    print("=" * 70)
-
-    # Setup workspace
-    workspace_path = PROJECT_ROOT / "workspace" / "test_e2e_loop"
-    workspace_path.mkdir(parents=True, exist_ok=True)
-    assets_path = workspace_path / "generated_assets"
-    assets_path.mkdir(parents=True, exist_ok=True)
-
-    print(f"📁 Workspace: {workspace_path}")
-
-    # Initialize state
-    state = AgentState(
-        job_id="e2e_loop_test",
-        workspace_path=str(workspace_path),
-        user_intent="Test SVG generation with QA repair loop",
-    )
-
-    # Initialize client
+async def test_svg_stress_patching():
+    print("🔥 Starting SVG STRESS PATCHING Test...")
     client = GeminiClient()
-    uar = state.get_uar()
-
-    # Configuration
-    MAX_ATTEMPTS = 4
-    PASS_THRESHOLD = 0.90
-
-    # =========================================================================
-    # Phase 1: Initial SVG Generation
-    # =========================================================================
-    print("\n" + "-" * 70)
-    print(" 📦 Phase 1: Initial SVG Generation")
-    print("-" * 70)
-
-    fulfillment = AssetFulfillmentAgent(
-        client=client,
-        output_dir="generated_assets",
-        skip_generation=False,
-        skip_search=True,
-    )
-
-    state, fulfilled_markdown = await fulfillment.run_async(
-        state=state,
-        section_content=TEST_MARKDOWN,
-        namespace="s1"
-    )
-
-    svg_asset = uar.get_asset("s1-heart-diagram")
-    if not svg_asset:
-        print("❌ Error: Initial SVG was not created!")
-        return
-
-    svg_path = workspace_path / svg_asset.local_path
-    print(f"✅ Initial SVG created: {svg_path.name}")
-
-    # =========================================================================
-    # Phase 2: QA + Repair Loop
-    # =========================================================================
-    print("\n" + "-" * 70)
-    print(" 🔄 Phase 2: QA + Repair Loop")
-    print("-" * 70)
-
-    critic = AssetCriticAgent(client=client, pass_threshold=PASS_THRESHOLD)
+    state = AgentState(user_context="stress_test", workspace_path="workspace_test", job_id="stress_job")
     
-    attempt = 0
-    final_passed = False
-    all_reports = []
+    # 1. 生成一个巨大的 SVG (模拟工业级复杂度)
+    print("  - Generating 500-element SVG...")
+    svg_lines = [
+        '<svg width="1200" height="1000" viewBox="0 0 1200 1000" xmlns="http://www.w3.org/2000/svg">',
+        '<rect width="100%" height="100%" fill="#ffffff"/>',
+        '<g id="background_clutter" opacity="0.2">'
+    ]
+    for i in range(400):
+        svg_lines.append(f'  <rect x="{i*3}" y="{i*2}" width="20" height="20" fill="gray" />')
+    svg_lines.append('</g>')
+    
+    # 2. 注入核心内容 (故意制造错误：文字重叠，颜色错误)
+    svg_lines.append('<g id="main_content">')
+    svg_lines.append('  <circle cx="600" cy="500" r="150" fill="blue" id="core_node" />')
+    # 错误 1: 文字完全重叠在圆心上
+    svg_lines.append('  <text x="600" y="500" font-size="40" fill="white" id="label_1">OVERLAP_ERROR</text>')
+    # 错误 2: 引导线断裂
+    svg_lines.append('  <line x1="100" y1="100" x2="200" y2="200" stroke="red" stroke-width="5" id="broken_line" />')
+    svg_lines.append('</g>')
+    svg_lines.append('</svg>')
+    
+    svg_code = "\n".join(svg_lines)
+    intent = "这张图是一个核心节点图。要求：1. label_1 必须在圆形的上方，不能重叠。2. 红色引导线 broken_line 必须加粗并连接到 (300, 300)。"
 
-    while attempt < MAX_ATTEMPTS:
-        attempt += 1
-        print(f"\n--- Attempt {attempt}/{MAX_ATTEMPTS} ---")
+    print(f"📊 Payload Info: {len(svg_code)} chars, {len(svg_lines)} lines")
+    
+    from src.agents.asset_management.processors.audit import render_svg_to_png_base64
+    png_b64 = render_svg_to_png_base64(svg_code)
+    
+    # 3. 模拟 Audit -> Repair 流程
+    from src.agents.asset_management.processors.audit import audit_svg_visual_async
+    from src.agents.asset_management.processors.svg import repair_svg_async
+    
+    print("\n[Step 1] Auditing huge SVG...")
+    report = await audit_svg_visual_async(client, svg_code, intent, state=state)
+    
+    if report and report.get("result") != "pass":
+        print(f"✅ Audit successfully identified issues: {report.get('issues')}")
         
-        # Audit current SVG
-        report = await critic.audit_asset_async(
-            asset=svg_asset,
-            intent_description="Heart anatomy diagram with four chambers, blood flow arrows, color-coded paths (red oxygenated, blue deoxygenated), clear non-overlapping labels",
-            workspace_path=workspace_path
-        )
-        all_reports.append(report)
+        print("\n[Step 2] Repairing via PATCHING...")
+        start_time = time.time()
         
-        print(f"   Result: {report.result.value} | Score: {report.score:.0%}")
-        
-        if report.result == AuditResult.PASS or report.score >= PASS_THRESHOLD:
-            print(f"   ✅ PASSED!")
-            final_passed = True
-            break
-        
-        if attempt >= MAX_ATTEMPTS:
-            print(f"   ⚠️ Max attempts reached")
-            break
-        
-        # Show issues
-        if report.issues:
-            print("   Issues:")
-            for issue in report.issues[:3]:
-                print(f"     - {issue[:60]}...")
-        
-        # === SURGICAL REPAIR: Pass the failed SVG code + rendered image to the model ===
-        current_svg_path = workspace_path / svg_asset.local_path
-        current_svg_code = current_svg_path.read_text(encoding="utf-8")
-        
-        # Render SVG to PNG for multi-modal repair
-        rendered_b64 = None
-        try:
-            import cairosvg
-            import base64
-            png_data = cairosvg.svg2png(bytestring=current_svg_code.encode("utf-8"), output_width=800)
-            rendered_b64 = base64.b64encode(png_data).decode("utf-8")
-            print(f"\n   🔧 Multi-modal repair with image + code ({len(current_svg_code)} chars)...")
-        except Exception as e:
-            print(f"\n   🔧 Text-only repair (render failed: {e})...")
-        
-        new_svg_code = await repair_svg_async(
-            client=client,
-            original_intent=ORIGINAL_INTENT,
-            failed_svg_code=current_svg_code,
-            issues=report.issues,
-            suggestions=report.suggestions,
-            rendered_image_b64=rendered_b64
+        # 获取最新的截图用于修复
+        repaired_code = await repair_svg_async(
+            client, 
+            intent, 
+            svg_code, 
+            report.get("issues"), 
+            report.get("suggestions"), 
+            state=state,
+            rendered_image_b64=png_b64
         )
         
-        if not new_svg_code:
-            print("   ❌ Failed to regenerate SVG")
-            break
+        duration = time.time() - start_time
         
-        # Save new version
-        version_filename = f"s1-heart-diagram_v{attempt + 1}.svg"
-        new_svg_path = assets_path / version_filename
-        new_svg_path.write_text(new_svg_code, encoding="utf-8")
-        
-        # Update asset entry
-        content_hash = hashlib.md5(new_svg_code.encode()).hexdigest()
-        svg_asset.local_path = f"generated_assets/{version_filename}"
-        svg_asset.content_hash = content_hash
-        uar.register_immediate(svg_asset)
-        
-        print(f"   ✅ New version saved: {version_filename}")
+        if repaired_code:
+            print(f"🎊 Success in {duration:.2f}s!")
+            # 验证 Patch 是否生效 (简单字符串检查)
+            if 'y="300"' in repaired_code or 'y="320"' in repaired_code:
+                print("  - Patch logic: Text position moved.")
+            if 'x2="300"' in repaired_code:
+                print("  - Patch logic: Line extended.")
+            
+            # 打印最后的 Thoughts
+            if state.thoughts:
+                print(f"\n🧠 LATEST THOUGHTS:\n{state.thoughts.split('---')[-1]}")
+        else:
+            print("❌ Repair failed to generate patches.")
+    else:
+        print("❓ Audit unexpectedly passed or failed to run.")
 
-    # =========================================================================
-    # Phase 3: Final Results
-    # =========================================================================
-    print("\n" + "=" * 70)
-    print(" 📊 Final Results")
-    print("=" * 70)
-
-    final_report = all_reports[-1]
-    final_svg_path = workspace_path / svg_asset.local_path
-    
-    print(f"\n🎯 Final Status: {'✅ PASSED' if final_passed else '❌ NEEDS MORE WORK'}")
-    print(f"   Total Attempts: {attempt}")
-    print(f"   Final Score: {final_report.score:.0%}")
-    print(f"   Final SVG: {final_svg_path}")
-    
-    # Show score progression
-    print(f"\n📈 Score Progression:")
-    for i, report in enumerate(all_reports):
-        status = "✅" if report.result == AuditResult.PASS else "🔄" if report.result == AuditResult.NEEDS_REVISION else "❌"
-        print(f"   Attempt {i+1}: {report.score:.0%} {status}")
-    
-    # Show final assessment
-    if final_report.quality_assessment:
-        print(f"\n📝 Final Assessment:")
-        print(f"   {final_report.quality_assessment[:200]}...")
-    
-    if not final_passed and final_report.issues:
-        print(f"\n⚠️ Remaining Issues:")
-        for issue in final_report.issues[:3]:
-            print(f"   - {issue[:80]}...")
-
-    # Show final SVG preview
-    if final_svg_path.exists():
-        svg_content = final_svg_path.read_text()
-        print(f"\n📜 Final SVG Preview (first 600 chars):")
-        print("-" * 40)
-        print(svg_content[:600])
-        print("-" * 40)
-    
-    print(f"\n💾 All versions saved in: {assets_path}")
-    print(f"   Open in browser to compare visual quality")
-
+    await client.close_async()
 
 if __name__ == "__main__":
-    asyncio.run(run_e2e_test())
+    asyncio.run(test_svg_stress_patching())
+
+if __name__ == "__main__":
+
+    asyncio.run(test_svg_stress_patching())
