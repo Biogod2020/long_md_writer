@@ -33,3 +33,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Fix Universal Asset Registry (UAR) race conditions during parallel asset fulfillment and improve reporting accuracy.**
 *Link: [./tracks/uar_parallel_safety_20260125/](./tracks/uar_parallel_safety_20260125/)*
+
+---
+
+- [x] **Track: Organize the project root directory by relocating scripts, tests, and documentation to appropriate subdirectories while preserving original functionality and task-tracking files.**
+*Link: [./tracks/repo_tidy_up_20260129/](./tracks/repo_tidy_up_20260129/)*
