@@ -222,7 +222,19 @@ class ImageDownloader:
             }
             
             time.sleep(random.uniform(0.1, 0.4))
-            resp = session.get(url, headers=headers, timeout=10, verify=False, allow_redirects=True)
+            
+            # SOTA: First attempt with full headers
+            try:
+                resp = session.get(url, headers=headers, timeout=25, verify=False, allow_redirects=True)
+            except Exception as e:
+                if self.debug: print(f"      [Layer 1] First attempt failed ({e}), trying Clean Header Fallback...")
+                # Layer 1.1: Clean Header Fallback (strip Sec-Fetch and other complex tokens)
+                clean_headers = {
+                    'User-Agent': headers['User-Agent'],
+                    'Accept': 'image/*',
+                    'Referer': headers['Referer']
+                }
+                resp = session.get(url, headers=clean_headers, timeout=30, verify=False, allow_redirects=True)
             
             if resp.status_code == 200 and len(resp.content) > 2000:
                 c_type = resp.headers.get('Content-Type', '').lower()

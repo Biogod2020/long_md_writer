@@ -1,1 +1,0 @@
-{"project_title": "Heart Book", "description": "Desc", "sections": [{"id": "sec-1", "title": "Intro", "summary": "Intro sum", "metadata": {"assigned_assets": ["m-heart-1"]}}]}

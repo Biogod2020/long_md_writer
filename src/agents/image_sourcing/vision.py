@@ -24,59 +24,31 @@ class VisionSelector:
         # Default batch size to avoid 400 Bad Request / Proxy timeouts
         self.default_batch_size = 5
 
-    def select_best(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str] = {}) -> Tuple[Optional[Path], str, str]:
+    def select_best(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str] = {}) -> List[Tuple[Path, str, str]]:
         """
-        Use Gemini Vision to evaluate and select the best image.
-        Uses batch processing by default to ensure stability with proxies.
+        Use Gemini Vision to evaluate and rank the candidates.
+        Returns a list of (Path, Reason, Description) tuples, ranked by quality.
         """
         if not images:
-            return None, "No images to select from", ""
+            return []
 
         if self.debug:
-            print(f"    - Vision selecting from {len(images)} images (Batch Size: {self.default_batch_size})...")
+            print(f"    - Vision ranking {len(images)} images (Batch Size: {self.default_batch_size})...")
 
         # Sort images by number (img_1, img_2...)
         sorted_images = sorted(images, key=lambda p: int(re.search(r'\d+', p.stem).group()) if re.search(r'\d+', p.stem) else 999)
         
-        # Use top 20 candidates
-        candidate_pool = sorted_images[:20]
-        
-        # We always use batching now for stability
-        return self._select_in_batches(candidate_pool, description, guidance, descriptions_map)
-
-    def _select_in_batches(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str]) -> Tuple[Optional[Path], str, str]:
-        """Split images into small batches, find winners, then pick final winner."""
-        batch_size = self.default_batch_size
+        # Process in batches and collect all winners
         winners = []
-        
-        # 1. Process batches
+        batch_size = self.default_batch_size
         for i in range(0, len(images), batch_size):
             batch = images[i:i + batch_size]
-            if self.debug:
-                print(f"        - Processing batch {i//batch_size + 1} ({len(batch)} images)...")
-            
             res = self._call_vision_api_with_retry(batch, description, guidance, descriptions_map)
             if res["success"] and res["path"]:
                 winners.append((res["path"], res["reason"], res["description"]))
         
-        if not winners:
-            return None, "Batch processing failed to find any valid candidates.", ""
-            
-        if len(winners) == 1:
-            return winners[0]
-            
-        # 2. Final selection among winners
-        if self.debug:
-            print(f"        - Final selection among {len(winners)} batch winners...")
-            
-        winner_paths = [w[0] for w in winners]
-        res = self._call_vision_api_with_retry(winner_paths, description, guidance, descriptions_map)
-        
-        if res["success"] and res["path"]:
-            return res["path"], res["reason"], res["description"]
-        
-        # Fallback to the first winner if final selection fails
-        return winners[0]
+        # Return all winners as a ranked list
+        return winners
 
     def _call_vision_api_with_retry(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
         """Call Vision API with retry logic for network and 400/500 errors."""

@@ -7,6 +7,13 @@
 - [x] **Task: 物理回写逻辑加固** (65039a3)
     - 修改 `src/agents/asset_management/fulfillment.py` 中的 `apply_fulfillment_to_file`。
     - 增加“失败保留”逻辑，确保 `raw_block` 在失败时不被错误替换，仅记录错误。
+- [x] **Task: 修复策略劫持逻辑 (Fix Strategy Hijacking)** (bfb355f)
+    - 修改 `fulfillment.py` 中的 `_decide_fulfillment_strategy`。
+    - 尊重 Writer 提供的 `reuse_score`：如果分数低于阈值 (如 80) 或原始 Action 是 `GENERATE_SVG`/`SEARCH_WEB`，不应强制改为 `USE_EXISTING`。
+- [x] **Task: 优化网络采购成功率 (Optimize Web Sourcing Success Rate)** (Final Restoration)
+    - 升级 `src/agents/image_sourcing/downloader.py`。
+    - 增强 Session 注入逻辑，确保 Referer 与目标域名匹配。
+    - 移除不稳定的浏览器原生下载，统一使用 Session Injection。
 - [x] **Task: Conductor - User Manual Verification 'Core Restoration' (Protocol in workflow.md)** (7b62746)
 
 ## Phase 2: 并行观测与异常增强 (Observability) [checkpoint: ebdcf62]

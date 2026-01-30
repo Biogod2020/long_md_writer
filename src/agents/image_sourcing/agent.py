@@ -48,18 +48,22 @@ class ImageSourcingAgent:
         # Get UAR for local matching
         uar = state.get_uar()
 
-        for html_path in state.completed_html_sections:
+        for html_path_str in state.completed_html_sections:
             try:
-                html_file = Path(html_path)
+                html_file = Path(html_path_str)
                 content = html_file.read_text(encoding="utf-8")
-                updated_content = self._process_section(content, assets_dir, preserve_candidates, uar)
+                updated_content = self._process_section(
+                    content, assets_dir, preserve_candidates, uar,
+                    target_file=html_file,
+                    workspace_path=Path(state.workspace_path)
+                )
                 html_file.write_text(updated_content, encoding="utf-8")
             except Exception as e:
-                state.errors.append(f"ImageSourcingAgent: Error processing {html_path}: {e}")
+                state.errors.append(f"ImageSourcingAgent: Error processing {html_path_str}: {e}")
 
         return state
 
-    def _process_section(self, html_content: str, assets_dir: Path, preserve_candidates: bool = False, uar = None) -> str:
+    def _process_section(self, html_content: str, assets_dir: Path, preserve_candidates: bool = False, uar = None, target_file: Optional[Path] = None, workspace_path: Optional[Path] = None) -> str:
         """Finds placeholders and replaces them in parallel."""
         placeholder_regex = re.compile(
             r'(<div[^>]*class="img-placeholder"[^>]*data-img-id="([^"]+)"[^>]*>.*?'
@@ -80,7 +84,9 @@ class ImageSourcingAgent:
             future_to_placeholder = {
                 executor.submit(
                     self._source_single_image, 
-                    img_id, description, assets_dir, html_content, preserve_candidates, uar
+                    img_id, description, assets_dir, html_content, preserve_candidates, uar,
+                    target_file=target_file,
+                    workspace_path=workspace_path
                 ): (full_tag, img_id) 
                 for full_tag, img_id, description in matches
             }
@@ -101,7 +107,8 @@ class ImageSourcingAgent:
         return html_content
 
     def _source_single_image(self, img_id: str, description: str, assets_dir: Path, 
-                             html_context: str, preserve_candidates: bool, uar = None) -> Optional[str]:
+                             html_context: str, preserve_candidates: bool, uar = None,
+                             target_file: Optional[Path] = None, workspace_path: Optional[Path] = None) -> Optional[str]:
         """Worker function to source a single image. Uses its own browser instance."""
         description = description.strip()
         print(f"    [Thread] Sourcing: {img_id}")
@@ -121,8 +128,13 @@ class ImageSourcingAgent:
                 
                 if best_local:
                     print(f"    [{img_id}] ✓ LOCAL HIT: {best_local.id} ({reasoning})")
-                    # Use existing asset
-                    replacement_html = f'<figure class="image-container" id="{img_id}">\n  {best_local.to_img_tag()}\n  <figcaption>{description}</figcaption>\n</figure>'
+                    # Use existing asset - robust path resolution
+                    from ..asset_management.utils import generate_figure_html
+                    replacement_html = generate_figure_html(
+                        best_local, description, 
+                        target_file=target_file, 
+                        workspace_path=workspace_path
+                    )
                     return replacement_html
                 else:
                     print(f"    [{img_id}] No local match: {reasoning}")
@@ -178,34 +190,58 @@ class ImageSourcingAgent:
                     if txt_path.exists():
                         descriptions_map[img_path.name] = txt_path.read_text(encoding='utf-8')
                 
-                best_image_path, reason, best_desc = self.vision_selector.select_best(
+                # SOTA: Returns a RANKED LIST of candidates
+                candidates_ranked = self.vision_selector.select_best(
                     local_images, description, guidance, descriptions_map
                 )
 
-                if best_image_path:
-                    break
+                if candidates_ranked:
+                    # 5. Resilient Rotation: Try to archive and replace using the ranked list
+                    for best_image_path, reason, best_desc in candidates_ranked:
+                        try:
+                            final_name = f"{img_id}{best_image_path.suffix}"
+                            final_path = assets_dir / final_name
+                            shutil.copy2(best_image_path, final_path)
+                            
+                            display_desc = best_desc if best_desc else description
+                            
+                            # Create a temporary AssetEntry to leverage robust path logic
+                            from ...core.types import AssetSource, AssetEntry
+                            # local_path should be relative to workspace or project root
+                            # final_path is in workspace/assets/images/
+                            # so relative to project root it is workspace/job_id/assets/images/xxx
+                            # but we usually store it relative to workspace
+                            rel_local = str(final_path.relative_to(workspace_path)) if workspace_path else str(final_path)
+                            
+                            temp_asset = AssetEntry(
+                                id=img_id,
+                                source=AssetSource.WEB,
+                                local_path=rel_local,
+                                semantic_label=display_desc
+                            )
+                            
+                            from ..asset_management.utils import generate_figure_html
+                            replacement_html = generate_figure_html(
+                                temp_asset, display_desc, 
+                                target_file=target_file, 
+                                workspace_path=workspace_path
+                            )
+                            
+                            # Debug info
+                            if self.debug:
+                                self._write_debug_info(img_id, description, strategy, best_image_path, reason, best_desc, attempt, all_failed_queries, assets_dir)
+                            
+                            # Cleanup candidates and exit loop on success
+                            if not preserve_candidates:
+                                for d in assets_dir.glob(f"candidates_{img_id}*"):
+                                    if d.is_dir(): shutil.rmtree(d, ignore_errors=True)
+                            
+                            return replacement_html
+                        except Exception as e:
+                            print(f"    [{img_id}] ⚠️ Rotation failed for {best_image_path.name}, trying next: {e}")
+                            continue
                 else:
                     all_failed_queries.extend(queries[:2])
-            
-            if best_image_path:
-                # 5. Archive and replace
-                final_name = f"{img_id}{best_image_path.suffix}"
-                final_path = assets_dir / final_name
-                shutil.copy2(best_image_path, final_path)
-                
-                display_desc = best_desc if best_desc else description
-                replacement_html = f'<figure class="image-container" id="{img_id}">\n  <img src="assets/images/{final_name}" alt="{display_desc}">\n  <figcaption>{display_desc}</figcaption>\n</figure>'
-                
-                # Debug info
-                if self.debug:
-                    self._write_debug_info(img_id, description, strategy, best_image_path, reason, best_desc, attempt, all_failed_queries, assets_dir)
-                
-                # Cleanup unless preserved
-                if not preserve_candidates:
-                    for d in assets_dir.glob(f"candidates_{img_id}*"):
-                        if d.is_dir(): shutil.rmtree(d, ignore_errors=True)
-                
-                return replacement_html
 
         return None
 

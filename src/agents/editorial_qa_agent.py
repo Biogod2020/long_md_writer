@@ -3,7 +3,7 @@ EditorialQAAgent: SOTA 2.0 Phase E 全量语义综审
 
 核心职责：
 1. 全量多模态终审 - 接收完整文本与资产流
-2. 校验 <img style="..."> 裁切范围是否准确命中文字焦点
+2. 校验 <img style=\"...\"> 裁切范围是否准确命中文字焦点
 3. 语义一致性检查 - 确保图文描述对应
 4. 生成审计报告与修复建议
 
@@ -21,6 +21,7 @@ from enum import Enum
 
 from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState, AssetQualityLevel
+from ..core.patcher import StuckDetector
 from .markdown_qa.fixer import run_markdown_fixer, apply_patches
 
 
@@ -191,6 +192,7 @@ class EditorialQAAgent:
         max_iterations = 3
         current_content = content
         last_report = None
+        stuck_detector = StuckDetector()
 
         print(f"[EditorialQA] 开始全量语义与视觉审核 (namespace: {namespace})")
 
@@ -208,7 +210,6 @@ class EditorialQAAgent:
             screenshot_path = None
             if self.renderer:
                 try:
-                    # Check if renderer is async
                     if asyncio.iscoroutinefunction(self.renderer.render_to_image):
                         screenshot_path = await self.renderer.render_to_image(current_content, f"qa_{namespace}_{iteration}")
                     else:
@@ -220,6 +221,7 @@ class EditorialQAAgent:
             if not self.skip_llm_review:
                 llm_issues = await self._run_llm_review(
                     current_content, 
+                    state,
                     full_context=full_context, 
                     image_path=screenshot_path
                 )
@@ -246,46 +248,79 @@ class EditorialQAAgent:
                 print(f"  [Iteration {iteration}] ✅ 审核通过")
                 break
 
+            # 🛠️ Backoff & Retry Logic
+            combined_advice = "|".join([i.message for i in issues])
+            is_stuck = not stuck_detector.check_progress(combined_advice, current_content)
+            
+            if is_stuck:
+                print(f"  [EditorialQA] ⚠️ 检测到重复修复建议且内容未变化，触发 Backoff 策略...")
+                for issue in issues:
+                    issue.suggestion = f"PREVIOUS ATTEMPT FAILED. You MUST provide more context in your SEARCH block to ensure a unique match. {issue.suggestion}"
+                
+                # 使用 state.loop_metadata 跟踪重试
+                retry_key = f"qa_retry_{namespace}"
+                if state.loop_metadata.get(retry_key, False):
+                    print(f"  [EditorialQA] ❌ 第二次尝试仍卡住，停止迭代。")
+                    break
+                state.loop_metadata[retry_key] = True
+            else:
+                state.loop_metadata[f"qa_retry_{namespace}"] = False
+
             # 5. Fixer 修复
             print(f"  [Iteration {iteration}] 🛠️ 发现 {len(issues)} 个问题，尝试自动修复...")
             fixed_content = await self._run_fixer_loop(current_content, issues, full_context)
             
-            if fixed_content == current_content:
-                print(f"  [Iteration {iteration}] ⏭️ 无法进一步自动修复，停止迭代。")
-                break
+            # NOTE: We DON'T break early here if fixed_content == current_content.
+            # We let the loop continue to the next iteration where the StuckDetector
+            # will see that content hasn't changed despite having the same issues,
+            # and then it will trigger the Backoff logic or break.
             
             current_content = fixed_content
-            # 更新状态中的内容（在这里我们只在内存中迭代）
 
         return state, last_report, current_content
 
     async def _run_fixer_loop(self, content: str, issues: list[QAIssue], full_context: Optional[str]) -> str:
-        """运行 Fixer 尝试修复所有错误级别的问题"""
+        """运行 Fixer 尝试修复所有错误级别的问题 (并行处理)"""
         current_content = content
         # 只修复错误级别的问题
         errors = [i for i in issues if i.severity == QASeverity.ERROR]
         
-        for issue in errors:
-            print(f"    [Fixer] 正在修复: {issue.message}")
-            # 构造修复建议
+        if not errors:
+            return current_content
+
+        print(f"    [Fixer] 正在并行修复 {len(errors)} 个错误...")
+        
+        async def fix_issue(issue: QAIssue, content_state: str) -> Optional[dict]:
             advice = f"ISSUE: {issue.message}\nLOCATION: {issue.location}\nSUGGESTION: {issue.suggestion}"
-            
             try:
-                fix_result = await run_markdown_fixer(
-                    self.client,
-                    current_content,
-                    advice,
-                    context=full_context
+                return await asyncio.wait_for(
+                    run_markdown_fixer(
+                        self.client,
+                        content_state,
+                        advice,
+                        context=full_context
+                    ),
+                    timeout=60.0
                 )
-                
-                if fix_result and fix_result.get("status") == "FIXED":
-                    current_content = apply_patches(current_content, fix_result)
-                    print(f"      ✅ 修复成功")
-                else:
-                    print(f"      ❌ 修复失败: {fix_result.get('reason') if fix_result else 'No response'}")
             except Exception as e:
                 print(f"      ❌ 修复过程出错: {e}")
-                
+                return None
+
+        # 发起所有修复任务
+        tasks = [fix_issue(issue, current_content) for issue in errors]
+        fix_results = await asyncio.gather(*tasks)
+        
+        applied_count = 0
+        for res in fix_results:
+            if res and res.get("status") == "FIXED":
+                new_content = apply_patches(current_content, res)
+                if new_content != current_content:
+                    current_content = new_content
+                    applied_count += 1
+        
+        if applied_count > 0:
+            print(f"    [Fixer] ✅ 成功应用了 {applied_count} 个修复补丁")
+        
         return current_content
 
     def run(
@@ -300,7 +335,6 @@ class EditorialQAAgent:
         try:
             return asyncio.run(self.run_async(state, content, namespace, full_context))
         except RuntimeError:
-            # 如果已经在 event loop 中
             loop = asyncio.get_event_loop()
             return loop.run_until_complete(self.run_async(state, content, namespace, full_context))
 
@@ -312,46 +346,30 @@ class EditorialQAAgent:
     ) -> list[QAIssue]:
         """执行本地静态检查"""
         issues = []
-
-        # 检查未履约的 :::visual 指令
         issues.extend(self._check_unfulfilled_visuals(content))
-
-        # 检查 img 标签
         issues.extend(self._check_img_tags(content, state))
-
-        # 检查 figure 标签
         issues.extend(self._check_figure_tags(content))
-
-        # 检查断裂的引用
         issues.extend(self._check_broken_refs(content))
-
-        # SOTA 2.0: 检查强制性资产覆盖率
-        issues.extend(self._check_mandatory_assets(content, state))
-
+        issues.extend(self._check_mandatory_assets(content, state, namespace))
         return issues
 
-    def _check_mandatory_assets(self, content: str, state: AgentState) -> list[QAIssue]:
+    def _check_mandatory_assets(self, content: str, state: AgentState, namespace: str) -> list[QAIssue]:
         """检查所有 MANDATORY 资产是否已在正文中引用"""
         issues = []
         uar = state.get_uar()
-        
-        # 找出本章节分配的 Mandatory 资产 (从 Manifest 中查找)
         assigned_ids = []
         if state.manifest:
-            # 根据 namespace 找到当前章节
             for sec in state.manifest.sections:
                 sec_ns = sec.id.replace("sec-", "s").replace("-", "")
                 if sec_ns == namespace or sec.id == namespace:
                     assigned_ids = sec.metadata.get("assigned_assets", [])
                     break
         
-        # 如果 Manifest 没分配，检查全局 Mandatory 池 (Fallback)
         if not assigned_ids:
             assigned_ids = [a.id for a in uar.assets.values() if a.priority == "MANDATORY"]
 
         for aid in assigned_ids:
-            # 检查 ID 是否出现在 <img> 标签或 :::visual 指令中
-            if f'data-asset-id="{aid}"' not in content and f'"matched_asset": "{aid}"' not in content:
+            if f'data-asset-id="{aid}"' not in content and f"data-asset-id='{aid}'" not in content and f'"matched_asset": "{aid}"' not in content:
                 asset = uar.get_asset(aid)
                 label = asset.semantic_label if asset else aid
                 issues.append(QAIssue(
@@ -361,37 +379,28 @@ class EditorialQAAgent:
                     message=f"缺少强制性资产: [{aid}] ({label})",
                     suggestion=f"请在文中合适位置插入该图片，它是用户要求的必备素材。"
                 ))
-        
         return issues
 
     def _check_unfulfilled_visuals(self, content: str) -> list[QAIssue]:
         """检查未履约的 :::visual 指令"""
         issues = []
         pattern = r':::visual\s*\{([^}]+)\}'
-
         for match in re.finditer(pattern, content):
             issues.append(QAIssue(
                 issue_type=QAIssueType.BROKEN_REFERENCE,
                 severity=QASeverity.ERROR,
                 location=f"位置 {match.start()}",
                 message=f"发现未履约的 :::visual 指令",
-                suggestion="请运行 AssetFulfillmentAgent 处理此指令",
-                context={"directive": match.group(0)[:100]}
+                suggestion="请运行 AssetFulfillmentAgent 处理此指令"
             ))
-
         return issues
 
     def _check_img_tags(self, content: str, state: AgentState) -> list[QAIssue]:
         """检查 img 标签"""
         issues = []
-
-        # 匹配 img 标签
         img_pattern = r'<img\s+([^>]+)>'
-
         for match in re.finditer(img_pattern, content, re.IGNORECASE):
             attrs_str = match.group(1)
-
-            # 检查 alt 属性
             if 'alt=' not in attrs_str.lower():
                 issues.append(QAIssue(
                     issue_type=QAIssueType.MISSING_ALT,
@@ -400,28 +409,21 @@ class EditorialQAAgent:
                     message="img 标签缺少 alt 属性",
                     suggestion="添加描述性的 alt 文本以提高可访问性"
                 ))
-
-            # 检查 src 属性
-            src_match = re.search(r'src=["\']([^"\']+)["\']', attrs_str)
+            src_match = re.search(r'src=["\']([^"\\]+)["\\]', attrs_str)
             if src_match:
                 src = src_match.group(1)
-                # 检查是否是有效路径格式
-                if not src.startswith(('http', '/', 'data:', 'generated_assets/')):
-                    if not src.startswith(('assets/', './')):
-                        issues.append(QAIssue(
-                            issue_type=QAIssueType.BROKEN_REFERENCE,
-                            severity=QASeverity.WARNING,
-                            location=f"位置 {match.start()}",
-                            message=f"img src 路径可能无效: {src}",
-                            suggestion="确保图片路径正确，使用相对路径或绝对路径"
-                        ))
-
-            # 检查 object-position 样式
-            style_match = re.search(r'style=["\']([^"\']+)["\']', attrs_str)
+                if not src.startswith(('http', '/', 'data:', 'generated_assets/', 'assets/', './')):
+                    issues.append(QAIssue(
+                        issue_type=QAIssueType.BROKEN_REFERENCE,
+                        severity=QASeverity.WARNING,
+                        location=f"位置 {match.start()}",
+                        message=f"img src 路径可能无效: {src}",
+                        suggestion="确保图片路径正确，使用相对路径 or 绝对路径"
+                    ))
+            style_match = re.search(r'style=["\']([^"\\]+)["\\]', attrs_str)
             if style_match:
                 style = style_match.group(1)
                 if 'object-position' in style:
-                    # 验证百分比值（支持负数）
                     pos_match = re.search(r'object-position:\s*(-?\d+)%\s+(-?\d+)%', style)
                     if pos_match:
                         x, y = int(pos_match.group(1)), int(pos_match.group(2))
@@ -429,107 +431,68 @@ class EditorialQAAgent:
                             issues.append(QAIssue(
                                 issue_type=QAIssueType.CROP_MISMATCH,
                                 severity=QASeverity.ERROR,
-                                location=f"位置 {match.start()}",
                                 message=f"object-position 值超出范围: {x}% {y}%",
                                 suggestion="确保百分比值在 0-100 之间"
                             ))
-
         return issues
 
     def _check_figure_tags(self, content: str) -> list[QAIssue]:
         """检查 figure 标签"""
         issues = []
-
-        # 检查 figure 是否有 figcaption
         figure_pattern = r'<figure[^>]*>([\s\S]*?)</figure>'
-
         for match in re.finditer(figure_pattern, content, re.IGNORECASE):
-            figure_content = match.group(1)
-
-            if '<figcaption' not in figure_content.lower():
+            if '<figcaption' not in match.group(1).lower():
                 issues.append(QAIssue(
                     issue_type=QAIssueType.ACCESSIBILITY_ISSUE,
                     severity=QASeverity.INFO,
-                    location=f"位置 {match.start()}",
                     message="figure 标签缺少 figcaption",
                     suggestion="添加 figcaption 以提供图片说明"
                 ))
-
         return issues
 
     def _check_broken_refs(self, content: str) -> list[QAIssue]:
         """检查断裂的引用"""
         issues = []
-
-        # 检查 [REF:xxx] 格式的引用
         ref_pattern = r'\[REF:([^\]]+)\]'
-
         for match in re.finditer(ref_pattern, content):
             ref_id = match.group(1)
-            # 这里只是标记，实际验证需要全局上下文
-            # 暂时只检查格式
             if not re.match(r'^[a-z0-9-]+$', ref_id):
                 issues.append(QAIssue(
                     issue_type=QAIssueType.BROKEN_REFERENCE,
                     severity=QASeverity.WARNING,
-                    location=f"位置 {match.start()}",
-                    message=f"引用 ID 格式不规范: {ref_id}",
-                    suggestion="使用小写字母、数字和连字符组成的 ID"
+                    message=f"引用 ID 格式不规范: {ref_id}"
                 ))
-
         return issues
 
     async def _run_llm_review(
         self, 
         content: str, 
+        state: AgentState,
         full_context: Optional[str] = None,
         image_path: Optional[Path] = None
     ) -> list[QAIssue]:
         """使用 LLM 进行语义和视觉审核"""
         issues = []
-
-        context_section = ""
-        if full_context:
-            context_size = len(full_context)
-            if context_size > 100000:
-                print(f"  [EditorialQA] ⚠️ 警告: 前文上下文过大 ({context_size} 字符)，可能导致 Token 溢出或性能下降。")
-            context_section = f"## 全书前文上下文\n\n```markdown\n{full_context}\n```"
-
-        prompt = EDITORIAL_QA_PROMPT.format(
-            content=content,
-            context_section=context_section
-        )
-
+        context_section = f"## 全书前文上下文\n\n```markdown\n{full_context}\n```" if full_context else ""
+        prompt = EDITORIAL_QA_PROMPT.format(content=content, context_section=context_section)
         try:
-            # 构造多模态消息
-            message_parts = [{"text": prompt}]
+            parts = [{"text": prompt}]
             if image_path and image_path.exists():
                 import base64
                 with open(image_path, "rb") as img_file:
                     img_data = base64.b64encode(img_file.read()).decode("utf-8")
-                
-                message_parts.append({
-                    "inline_data": {
-                        "mime_type": "image/png",
-                        "data": img_data
-                    }
-                })
+                parts.append({"inline_data": {"mime_type": "image/png", "data": img_data}})
 
             response = await self.client.generate_async(
-                prompt=message_parts,
-                system_instruction="你是一位专业的技术文档编辑审核员。请仔细审核文档质量，结合提供的截图和前文上下文。",
+                parts=parts,
+                system_instruction="你是一位专业的技术文档编辑审核员。请仔细审核文档质量。",
                 temperature=0.2
             )
-
-            if not response.success:
-                print(f"  LLM 审核调用失败: {response.error}")
-                return issues
-
-            # 解析 JSON
-            json_match = re.search(r'\{[\s\S]*\}', response.text)
-            if json_match:
-                data = json.loads(json_match.group())
-
+            if not response.success: return issues
+            if response.thoughts:
+                state.thoughts += f"\n[EditorialQA Review] {response.thoughts}"
+            data = response.json_data
+            if data:
                 for issue_data in data.get("issues", []):
                     try:
                         issue_type = QAIssueType(issue_data.get("type", "semantic_drift"))
@@ -548,39 +511,21 @@ class EditorialQAAgent:
                         message=issue_data.get("message", ""),
                         suggestion=issue_data.get("suggestion", "")
                     ))
-
-        except json.JSONDecodeError as e:
-            print(f"  解析 LLM 响应失败: {e}")
         except Exception as e:
             print(f"  LLM 审核出错: {e}")
-
         return issues
 
     def _count_assets(self, content: str) -> int:
-        """统计内容中的资产数量"""
-        img_count = len(re.findall(r'<img\s+', content, re.IGNORECASE))
-        figure_count = len(re.findall(r'<figure', content, re.IGNORECASE))
-        return max(img_count, figure_count)
+        return len(re.findall(r'<img\s+|<figure', content, re.IGNORECASE))
 
     def _generate_summary(self, issues: list[QAIssue], passed: bool) -> str:
-        """生成审核摘要"""
-        if not issues:
-            return "文档审核通过，未发现任何问题。"
-
+        if not issues: return "文档审核通过。"
         error_count = sum(1 for i in issues if i.severity == QASeverity.ERROR)
         warning_count = sum(1 for i in issues if i.severity == QASeverity.WARNING)
-        info_count = sum(1 for i in issues if i.severity == QASeverity.INFO)
-
         parts = []
-        if error_count:
-            parts.append(f"{error_count} 个错误")
-        if warning_count:
-            parts.append(f"{warning_count} 个警告")
-        if info_count:
-            parts.append(f"{info_count} 个提示")
-
-        status = "未通过" if not passed else "通过（有提示）"
-        return f"审核{status}，发现 {', '.join(parts)}。"
+        if error_count: parts.append(f"{error_count} 个错误")
+        if warning_count: parts.append(f"{warning_count} 个警告")
+        return f"审核{'未通过' if not passed else '通过'}，发现 {', '.join(parts)}。"
 
 
 # ============================================================================
@@ -655,7 +600,7 @@ async def extract_semantic_summary(
     if client is None:
         client = GeminiClient()
 
-    prompt = SEMANTIC_SUMMARY_PROMPT.format(content=content)  # Full content - no truncation
+    prompt = SEMANTIC_SUMMARY_PROMPT.format(content=content)
 
     try:
         response = await client.generate_async(
@@ -668,9 +613,15 @@ async def extract_semantic_summary(
             print(f"语义摘要提取失败: {response.error}")
             return None
 
-        json_match = re.search(r'\{[\s\S]*\}', response.text)
-        if json_match:
-            data = json.loads(json_match.group())
+        # Robust extraction
+        data = response.json_data
+        if not data:
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response.text)
+            if json_match:
+                data = json.loads(json_match.group())
+
+        if data:
             return SemanticSummary(
                 title=data.get("title", ""),
                 core_concepts=data.get("core_concepts", []),

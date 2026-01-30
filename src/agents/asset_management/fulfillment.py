@@ -142,7 +142,7 @@ class AssetFulfillmentAgent:
 
         # 3. 汇总并注册资产 (SOTA: 批量原子写入，防止 Race Condition)
         file_map = {}
-        new_assets_count = 0
+        new_assets_list = []
         reused_count = 0
         mermaid_count = 0
         
@@ -151,9 +151,8 @@ class AssetFulfillmentAgent:
             file_map[fp].append(d)
             
             if asset:
-                # 只有新产生的资产需要注册 (SVG, Web Sourced)
-                uar.register_immediate(asset)
-                new_assets_count += 1
+                # 收集新产生的资产 (SVG, Web Sourced)
+                new_assets_list.append(asset)
             elif d.fulfilled:
                 if d.action == AssetFulfillmentAction.USE_EXISTING:
                     reused_count += 1
@@ -171,11 +170,15 @@ class AssetFulfillmentAgent:
                 })
                 state.asset_revision_needed = True
 
+        # SOTA: 一次性执行批量注册与持久化，效率最高且最安全
+        if new_assets_list:
+            uar.register_batch(new_assets_list)
+
         # 物理回写
         for fp, directives in file_map.items():
             self.apply_fulfillment_to_file(fp, directives)
 
-        print(f"[AssetFulfillment] ✅ 履约完成: 新增 {new_assets_count}, 复用 {reused_count}, Mermaid {mermaid_count}")
+        print(f"[AssetFulfillment] ✅ 履约完成: 新增 {len(new_assets_list)}, 复用 {reused_count}, Mermaid {mermaid_count}")
         state.batch_fulfillment_complete = True
         return state
 
@@ -349,13 +352,13 @@ class AssetFulfillmentAgent:
         
         if candidates:
             best_asset = candidates[0]
-            # 这里我们需要一个逻辑：只有当匹配度极高时才“建议”或“强制”复用
-            # 这里的粗筛没有返回具体分数，我们暂时通过 ID 匹配来判断 Writer 是否已经看过了
+            # SOTA Logic: 只有当匹配度极高且 Writer 的原始意图允许时才劫持
             
             # 如果 Writer 要求生成 SVG 或 搜网图，我们非常谨慎
             if d.action in [AssetFulfillmentAction.GENERATE_SVG, AssetFulfillmentAction.SEARCH_WEB]:
-                # 只有当本地资产 ID 包含在 Writer 的描述或匹配 ID 中时，我们才考虑截胡
-                # 实际上，既然 Writer 已经明确要求了新资产，说明本地那个“心脏解剖图”不满足本章特定需求
+                # 只有在 Writer 没把握 (比如没填 matched_asset) 且本地发现极其匹配的条目时才考虑
+                # 目前由于 intent_match 没有返回具体分数，我们设定一个保守策略：
+                # 除非本地资产 ID 与指令 ID 语义高度相关，否则保持原始意图
                 print(f"  [Fulfillment] 尊重 Writer 决定: 保持 {d.action.value} 动作 ({d.id})")
                 return d
 

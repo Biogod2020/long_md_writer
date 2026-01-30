@@ -7,10 +7,12 @@ Handles visual and code-based auditing of assets.
 import re
 import json
 import base64
+import asyncio
 from pathlib import Path
 from typing import Optional, Dict, Any
 
 from ....core.gemini_client import GeminiClient
+from ....core.types import AgentState
 
 
 VISUAL_AUDIT_PROMPT = """You are a senior visual editor and content auditor. Your task is to evaluate this image against its intended purpose with high precision.
@@ -236,65 +238,112 @@ def render_svg_to_png_base64(svg_code: str, width: int = 1200) -> Optional[str]:
         return None
 
 
-def render_svg_with_browser(svg_path: Path, output_path: Path) -> bool:
-    """使用 DrissionPage 渲染 SVG 为 PNG (高保真)"""
+async def render_svg_with_playwright(svg_code: str, output_path: Path) -> bool:
+    """使用 Playwright 渲染 SVG 为 PNG (高保真，支持中文字体)"""
+    html_template = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            html, body {{ margin: 0; padding: 0; background: white; }}
+            body {{ display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }}
+            svg {{ 
+                display: block; 
+                max-width: 100vw; 
+                max-height: 100vh; 
+                width: auto; 
+                height: auto; 
+                min-width: 200px; 
+                min-height: 200px;
+            }}
+        </style>
+    </head>
+    <body>
+        {svg_code}
+    </body>
+    </html>
+    """
+    temp_html = output_path.with_suffix(".html")
+    temp_html.write_text(html_template, encoding="utf-8")
+    
     try:
-        from DrissionPage import ChromiumOptions, ChromiumPage
-        
-        co = ChromiumOptions()
-        co.auto_port()
-        co.headless()
-        co.set_argument("--force-device-scale-factor=2")
-        co.set_argument("--disable-gpu")
-        co.set_argument("--no-sandbox")
-        
-        page = ChromiumPage(co)
-        try:
-            page.get(f"file://{svg_path.absolute()}")
-            page.wait(0.5)
-            page.get_screenshot(path=str(output_path))
+        from playwright.async_api import async_playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            # Use a more reasonable viewport
+            context = await browser.new_context(viewport={"width": 1000, "height": 800})
+            page = await context.new_page()
+            await page.goto(f"file://{temp_html.absolute()}", wait_until="networkidle")
+            await asyncio.sleep(0.5)
+            
+            # Take screenshot
+            await page.screenshot(path=str(output_path), full_page=False)
+            
+            # Post-process: Resize and compress using PIL to reduce payload
+            from PIL import Image
+            with Image.open(output_path) as img:
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+                # If width > 1024, resize
+                if img.width > 1024:
+                    ratio = 1024 / img.width
+                    img = img.resize((1024, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                # Save back with compression
+                img.save(output_path, format="JPEG", quality=80, optimize=True)
+                
             return True
-        finally:
-            page.quit()
     except Exception as e:
-        print(f"    [Audit] Browser render failed: {e}")
+        print(f"    [Audit] Playwright render failed: {e}")
         return False
+    finally:
+        if temp_html.exists():
+            temp_html.unlink()
 
 
 async def audit_svg_visual_async(
     client: GeminiClient,
     svg_code: str,
     intent_description: str,
+    state: Optional[AgentState] = None,
     svg_path: Optional[Path] = None
 ) -> Optional[Dict[str, Any]]:
-    """双路交叉 SVG 审计：代码分析 + 渲染图视觉分析"""
+    """双路交叉 SVG 审计：代码分析 + 渲染图视觉分析 (优先使用浏览器渲染以支持中文字体)"""
     import tempfile
     
-    # Step 1: 尝试 cairosvg 渲染
-    png_b64 = render_svg_to_png_base64(svg_code)
+    # Step 1: 优先尝试浏览器渲染 (Playwright) 以解决 CJK 字体问题
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
     
-    # Step 2: 如果失败，尝试浏览器渲染
-    if not png_b64 and svg_path and svg_path.exists():
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            tmp_path = Path(tmp.name)
-        if render_svg_with_browser(svg_path, tmp_path):
-            try:
-                with open(tmp_path, "rb") as f:
-                    png_b64 = base64.b64encode(f.read()).decode("utf-8")
-            finally:
-                tmp_path.unlink(missing_ok=True)
+    png_b64 = None
+    if await render_svg_with_playwright(svg_code, tmp_path):
+        try:
+            with open(tmp_path, "rb") as f:
+                png_b64 = base64.b64encode(f.read()).decode("utf-8")
+        finally:
+            tmp_path.unlink(missing_ok=True)
     
-    # Step 3: 如果渲染失败，回退到纯代码审计
+    # Step 2: 如果浏览器渲染失败，尝试 cairosvg
     if not png_b64:
-        print("    [Audit] Render failed, falling back to code-only audit")
+        print("    [Audit] Browser render failed, trying cairosvg...")
+        png_b64 = render_svg_to_png_base64(svg_code)
+    
+    # Step 3: 如果渲染均失败，回退到纯代码审计
+    if not png_b64:
+        print("    [Audit] All render methods failed, falling back to code-only audit")
         return await audit_svg_async(client, svg_code, intent_description)
     
     # Step 4: 多模态审计请求
     prompt = SVG_VISUAL_AUDIT_PROMPT.format(intent_description=intent_description)
     parts = [
         {"text": prompt},
-        {"text": f"## SVG Source Code\n```svg\n{svg_code[:8000]}\n```"},
-        {"inlineData": {"mimeType": "image/png", "data": png_b64}}
+        {"text": f"## SVG Source Code\n```svg\n{svg_code}\n```"},
+        {
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": png_b64
+            }
+        }
     ]
     
     try:
@@ -304,6 +353,10 @@ async def audit_svg_visual_async(
         )
         if not response.success:
             return None
+
+        # Capture thoughts
+        if state and response.thoughts:
+            state.thoughts += f"\n[SVG Visual Audit] {response.thoughts}"
 
         payload = extract_json_payload(response.text)
         return json.loads(payload) if payload else None

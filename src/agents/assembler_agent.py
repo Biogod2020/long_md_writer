@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from ..core.gemini_client import GeminiClient, GeminiResponse
 from ..core.types import AgentState
+from ..core.patcher import StuckDetector
 
 
 LAYOUT_TEMPLATES = {
@@ -112,6 +113,7 @@ class AssemblerAgent:
     
     def __init__(self, client: Optional[GeminiClient] = None):
         self.client = client or GeminiClient()
+        self.stuck_detector = StuckDetector()
     
     def run(self, state: AgentState) -> AgentState:
         """执行拼接与质检流程"""
@@ -135,6 +137,12 @@ class AssemblerAgent:
         
         # Step 4: 如果验证失败，尝试 AI 修复
         if not is_valid:
+            # 🛠️ Stuck Detection & Backoff
+            advice = "|".join(errors)
+            if not self.stuck_detector.check_progress(advice, combined_content):
+                print(f"  [Assembler] ⚠️ HTML 修复循环卡住，尝试增强提示词...")
+                errors.append("PREVIOUS REPAIR FAILED. You MUST ensure all tags are balanced and nested correctly. Check for unclosed <div> or <section> tags.")
+
             repaired_content = self._repair_html(combined_content, errors)
             if repaired_content:
                 combined_content = repaired_content

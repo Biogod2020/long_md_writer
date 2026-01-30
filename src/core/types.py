@@ -7,12 +7,14 @@ SOTA 2.0 升级：
 - CropMetadata: 裁切元数据
 """
 
-from typing import Optional, Literal, Any
+from typing import Optional, Literal, Any, Union
 from enum import Enum
 from pydantic import BaseModel, Field, PrivateAttr
 import json
 from pathlib import Path
 import hashlib
+import os
+from .path_utils import get_project_root
 
 
 # ============================================================================
@@ -149,7 +151,40 @@ class AssetEntry(BaseModel):
         description="被拒绝使用的历史记录 [{section_id, reason, suggested_action}]"
     )
 
-    def to_img_tag(self, class_name: Optional[str] = None, md_subdir: Optional[str] = None) -> str:
+    def get_absolute_path(self, workspace_path: Optional[Union[str, Path]] = None, project_root: Optional[Path] = None) -> Optional[Path]:
+        """
+        Intelligently resolves the absolute physical path of the asset.
+        Returns the most likely absolute path, even if it doesn't exist on disk.
+        """
+        if not self.local_path:
+            return None
+
+        local_path = Path(self.local_path)
+        if local_path.is_absolute():
+            return local_path
+
+        # 1. Try relative to provided workspace_path
+        ws_path = Path(workspace_path).resolve() if workspace_path else None
+        if ws_path:
+            # Try directly in workspace
+            full = ws_path / local_path
+            if full.exists():
+                return full
+            # Try in parent of workspace (common for jobs in workspace/)
+            full = ws_path.parent / local_path
+            if full.exists():
+                return full
+
+        # 2. Try relative to project root
+        root = project_root or get_project_root(start_path=ws_path)
+        full = root / local_path
+        if full.exists():
+            return full
+
+        # 3. Fallback: Return best guess relative to project root if nothing else found
+        return (root / local_path).resolve()
+
+    def to_img_tag(self, class_name: Optional[str] = None, target_file: Optional[Union[str, Path]] = None, workspace_path: Optional[Union[str, Path]] = None, md_subdir: Optional[str] = None, project_root: Optional[Path] = None) -> str:
         """
         生成完整的 <img> HTML 标签 (Writer-Direct-Inject 协议)
 
@@ -161,7 +196,10 @@ class AssetEntry(BaseModel):
 
         Args:
             class_name: 可选的 CSS 类名
-            md_subdir: markdown 文件所在的子目录 (如 "md")，用于计算正确的相对路径
+            target_file: 正在生成的 Markdown/HTML 文件的路径 (用于计算相对路径)
+            workspace_path: 当前任务的工作目录
+            md_subdir: (已弃用) markdown 文件所在的子目录 (如 "md")
+            project_root: 可选的项目根目录 (用于路径解析)
 
         Returns:
             HTML img 标签字符串，如果 local_path 无效则返回带占位符的标签
@@ -169,9 +207,24 @@ class AssetEntry(BaseModel):
         # 确保 src 有有效值
         src_path = self.local_path or self.original_url or f"missing-asset-{self.id}"
 
-        # 如果指定了 md_subdir，调整相对路径
-        if md_subdir and src_path and not src_path.startswith(("http://", "https://", "/")):
-            # 从 md/ 子目录返回上一级
+        # SOTA: 优先使用新型相对路径计算逻辑
+        if target_file:
+            abs_asset = self.get_absolute_path(workspace_path=workspace_path, project_root=project_root)
+            if abs_asset:
+                target_dir = Path(target_file).resolve().parent
+                try:
+                    src_path = os.path.relpath(abs_asset, target_dir)
+                    
+                    # 物理存在性校验 (Strict Mode)
+                    if not abs_asset.exists():
+                        warning = f"<!-- ⚠️ FILE MISSING: {src_path} (ID: {self.id}) -->"
+                        # 如果文件丢失，我们仍然返回标签但附带警告
+                        # 或者按 spec 要求返回特定占位符
+                        return f"{warning}\n<img src=\"{src_path}\" alt=\"FILE MISSING\" data-asset-id=\"{self.id}\">"
+                except ValueError:
+                    pass
+        elif md_subdir and src_path and not src_path.startswith(("http://", "https://", "/")):
+            # 如果指定了 md_subdir，调整相对路径 (保持旧逻辑兼容性)
             if src_path.startswith("generated_assets/"):
                 # workspace 内的生成资产: ../generated_assets/xxx
                 src_path = f"../{src_path}"
@@ -402,6 +455,15 @@ class UniversalAssetRegistry(BaseModel):
         self.assets[entry.id] = entry
         self._persist()
 
+    def register_batch(self, entries: list[AssetEntry]) -> None:
+        """批量注册资产并执行单次持久化 (SOTA Parallel Optimization)"""
+        if not entries:
+            return
+        print(f"  [UAR] 🚀 正在批量注册 {len(entries)} 个新资产...")
+        for entry in entries:
+            self.assets[entry.id] = entry
+        self._persist()
+
     def get_asset(self, asset_id: str) -> Optional[AssetEntry]:
         """全局查找资产 (Session -> Mounted)"""
         if asset_id in self.assets:
@@ -455,21 +517,26 @@ class UniversalAssetRegistry(BaseModel):
         path = Path(self._persist_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
+        # SOTA: 动态刷新统计信息
+        stats = {
+            "by_source": {
+                s.value: len([a for a in self.assets.values() if a.source == s])
+                for s in AssetSource
+            },
+            "reusable_count": len(self.get_reusable_assets())
+        }
+
         # 序列化所有资产 (兼容 Pydantic v1 和 v2)
         data = {
             "assets": {k: (v.model_dump() if hasattr(v, 'model_dump') else v.dict()) for k, v in self.assets.items()},
             "total_count": len(self.assets),
-            "stats": {
-                "by_source": {
-                    s.value: len(self.get_assets_by_source(s))
-                    for s in AssetSource
-                },
-                "reusable_count": len(self.get_reusable_assets())
-            }
+            "stats": stats
         }
 
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        print(f"  [UAR] 💾 成功持久化 {len(self.assets)} 个资产至 {path.name}")
 
     @classmethod
     def load_from_file(cls, path: str) -> "UniversalAssetRegistry":

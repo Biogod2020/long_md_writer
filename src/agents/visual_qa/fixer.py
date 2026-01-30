@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Optional, Dict
 
 from ...core.gemini_client import GeminiClient
+from ...core.types import AgentState
+from ...core.patcher import apply_smart_patch
 from .prompts import FIXER_SYSTEM_PROMPT
 from .utils import parse_json_response, add_line_numbers
 
@@ -76,17 +78,16 @@ Modify ONLY ONE file.
 
 def run_fixer(
     client: GeminiClient,
+    state: AgentState,
     issue: Dict,
     section_path: str,
     workspace_path: str,
     style_mapping_path: Optional[str] = None,
     debug_image_path: Optional[Path] = None,
     debug: bool = False
-) -> Optional[str]: # Changed return type to str for raw response
+) -> Optional[Dict]:
     """
     Generate a fix for ONE specific issue, optionally using a debug image.
-    Uses style_mapping.json for context instead of full appendices to reduce load.
-    Returns the raw response text from the model.
     """
     
     task = prepare_fixer_task(issue, section_path, workspace_path, style_mapping_path)
@@ -111,7 +112,12 @@ def run_fixer(
                 img.save(buffer, format="JPEG", quality=80, optimize=True)
                 image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
                 
-                parts.append({"inlineData": {"mimeType": "image/jpeg", "data": image_data}})
+                parts.append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": image_data
+                    }
+                })
             parts.append({"text": "[Debug Screenshot with Red Bounding Box highlighting the issue]"})
         except Exception as e:
             print(f"    [Fixer] Error loading debug image {debug_image_path}: {e}")
@@ -125,10 +131,10 @@ def run_fixer(
     for attempt in range(MAX_RETRIES):
         try:
             response = client.generate(
-                parts=parts,  # Use parts instead of prompt string
+                parts=parts,
                 system_instruction=FIXER_SYSTEM_PROMPT,
                 temperature=0.0,
-                stream=True  # 启用流式生成以避免 500 超时
+                stream=True
             )
             
             if debug:
@@ -137,13 +143,16 @@ def run_fixer(
             if not response.success:
                 print(f"    [Fixer] API Error (attempt {attempt+1}/{MAX_RETRIES}): {response.error}")
                 if attempt < MAX_RETRIES - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4 seconds
-                    print(f"    [Fixer] Retrying in {wait_time}s...")
+                    wait_time = 2 ** attempt
                     time.sleep(wait_time)
                     continue
                 return None
             
-            return parse_json_response(response.text)
+            # Capture thoughts
+            if response.thoughts:
+                state.thoughts += f"\n[VisualQA Fixer] {response.thoughts}"
+                
+            return response.json_data if response.json_data else parse_json_response(response.text)
         except Exception as e:
             print(f"    [Fixer] Exception (attempt {attempt+1}/{MAX_RETRIES}): {e}")
             if attempt < MAX_RETRIES - 1:
@@ -155,7 +164,7 @@ def run_fixer(
 
 def apply_fix(fix_result: Dict, workspace_path: str) -> bool:
     """
-    Apply a single fix from the Fixer agent.
+    Apply a single fix from the Fixer agent using the Universal Patcher.
     
     Returns True if fix was applied successfully.
     """
@@ -178,18 +187,22 @@ def apply_fix(fix_result: Dict, workspace_path: str) -> bool:
         target = fix.get("target")
         replacement = fix.get("replacement")
         
-        if not target or target not in content:
-            print(f"    [Fixer] Target string not found in {target_file_rel}")
+        if not target:
             return False
-        
-        count = content.count(target)
-        if count > 1:
-            print(f"    [Fixer] Ambiguous target ({count} matches). Skipping.")
+            
+        # Use Universal Patcher
+        new_content, success = apply_smart_patch(content, target, replacement)
+        if success:
+            target_file.write_text(new_content, encoding="utf-8")
+            return True
+        else:
+            print(f"    [Fixer] ⚠️ Smart patch failed for {target_file_rel}. Error: {new_content[:100]}...")
+            # Fallback to simple replace if search is exactly present
+            if target in content:
+                print(f"    [Fixer] 🔄 Falling back to exact replace.")
+                target_file.write_text(content.replace(target, replacement, 1), encoding="utf-8")
+                return True
             return False
-        
-        content = content.replace(target, replacement, 1)
-        target_file.write_text(content, encoding="utf-8")
-        return True
         
     elif fix_type == "append":
         new_content = fix.get("content")
@@ -205,8 +218,14 @@ def apply_fix(fix_result: Dict, workspace_path: str) -> bool:
     elif fix_type == "delete":
         target = fix.get("target")
         if target and target in content:
-            content = content.replace(target, "")
-            target_file.write_text(content, encoding="utf-8")
-            return True
+            # Use smart patch even for deletion to find the block robustly
+            new_content, success = apply_smart_patch(content, target, "")
+            if success:
+                target_file.write_text(new_content, encoding="utf-8")
+                return True
+            else:
+                # Fallback
+                target_file.write_text(content.replace(target, ""), encoding="utf-8")
+                return True
     
     return False

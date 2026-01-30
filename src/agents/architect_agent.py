@@ -317,7 +317,7 @@ class ArchitectAgent:
         )
 
     async def run_async(self, state: AgentState, feedback: Optional[str] = None) -> AgentState:
-        """异步版本"""
+        """异步版本 - 使用 Native Structured Output"""
         parts = self._build_prompt_parts(state, feedback)
 
         if feedback:
@@ -328,45 +328,58 @@ class ArchitectAgent:
         else:
             temperature = 0.7
 
-        MAX_RETRIES = 3
-        last_error = None
+        print(f"    [Architect] Generating manifest using Native JSON Mode...")
+        
+        # Use native structured generation
+        prompt_text = "\n".join([p.get("text", "") for p in parts if "text" in p])
+        response = await self.client.generate_structured_async(
+            prompt=prompt_text,
+            response_schema=FLEXIBLE_MANIFEST_SCHEMA,
+            system_instruction=ARCHITECT_SYSTEM_PROMPT,
+            temperature=temperature
+        )
 
-        for attempt in range(MAX_RETRIES + 1):
-            if attempt > 0:
-                print(f"    [Architect] JSON Error (Attempt {attempt}): {last_error}. Retrying...")
-                parts.append({
-                    "text": f"SYSTEM: Your previous JSON output caused a parse error: {last_error}\nPlease output the full, valid JSON again."
-                })
+        if not response.success:
+            state.errors.append(f"Architect Agent failed: {response.error}")
+            return state
 
-            response = await self.client.generate_async(
-                parts=parts,
-                system_instruction=ARCHITECT_SYSTEM_PROMPT,
-                temperature=temperature,
-                stream=True
+        # Capture thoughts
+        if response.thoughts:
+            state.thoughts = response.thoughts
+
+        try:
+            # Parse manifest from JSON data
+            data = response.json_data if response.json_data else self._parse_manifest(response.text)
+            
+            # Convert to Manifest object
+            sections = []
+            for sec_data in data.get("sections", []):
+                sections.append(SectionInfo(
+                    id=sec_data["id"],
+                    title=sec_data["title"],
+                    summary=sec_data.get("summary", ""),
+                    estimated_words=sec_data.get("estimated_words", 0),
+                    metadata=sec_data.get("metadata", {})
+                ))
+            
+            state.manifest = Manifest(
+                project_title=data.get("project_title", "Untitled"),
+                author=data.get("author"),
+                description=data.get("description", ""),
+                config=data.get("config", {}),
+                metadata=data.get("metadata", {}),
+                sections=sections,
+                knowledge_map=data.get("knowledge_map", {}),
             )
+            
+            self._save_manifest(state)
+            return state
+            
+        except Exception as e:
+            state.errors.append(f"Failed to process manifest structure: {str(e)}")
+            return state
 
-            if not response.success:
-                error_msg = f"Architect Agent failed: {response.error}"
-                if attempt == MAX_RETRIES:
-                    state.errors.append(error_msg)
-                    return state
-                last_error = response.error
-                continue
-
-            try:
-                manifest = self._parse_manifest(response.text)
-                state.manifest = manifest
-                self._save_manifest(state)
-                return state
-            except Exception as e:
-                last_error = str(e)
-                if attempt == MAX_RETRIES:
-                    state.errors.append(f"Failed to parse manifest: {str(e)}")
-                    return state
-
-        return state
-
-
-def create_architect_agent(client: Optional[GeminiClient] = None) -> ArchitectAgent:
-    """创建架构师 Agent 实例"""
-    return ArchitectAgent(client=client)
+    def run(self, state: AgentState, feedback: Optional[str] = None) -> AgentState:
+        """同步版本 - 封装异步调用"""
+        import asyncio
+        return asyncio.run(self.run_async(state, feedback))

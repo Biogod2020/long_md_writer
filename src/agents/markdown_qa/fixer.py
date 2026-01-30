@@ -6,6 +6,7 @@ Executes specific editing instructions on a target file.
 import re
 from typing import Dict, Optional, List, Any
 from src.core.gemini_client import GeminiClient
+from src.core.patcher import apply_smart_patch
 
 
 FIXER_SYSTEM_PROMPT = """You are a High-Precision Content Patcher Agent.
@@ -90,7 +91,7 @@ Identify the text block to change and generate the JSON patch.
     return {"status": "FIXED", "patches": result["patches"]}
 
 def apply_patches(original_content: str, result: Dict) -> str:
-    """Apply JSON patches to content."""
+    """Apply patches using the Universal High-Precision Patcher."""
     if not result or result.get("status") != "FIXED":
         return original_content
         
@@ -104,9 +105,15 @@ def apply_patches(original_content: str, result: Dict) -> str:
         replace_text = patch.get("replace")
         
         if search_text and replace_text is not None:
-             if search_text in modified_content:
-                 modified_content = modified_content.replace(search_text, replace_text)
+             # Use the Smart Patcher instead of simple string.replace
+             new_content, success = apply_smart_patch(modified_content, search_text, replace_text)
+             if success:
+                 modified_content = new_content
              else:
-                 print(f"    [Fixer] ⚠️ Search text not found: {search_text[:50]}...")
+                 print(f"    [Fixer] ⚠️ Smart patch failed: {new_content[:100]}...")
+                 # Fallback to simple replace if smart fails but search is exactly in content
+                 if search_text in modified_content:
+                     print(f"    [Fixer] 🔄 Falling back to exact replace.")
+                     modified_content = modified_content.replace(search_text, replace_text, 1)
                  
     return modified_content

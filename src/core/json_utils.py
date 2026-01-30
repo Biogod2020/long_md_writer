@@ -17,40 +17,35 @@ _TRAILING_TEXT_PATTERN = re.compile(r"[}\]](?:[^}\]]*$)", re.DOTALL)
 
 def extract_json_from_text(text: str) -> Optional[str]:
     """
-    Extracts JSON content from text that may contain Markdown code fences or surrounding prose.
-    
-    Strategies:
-    1. Look for content inside ```json ... ``` or ``` ... ``` blocks.
-    2. If not found, strip leading/trailing non-JSON characters and return the rest.
+    Extracts JSON content from text that may contain Markdown code fences, 
+    nested <thought> blocks, or surrounding prose.
     """
     if not text:
         return None
     
-    text = text.strip()
+    # 1. Clean up <thought> blocks first to prevent interference
+    text = re.sub(r'<thought>[\s\S]*?</thought>', '', text).strip()
     
-    # Strategy 1: Extract from Markdown code fences
-    match = _JSON_FENCES_PATTERN.search(text)
-    if match:
-        return match.group(1).strip()
+    # 2. Strategy 1: Find ALL Markdown code fences and try the last one first (usually the final answer)
+    matches = list(_JSON_FENCES_PATTERN.finditer(text))
+    if matches:
+        # Try from last to first
+        for match in reversed(matches):
+            content = match.group(1).strip()
+            if content: return content
     
-    # Strategy 2: Find the first { or [ and the last } or ]
+    # 3. Strategy 2: Find the largest possible balanced bracket structure
+    # This is more robust for cases where code fences are missing or malformed
     start_obj = text.find('{')
     start_arr = text.find('[')
     
     if start_obj == -1 and start_arr == -1:
         return None
     
-    # Determine which comes first
-    if start_obj == -1:
-        start = start_arr
-    elif start_arr == -1:
-        start = start_obj
-    else:
-        start = min(start_obj, start_arr)
+    start = min(start_obj, start_arr) if (start_obj != -1 and start_arr != -1) else (start_obj if start_obj != -1 else start_arr)
     
     end_obj = text.rfind('}')
     end_arr = text.rfind(']')
-    
     end = max(end_obj, end_arr)
     
     if end == -1 or end < start:
@@ -62,23 +57,25 @@ def extract_json_from_text(text: str) -> Optional[str]:
 def fix_common_json_errors(json_str: str) -> str:
     """
     Attempts to fix common JSON formatting errors produced by LLMs.
-    
-    Fixes:
-    - Trailing commas before } or ]
-    - Single quotes instead of double quotes (simple cases)
-    - Missing quotes around keys (simple alphanumeric keys)
     """
     if not json_str:
         return json_str
     
-    # Fix trailing commas (e.g., {"a": 1,} -> {"a": 1})
+    # A. Fix trailing commas (e.g., {"a": 1,} -> {"a": 1})
     json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
     
-    # Fix single quotes (naive replacement, may break strings containing escaped quotes)
-    # This is a common LLM mistake but dangerous; apply cautiously
-    # We only do this if double quotes are not present at all
-    if '"' not in json_str and "'" in json_str:
-        json_str = json_str.replace("'", '"')
+    # B. SOTA: Handle unescaped newlines inside JSON strings
+    # This replaces real newlines within double quotes with \n
+    # Note: This regex is a heuristic and might fail on extremely complex nested quotes
+    def replace_newlines(match):
+        return match.group(0).replace('\n', '\\n').replace('\r', '\\r')
+    
+    json_str = re.sub(r'"([^"\\]|\\.)*"', replace_newlines, json_str)
+    
+    # C. Fix missing quotes around boolean values or nulls if they are capitalized
+    json_str = re.sub(r':\s*True\b', ': true', json_str)
+    json_str = re.sub(r':\s*False\b', ': false', json_str)
+    json_str = re.sub(r':\s*None\b', ': null', json_str)
     
     return json_str
 

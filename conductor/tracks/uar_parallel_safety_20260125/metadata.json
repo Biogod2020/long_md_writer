@@ -1,0 +1,8 @@
+{
+  "track_id": "uar_parallel_safety_20260125",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-01-25T02:00:00Z",
+  "updated_at": "2026-01-25T02:00:00Z",
+  "description": "Fix Universal Asset Registry (UAR) race conditions during parallel asset fulfillment and improve reporting accuracy."
+}

@@ -20,7 +20,7 @@ class MarkdownQAAgent:
     Workflow:
     1. Critic reviews full content -> VERDICT
     2. If APPROVE -> Finish
-    3. If REWRITE -> Flag for rewrite (WriterAgent)
+    3. If REWRITE -> Try Patching first, fallback to Writer rewrite only if fundamental failure
     4. If MODIFY -> Advicer generates specific plan -> Fixer applies patches
     """
 
@@ -59,103 +59,110 @@ class MarkdownQAAgent:
             state.markdown_approved = True
             return state
             
-        elif verdict == "REWRITE":
-            print("  [MarkdownQA] 🔄 Triggering Rewrite Loop...")
-            print(f"  [MarkdownQA] Feedback: {feedback[:200]}...")
-            state.rewrite_needed = True # Flag for edges.py
+        # SOTA: Patch-First Strategy
+        # Even if Critic asks for REWRITE, we try to fix it via patches first
+        if verdict == "REWRITE" and state.md_qa_iterations > 2:
+            print(f"  [MarkdownQA] 🔄 Patching failed to resolve fundamental issues. Triggering Writer Rewrite...")
+            state.rewrite_needed = True
             state.rewrite_feedback = feedback
-            # We do NOT increment iterations heavily here, as Writer will handle it.
-            # But the edge will route us away.
             return state
             
-        elif verdict == "MODIFY":
-            print("  [MarkdownQA] 🛠️ Proceeding to Modification Phase...")
-            
-            # 4. ADVICER Phase
-            file_list = [Path(p).name for p in state.completed_md_sections]
-            advice_map = await run_markdown_advicer(
-                self.client, 
-                merged_content, 
-                file_list, 
-                feedback, 
-                debug=state.debug_mode
-            )
-            
-            if not advice_map:
-                print("  [MarkdownQA] Advicer suggested no changes.")
-                state.md_qa_needs_revision = False
-                return state
-                
-            print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
-            
-            # 5. FIXER Phase (Parallel with max 4 concurrent tasks)
-            import asyncio
-            
-            semaphore = asyncio.Semaphore(4)
-            fixes_applied = 0
-            fix_results = []
-            
-            async def fix_single_file(filename: str, advice: str):
-                """Fix a single file with semaphore-controlled concurrency."""
-                async with semaphore:
-                    target_path = next((p for p in state.completed_md_sections if Path(p).name == filename), None)
-                    if not target_path:
-                        print(f"  [MarkdownQA] ⚠️ Could not find path for {filename}")
-                        return None
-                    
-                    print(f"    [MarkdownQA] Fixing {filename}...")
-                    current_content = Path(target_path).read_text(encoding="utf-8")
-                    
-                    fix_result = await run_markdown_fixer(
-                        self.client, 
-                        current_content, 
-                        advice, 
-                        context=merged_content,
-                        debug=state.debug_mode
-                    )
-                    
-                    return {
-                        "filename": filename,
-                        "target_path": target_path,
-                        "current_content": current_content,
-                        "fix_result": fix_result
-                    }
-            
-            # Launch all tasks in parallel (limited by semaphore)
-            tasks = [fix_single_file(fn, adv) for fn, adv in advice_map.items()]
-            fix_results = await asyncio.gather(*tasks)
-            
-            # Apply patches from results
-            for res in fix_results:
-                if res is None:
-                    continue
-                    
-                fix_result = res["fix_result"]
-                if fix_result and fix_result.get("status") == "FIXED":
-                    new_content = apply_patches(res["current_content"], fix_result)
-                    
-                    if new_content != res["current_content"]:
-                        Path(res["target_path"]).write_text(new_content, encoding="utf-8")
-                        fixes_applied += 1
-                        print(f"      ✅ Applied fixes to {res['filename']}")
-                    else:
-                        print(f"      ⚠️ Patches didn't change content for {res['filename']}")
-                else:
-                    reason = fix_result.get('reason') if fix_result else "No result"
-                    print(f"      ❌ Fixer failed for {res['filename']}: {reason}")
-            
-            if fixes_applied > 0:
-                 state.md_qa_needs_revision = True # Loop back to Critic
-            else:
-                 print("  [MarkdownQA] No fixes applied effectively.")
-                 state.md_qa_needs_revision = False # Stop if we can't fix it
-                 
+        print(f"  [MarkdownQA] 🛠️ Proceeding to Modification (Patching) Phase...")
+        
+        # 4. ADVICER Phase (Now correctly indented)
+        file_list = [Path(p).name for p in state.completed_md_sections]
+        advice_map = await run_markdown_advicer(
+            self.client, 
+            merged_content, 
+            file_list, 
+            feedback, 
+            debug=state.debug_mode
+        )
+        
+        # SOTA Logic Fix: Check for API errors vs real "No changes needed"
+        # run_markdown_advicer returns None on API error, {} on "no changes needed"
+        if advice_map is None:
+            print("  [MarkdownQA] ❌ Advicer failed due to technical error (API Crash).")
+            state.errors.append(f"MarkdownQA: Advicer API crashed for {file_list}")
+            state.md_qa_needs_revision = False # Exit loop to prevent stuck, but DON'T approve
+            state.markdown_approved = False
             return state
 
-        else:
-            print(f"  [MarkdownQA] Unknown verdict {verdict}.")
+        if not advice_map:
+            print("  [MarkdownQA] Advicer suggested no changes.")
+            # If critic wanted a fix but advicer couldn't find one, we should NOT approve.
+            # We let the human decide or retry in next iteration.
             state.md_qa_needs_revision = False
+            state.markdown_approved = False
             return state
+            
+        print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
+        
+        # 5. FIXER Phase (Parallel with max 4 concurrent tasks)
+        import asyncio
+        
+        semaphore = asyncio.Semaphore(4)
+        fixes_applied = 0
+        fix_results = []
+        
+        async def fix_single_file(filename: str, advice: str):
+            """Fix a single file with semaphore-controlled concurrency."""
+            async with semaphore:
+                target_path = next((p for p in state.completed_md_sections if Path(p).name == filename), None)
+                if not target_path:
+                    print(f"  [MarkdownQA] ⚠️ Could not find path for {filename}")
+                    return None
+                
+                print(f"    [MarkdownQA] Fixing {filename}...")
+                current_content = Path(target_path).read_text(encoding="utf-8")
+                
+                fix_result = await run_markdown_fixer(
+                    self.client, 
+                    current_content, 
+                    advice, 
+                    context=merged_content,
+                    debug=state.debug_mode
+                )
+                
+                return {
+                    "filename": filename,
+                    "target_path": target_path,
+                    "current_content": current_content,
+                    "fix_result": fix_result
+                }
+        
+        # Launch all tasks in parallel (limited by semaphore)
+        tasks = [fix_single_file(fn, adv) for fn, adv in advice_map.items()]
+        fix_results = await asyncio.gather(*tasks)
+        
+        # Apply patches from results
+        for res in fix_results:
+            if res is None:
+                continue
+                
+            fix_result = res["fix_result"]
+            if fix_result and fix_result.get("status") == "FIXED":
+                new_content = apply_patches(res["current_content"], fix_result)
+                
+                if new_content != res["current_content"]:
+                    Path(res["target_path"]).write_text(new_content, encoding="utf-8")
+                    fixes_applied += 1
+                    print(f"      ✅ Applied fixes to {res['filename']}")
+                else:
+                    print(f"      ⚠️ Patches didn't change content for {res['filename']}")
+            else:
+                reason = fix_result.get('reason') if fix_result else "No result"
+                print(f"      ❌ Fixer failed for {res['filename']}: {reason}")
+        
+        if fixes_applied > 0:
+             print(f"  [MarkdownQA] ✅ Applied {fixes_applied} patches. Requesting AI re-audit...")
+             state.md_qa_needs_revision = True # Loop back to Critic
+             state.markdown_approved = False   # Reset approval status
+        else:
+             print("  [MarkdownQA] No fixes applied effectively.")
+             state.md_qa_needs_revision = False # Stop if we can't fix it
+             
+        return state
 
     def _merge_content(self, state: AgentState) -> str:
         """Helper to merge content for the prompt"""

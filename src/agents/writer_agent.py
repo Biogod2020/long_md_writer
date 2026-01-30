@@ -44,60 +44,62 @@ WRITER_SYSTEM_PROMPT = """你是一位资深技术写手，负责撰写高质量
 - **警告块**: `:::warning` ... `:::` 用于常见陷阱或病理情况
 - **提示块**: `:::tip` ... `:::` 用于实用建议
 
-## 🖼️ 图像资产注入协议 (Writer-Direct-Inject)
+## 🖼️ 图像资产指令协议 (Visual Directive Protocol)
 
 你将收到一个「可用资产注册表 (UAR)」，其中列出了所有可复用的图像资产及其质量评估。
+
+### 核心规则：严禁直接注入 HTML 标签
+**严禁**在 Markdown 中直接书写 `<img>` 或 `<figure>` 标签。所有图像需求必须通过 `:::visual` 指令声明。
 
 ### 决策流程
 
 当你认为某个位置需要图像时：
 
 **步骤 1: 查看 UAR 是否有匹配的资产**
-- 检查语义描述是否符合你的需求
-- 检查质量等级 (HIGH/MEDIUM/LOW)
-- 检查适用/不适用场景
+- 检查语义描述是否符合你的需求。
+- 检查质量等级。
 
-**步骤 2: 做出决策**
+**步骤 2: 声明指令**
 
-#### 情况 A: 找到合适的高质量资产 → 直接注入 `<img>` 标签
-
-**重要**: 请使用 UAR 中显示的完整路径，不要修改！
+#### 情况 A: 决定复用 UAR 中的现有资产
+如果你认为 UAR 中的某张图（例如 ID 为 `u-img-xxx`）非常合适，请使用以下格式：
 
 ```markdown
 这里是正文内容...
 
-<figure>
-<img src="../../../assets/images/xxx.png" alt="描述" style="object-position: 50% 50%; object-fit: cover; width: 100%" data-asset-id="资产ID">
-<figcaption>图 X: 说明文字</figcaption>
-</figure>
-
-继续正文内容...
-```
-
-#### 情况 B: 没有合适资产 或 质量不达标 → 使用 `:::visual` 指令
-
-```markdown
-这里是正文内容...
-
-:::visual {"id": "s1-fig-xxx", "action": "GENERATE_SVG", "description": "需要展示的内容描述"}
-这张图用于说明 XXX 概念，需要清晰展示 A、B、C 三个组件的关系。
+:::visual {"id": "s1-fig-xxx", "action": "USE_EXISTING", "matched_asset": "u-img-xxx", "reuse_score": 95, "reason": "图片内容与本段描述的心脏瓣膜结构高度契合", "description": "对该图片的简要描述"}
+在此处根据 UAR 中该图片的视觉细节进行深度解说。
 :::
 
 继续正文内容...
 ```
 
-### `:::visual` 指令格式
+#### 情况 B: 需要生成新图 或 现有资产不达标
+使用对应的生成动作（GENERATE_SVG, SEARCH_WEB, GENERATE_MERMAID）：
+
+```markdown
+这里是正文内容...
+
+:::visual {"id": "s1-fig-xxx", "action": "GENERATE_SVG", "description": "需要展示的内容描述"}
+这张图用于说明 XXX 概念，需要包含 A、B、C 三个关键点。
+:::
+
+继续正文内容...
+```
+
+### `:::visual` 指令格式（JSON）
 
 ```json
 {
   "id": "章节命名空间-fig-名称",
-  "action": "USE_EXISTING | GENERATE_SVG | SEARCH_WEB | GENERATE_MERMAID | SKIP",
-  "description": "图像内容描述",
-  "matched_asset": "如果曾考虑某资产但被拒绝，填写其 ID",
-  "rejection_reason": "拒绝原因（如：分辨率不足、内容不匹配、风格不符）",
-  "search_queries": ["搜图关键词1", "关键词2"],  // 仅 SEARCH_WEB 时使用
-  "svg_spec": "SVG 规格描述",  // 仅 GENERATE_SVG 时使用
-  "mermaid_code": "```mermaid\n...\n```"  // 仅 GENERATE_MERMAID 时使用
+  "action": "USE_EXISTING | GENERATE_SVG | SEARCH_WEB | GENERATE_MERMAID",
+  "description": "详细的图像内容描述",
+  "matched_asset": "如果想复用现有资产，填写其 UAR ID",
+  "reuse_score": 0-100, // 仅 USE_EXISTING 时必填，表示匹配度
+  "reason": "简短理由", // 仅 USE_EXISTING 时必填
+  "search_queries": ["搜图关键词1"],  // 仅 SEARCH_WEB 时
+  "svg_spec": "SVG 规格描述",  // 仅 GENERATE_SVG 时
+  "mermaid_code": "```mermaid\n...\n```"  // 仅 GENERATE_MERMAID 时
 }
 ```
 
@@ -184,20 +186,15 @@ class WriterAgent:
         response = None
         for attempt in range(max_retries):
             try:
-                if isinstance(prompt_parts, list):
-                    response = await self.client.generate_async(
-                        parts=prompt_parts,  # 支持多模态
-                        system_instruction=WRITER_SYSTEM_PROMPT,
-                        temperature=0.7,
-                        stream=True
-                    )
-                else:
-                    response = await self.client.generate_async(
-                        prompt=prompt_parts,
-                        system_instruction=WRITER_SYSTEM_PROMPT,
-                        temperature=0.7,
-                        stream=True
-                    )
+                # Use native generation
+                response = await self.client.generate_async(
+                    parts=prompt_parts if isinstance(prompt_parts, list) else None,
+                    prompt=prompt_parts if isinstance(prompt_parts, str) else None,
+                    system_instruction=WRITER_SYSTEM_PROMPT,
+                    temperature=0.7,
+                    stream=True
+                )
+                
                 if response.success:
                     break
                 else:
@@ -211,6 +208,10 @@ class WriterAgent:
         if not response or not response.success:
             state.errors.append(f"Writer Agent failed on {current_section.id} after {max_retries} attempts. Last error: {response.error if response else 'Unknown'}")
             return state
+
+        # Capture thoughts
+        if response.thoughts:
+            state.thoughts = response.thoughts
 
         # 保存章节
         try:
@@ -371,12 +372,9 @@ class WriterAgent:
 
 请在合适的位置插入图像，遵循以下规则：
 
-1. **直接使用 UAR 资产**: 如果上面的 UAR 中有合适的资产，直接写 `<img>` 标签
-   - **重要**: 使用 UAR 中显示的完整路径，不要自己构造！
-   - 格式: `<img src="UAR中显示的路径" alt="描述" style="object-position: 50% 50%; object-fit: cover" data-asset-id="资产ID">`
-
-2. **声明新资产需求**: 如果没有合适资产或质量不达标，使用 `:::visual` 指令
-   - 所有新资产 ID 必须以 `{namespace}-` 开头，例如 `{namespace}-fig-xxx`
+1. **严禁使用 `<img>` 标签**: 无论你多么想用某张图，都必须通过 `:::visual` 指令并填写 `matched_asset`。
+2. **所有权归口**: 下游的履约模块会负责根据你的指令将图插入到最终位置。
+3. **命名规范**: 所有新资产 ID 必须以 `{namespace}-` 开头。
 
 3. **下方有参考图像**: 如果你看到参考图像（包含本章分配的图），请判断是否适合直接使用。**对于分配给本章的图，请务必根据其视觉细节写出具体的描述文字。**
 
