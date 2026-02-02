@@ -82,8 +82,8 @@ def apply_native_patch(content: str, search_block: str, replace_block: str) -> O
 def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) -> Optional[str]:
     """Last resort: Fuzzy matching using diff-match-patch to find boundaries."""
     dmp = diff_match_patch()
-    # SOTA: Relax threshold slightly for technical content/math formulas
-    dmp.Match_Threshold = 0.6 
+    # SOTA: Stricter threshold (0.0=exact, 1.0=anything)
+    dmp.Match_Threshold = 0.4 
     dmp.Match_Distance = 1000
     
     # 1. Find the best starting location
@@ -91,13 +91,12 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
     if loc == -1:
         return None
         
-    # 2. Use diff to find where the search_block actually ends in the content
-    # We take a significantly larger chunk to ensure we capture the entire match
+    # 2. Find precise boundaries using diff
+    # Use a safe margin to capture shifts
     margin = max(len(search_block), 100)
-    content_chunk = content[loc : loc + len(search_block) + margin]
-    diffs = dmp.diff_main(search_block, content_chunk)
+    match_region = content[loc : loc + len(search_block) + margin]
+    diffs = dmp.diff_main(search_block, match_region)
     
-    # 3. Calculate how much of the content was "consumed" by the search_block
     content_consumed = 0
     search_consumed = 0
     for op, text in diffs:
@@ -108,32 +107,46 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
             content_consumed += len(text)
         elif op == -1: # Deletion from content (missing char in file)
             search_consumed += len(text)
-            
         if search_consumed >= len(search_block):
             break
             
-    # 4. Perform the replacement
     actual_match_end = loc + content_consumed
+    matched_content = content[loc:actual_match_end]
+
+    # 3. Verify quality of the match
+    # Compare search_block with the EXACT segment it matched in content
+    diffs_for_score = dmp.diff_main(search_block, matched_content)
+    levenshtein = dmp.diff_levenshtein(diffs_for_score)
+    similarity = 1 - (levenshtein / max(len(search_block), len(matched_content), 1))
     
-    # Special handling for multiline to preserve indentation if possible
+    if similarity < 0.7:
+        return None
+    
+    # 4. Handle indentation for multiline blocks
     if "\n" in search_block:
-        # Find start of line for the match to determine base indentation
         line_start = content.rfind("\n", 0, loc) + 1 if "\n" in content[:loc] else 0
-        current_indent = IndentationNormalizer.get_indent(content[line_start:])
+        target_base_indent = IndentationNormalizer.get_indent(content[line_start:])
         
-        # SOTA: Re-apply indentation to every line of the replacement block
+        search_lines = search_block.splitlines()
+        search_base_indent = IndentationNormalizer.get_indent(search_lines[0]) if search_lines else ""
+        
         r_lines = replace_block.splitlines()
-        if not r_lines:
-            indented_r = ""
-        else:
-            # Preserve original first-line indentation if it was already provided
-            first_line_indent = IndentationNormalizer.get_indent(r_lines[0])
-            if first_line_indent == current_indent:
-                indented_r = "\n".join(r_lines)
-            else:
-                indented_r = "\n".join([f"{current_indent}{l.lstrip()}" if l.strip() else "" for l in r_lines])
+        indented_lines = []
         
-        if replace_block.endswith("\n") and not indented_r.endswith("\n"):
+        for line in r_lines:
+            if not line.strip():
+                indented_lines.append("")
+                continue
+            
+            line_indent = IndentationNormalizer.get_indent(line)
+            if line_indent.startswith(search_base_indent):
+                relative_indent = line_indent[len(search_base_indent):]
+                indented_lines.append(f"{target_base_indent}{relative_indent}{line.lstrip()}")
+            else:
+                indented_lines.append(f"{target_base_indent}{line.lstrip()}")
+        
+        indented_r = "\n".join(indented_lines)
+        if replace_block.endswith("\n"):
             indented_r += "\n"
             
         return content[:loc] + indented_r + content[actual_match_end:]
