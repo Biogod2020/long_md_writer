@@ -10,6 +10,49 @@ from typing import Optional
 from ...core.types import AssetEntry, CropMetadata
 
 
+import shutil
+import asyncio
+
+class WorkingCopyManager:
+    """
+    Manages a transactional .working copy of a file for incremental updates.
+    Ensures thread-safe writes and atomic commits.
+    """
+    def __init__(self, original_path: Path):
+        self.original_path = original_path
+        self.working_path = original_path.with_suffix(original_path.suffix + ".working")
+        self._lock = asyncio.Lock()
+
+    def start_session(self) -> Path:
+        """
+        Ensures a .working file exists. If it already exists, we resume from it.
+        Otherwise, we create it from the original.
+        """
+        if not self.working_path.exists():
+            shutil.copy2(self.original_path, self.working_path)
+            print(f"  [Fulfillment] Created working copy: {self.working_path.name}")
+        else:
+            print(f"  [Fulfillment] Resuming from existing working copy: {self.working_path.name}")
+        return self.working_path
+
+    async def update_content(self, new_content: str):
+        """Thread-safe write to the working file."""
+        async with self._lock:
+            # We use to_thread for blocking IO
+            await asyncio.to_thread(self.working_path.write_text, new_content, encoding="utf-8")
+
+    def commit(self):
+        """Atomic commit: rename .working back to original."""
+        if self.working_path.exists():
+            self.working_path.replace(self.original_path)
+            print(f"  [Fulfillment] Committed changes to: {self.original_path.name}")
+
+    def cleanup(self):
+        """Remove .working file if it exists."""
+        if self.working_path.exists():
+            self.working_path.unlink()
+
+
 def generate_figure_html(
     asset: AssetEntry,
     caption: str,

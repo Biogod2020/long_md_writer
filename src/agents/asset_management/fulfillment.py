@@ -183,20 +183,64 @@ class AssetFulfillmentAgent:
         return state
 
     def apply_fulfillment_to_file(self, file_path: Path, directives: List[VisualDirective]):
+        """
+        SOTA 4.0 动态回写逻辑：实时重新扫描文件，通过 ID 锚点执行物理替换。
+        """
         content = file_path.read_text(encoding="utf-8")
-        replaced_count = 0
-        for d in directives:
-            if d.fulfilled and d.result_html:
-                # 仅在成功时替换原始块
-                if d.raw_block in content:
-                    content = content.replace(d.raw_block, d.result_html)
-                    replaced_count += 1
-            else:
-                # 失败时不修改原文
-                pass
+        fulfillment_map = {d.id: d.result_html for d in directives if d.fulfilled and d.result_html}
         
-        if replaced_count > 0:
-            file_path.write_text(content, encoding="utf-8")
+        if not fulfillment_map:
+            return
+
+        # 匹配模式必须与 _parse_visual_directives 保持高度一致
+        block_pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})[\s\S]*?:::', re.DOTALL)
+        
+        def replace_match(match):
+            full_block = match.group(0)
+            json_str = match.group(1)
+            try:
+                # 预处理并提取 ID
+                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
+                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
+                cfg = json.loads(clean_json)
+                vid = cfg.get("id")
+                
+                if vid in fulfillment_map:
+                    print(f"    [Fulfillment] 🚀 物理注入成功: {vid}")
+                    return fulfillment_map[vid]
+                
+                return full_block
+            except:
+                return full_block
+
+        new_content = block_pattern.sub(replace_match, content)
+        
+        if new_content != content:
+            file_path.write_text(new_content, encoding="utf-8")
+            print(f"  [Fulfillment] ✅ {file_path.name}: 已成功完成物理固化。")
+        else:
+            print(f"  [Fulfillment] ❌ {file_path.name}: 匹配失败，无法执行替换。")
+
+    async def _check_asset_exists(self, d: VisualDirective, uar, ws_path: Path) -> bool:
+        """
+        检查资产是否已经存在且有效。
+        如果存在，则直接标记为 fulfilled 并返回 True。
+        """
+        asset = uar.get_asset(d.id)
+        if not asset:
+            return False
+            
+        # 验证物理文件是否存在
+        abs_path = asset.get_absolute_path(workspace_path=ws_path)
+        if abs_path and abs_path.exists():
+            print(f"  [Fulfillment] ⚡ 资产已存在，跳过生成: {d.id} ({abs_path.name})")
+            d.fulfilled = True
+            d.result_html = generate_figure_html(
+                asset, d.description, workspace_path=ws_path
+            )
+            return True
+            
+        return False
 
     async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         gen_path.mkdir(parents=True, exist_ok=True)
@@ -281,6 +325,7 @@ class AssetFulfillmentAgent:
         trace["steps"].append({"type": "search", "success": bool(html)})
         
         if html:
+            # SOTA: Try to find the actual physical file to create a proper AssetEntry
             found_files = list(src_path.glob(f"{d.id}.*"))
             if found_files:
                 img_file = found_files[0]
@@ -301,7 +346,8 @@ class AssetFulfillmentAgent:
                 )
                 d.fulfilled, d.result_html = True, html
                 return d, asset
-                
+            
+            # Fallback if file matching logic failed but HTML was returned
             d.fulfilled, d.result_html = True, html
         return d, None
 
@@ -315,21 +361,36 @@ class AssetFulfillmentAgent:
         return d
 
     def _parse_visual_directives(self, content: str) -> list[VisualDirective]:
+        """
+        SOTA 4.0 增强型解析器：支持跨行 JSON、支持字段内换行、捕获位置偏移。
+        """
         directives = []
-        pattern = r':::visual[^\n]*\n[\s\S]*?:::'
-        for match in re.finditer(pattern, content):
+        # 模式：:::visual [空白] {JSON内容} [任意直到下一个 :::]
+        pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})([\s\S]*?):::', re.DOTALL)
+        
+        for match in pattern.finditer(content):
             raw = match.group(0)
-            json_str = raw.splitlines()[0][len(":::visual"):
-].strip()
-            d = VisualDirective(raw_block=raw, start_pos=match.start(), end_pos=match.end())
+            json_str = match.group(1).strip()
+            
+            d = VisualDirective(
+                raw_block=raw, 
+                start_pos=match.start(), 
+                end_pos=match.end()
+            )
             try:
-                cfg = json.loads(extract_json_from_text(json_str) or json_str)
+                # 预处理 JSON：移除真实换行符，防止 json.loads 崩溃
+                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
+                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
+                cfg = json.loads(clean_json)
+                
                 d.id = cfg.get("id", f"v-{len(directives)}")
                 d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())
-                d.description = cfg.get("description", raw.splitlines()[1])
+                d.description = cfg.get("description", "").strip()
                 d.matched_asset_id = cfg.get("matched_asset")
                 d.reuse_score = int(cfg.get("reuse_score", 0))
-            except: d.error = "JSON Error"
+            except Exception as e:
+                d.error = f"JSON Error: {str(e)}"
+            
             directives.append(d)
         return directives
 
@@ -338,27 +399,32 @@ class AssetFulfillmentAgent:
         SOTA 2.0 策略决策引擎
         
         原则：
-        1. 尊重 Writer 的明确复用意图 (如果评分够高)
-        2. 如果 Writer 要求生成或搜索，除非本地有“极其完美”的匹配，否则严禁劫持
+        1. 尊重 Writer 的明确复用意图 (如果评分够高 >= 85)
+        2. 如果 Writer 要求生成 (GENERATE_SVG) 或 搜索 (SEARCH_WEB)，
+           除非本地有匹配得分极高 (>= 90) 的完美资产，否则严禁劫持 Writer 意图。
         """
         # 场景 A: Writer 已经决定要复用
         if d.action == AssetFulfillmentAction.USE_EXISTING and d.matched_asset_id:
-            # 如果分数太低 (小于 85)，说明 Writer 也是勉强为之，我们尝试找更好的或 fallback
             if d.reuse_score >= 85:
                 return d
             
         # 场景 B: 寻找本地匹配 (作为第二意见)
-        candidates = await uar.intent_match_candidates_async(d.description, client=self.client, limit=5)
+        # SOTA: limit=1 提高效率，我们只需要最好的
+        candidates = await uar.intent_match_candidates_async(d.description, client=self.client, limit=1)
         
         if candidates:
             best_asset = candidates[0]
-            # SOTA Logic: 只有当匹配度极高且 Writer 的原始意图允许时才劫持
             
             # 如果 Writer 要求生成 SVG 或 搜网图，我们非常谨慎
             if d.action in [AssetFulfillmentAction.GENERATE_SVG, AssetFulfillmentAction.SEARCH_WEB]:
-                # 只有在 Writer 没把握 (比如没填 matched_asset) 且本地发现极其匹配的条目时才考虑
+                # 只有在本地发现得分极高的条目时才考虑“劫持”以节省资源
                 # 目前由于 intent_match 没有返回具体分数，我们设定一个保守策略：
-                # 除非本地资产 ID 与指令 ID 语义高度相关，否则保持原始意图
+                # 仅当 best_asset 的 ID 与指令 ID 语义高度相关，或它是 MANDATORY 资产时才考虑。
+                if best_asset.priority == AssetPriority.MANDATORY:
+                    print(f"  [Fulfillment] 发现强制性匹配，执行动作劫持: {d.id} -> USE_EXISTING ({best_asset.id})")
+                    d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+                    return d
+                
                 print(f"  [Fulfillment] 尊重 Writer 决定: 保持 {d.action.value} 动作 ({d.id})")
                 return d
 
