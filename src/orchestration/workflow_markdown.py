@@ -269,6 +269,11 @@ async def run_sota2_workflow(
                 print(current_values.project_brief)
                 print("-" * 40)
                 print("\n输入 'approve' 通过，或输入修改建议:")
+                fb = input("> ").strip()
+                if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
+                    update_data = {"brief_approved": True, "user_brief_feedback": None}
+                else:
+                    update_data = {"brief_approved": False, "user_brief_feedback": fb}
             elif next_node == "review_outline":
                 print("🏗️ Manifest (大纲):")
                 print("-" * 40)
@@ -279,6 +284,12 @@ async def run_sota2_workflow(
                         print(f"  - {s.id}: {s.title} (~{s.estimated_words} 字)")
                         print(f"    摘要: {s.summary}")
                 print("-" * 40)
+                print("\n输入 'approve' 通过，或输入修改建议:")
+                fb = input("> ").strip()
+                if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
+                    update_data = {"outline_approved": True, "user_outline_feedback": None}
+                else:
+                    update_data = {"outline_approved": False, "user_outline_feedback": fb}
             elif next_node == "markdown_review":
                 last_file = Path(current_values.completed_md_sections[-1]).name if current_values.completed_md_sections else "N/A"
                 print(f"📋 Reviewing: {last_file}\nApprove? (y/feedback)")

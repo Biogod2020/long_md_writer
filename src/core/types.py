@@ -389,11 +389,6 @@ class VisualIntentDeclaration(BaseModel):
 class UniversalAssetRegistry(BaseModel):
     """
     统一资产注册表 (UAR) - 系统的"视觉大脑" (SOTA 2.0 升级版)
-
-    支持：
-    1. 模块化挂载 (Mounting multiple workspaces)
-    2. 白名单管理 (HITL Selection)
-    3. 运行态即时复用
     """
     # 核心资产池 (当前 Session 产出)
     assets: dict[str, AssetEntry] = Field(default_factory=dict, description="当前 Session 资产映射表")
@@ -407,13 +402,17 @@ class UniversalAssetRegistry(BaseModel):
     # 用户强制提供的资产 ID (inputs/ 目录)
     user_provided_ids: set[str] = Field(default_factory=set)
 
-    _persist_path: Optional[str] = PrivateAttr(default=None)
+    # SOTA Fix: 使用正式字段而非私有属性，确保在序列化过程中不丢失持久化路径
+    persist_path: Optional[str] = Field(default=None, description="UAR 持久化路径")
+    
+    # SOTA Fix: 将 stats 变为正式字段，确保报表准确
+    stats: dict = Field(default_factory=dict)
 
     model_config = {"arbitrary_types_allowed": True}
 
     def set_persist_path(self, path: str) -> None:
         """设置持久化路径 (通常是当前 workspace/assets.json)"""
-        self._persist_path = path
+        self.persist_path = path
 
     def mount_workspace(self, name: str, assets_json_path: str) -> bool:
         """挂载一个外部资产库"""
@@ -511,14 +510,14 @@ class UniversalAssetRegistry(BaseModel):
 
     def _persist(self) -> None:
         """持久化到 JSON 文件"""
-        if not self._persist_path:
+        if not self.persist_path:
             return
 
-        path = Path(self._persist_path)
+        path = Path(self.persist_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
         # SOTA: 动态刷新统计信息
-        stats = {
+        self.stats = {
             "by_source": {
                 s.value: len([a for a in self.assets.values() if a.source == s])
                 for s in AssetSource
@@ -526,11 +525,11 @@ class UniversalAssetRegistry(BaseModel):
             "reusable_count": len(self.get_reusable_assets())
         }
 
-        # 序列化所有资产 (兼容 Pydantic v1 和 v2)
+        # 序列化所有资产
         data = {
             "assets": {k: (v.model_dump() if hasattr(v, 'model_dump') else v.dict()) for k, v in self.assets.items()},
             "total_count": len(self.assets),
-            "stats": stats
+            "stats": self.stats
         }
 
         with open(path, "w", encoding="utf-8") as f:
@@ -563,6 +562,9 @@ class UniversalAssetRegistry(BaseModel):
                 if "crop_metadata" in asset_data and asset_data["crop_metadata"]:
                     asset_data["crop_metadata"] = CropMetadata(**asset_data["crop_metadata"])
                 registry.assets[asset_id] = AssetEntry(**asset_data)
+            
+            # 加载已有的统计信息
+            registry.stats = data.get("stats", {})
 
         return registry
 

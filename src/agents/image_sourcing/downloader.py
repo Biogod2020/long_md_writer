@@ -136,7 +136,18 @@ class ImageDownloader:
                         
                         try:
                             # Stream download
-                            resp = fast_session.get(url, stream=True, timeout=12, verify=False)
+                            resp = fast_session.get(url, stream=True, timeout=25, verify=False)
+                            
+                            # SOTA: If 403 or 567, try one last time with stripped headers
+                            if resp.status_code in [403, 567]:
+                                if self.debug: print(f"        [!] Status {resp.status_code} detected, trying Clean Header Fallback...")
+                                clean_headers = {
+                                    'User-Agent': ua,
+                                    'Accept': 'image/*',
+                                    'Referer': domain_referer
+                                }
+                                resp = session.get(url, headers=clean_headers, timeout=30, verify=False, stream=True)
+
                             if resp.status_code == 200:
                                 c_type = resp.headers.get('Content-Type', '').lower()
                                 ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
@@ -164,7 +175,7 @@ class ImageDownloader:
                         # D. Slow Browser Download (Last Resort)
                         if not download_success:
                             if self.debug: print(f"        [!] Reverting to slow browser download for {i+1}...")
-                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{{i+1}}")
+                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{i+1}")
                             if res and res[0]:
                                 downloaded_path = Path(res[1])
                                 self._resize_image(downloaded_path)

@@ -142,19 +142,22 @@ class AssetIndexerAgent:
                         # 更新缓存
                         self._cache[content_hash] = vision_result
 
-                # 5. 创建条目并注册
+                # 5. 创建条目 (SOTA: 返回条目供后续批量注册)
                 entry = self._create_asset_entry(img_path, root_scan_path, uar, content_hash, vision_result, priority=priority)
-                if entry:
-                    uar.register_immediate(entry)
-                    uar.add_to_whitelist(entry.id)
-                    uar.user_provided_ids.add(entry.id)
                 return entry
 
         tasks = [indexed_task(path, d) for path, d in all_files_to_process]
         results = await asyncio.gather(*tasks)
         
-        indexed_count = sum(1 for r in results if r)
-        print(f"[AssetIndexer] 扫描完成: 成功索引 {indexed_count} 个资产")
+        valid_entries = [r for r in results if r]
+        if valid_entries:
+            # SOTA: 统一原子化写入，杜绝竞争
+            uar.register_batch(valid_entries)
+            for entry in valid_entries:
+                uar.add_to_whitelist(entry.id)
+                uar.user_provided_ids.add(entry.id)
+        
+        print(f"[AssetIndexer] 扫描完成: 成功索引 {len(valid_entries)} 个资产")
         self._save_cache()
 
         if uar.mounted_workspaces:

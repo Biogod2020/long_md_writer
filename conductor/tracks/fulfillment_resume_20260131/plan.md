@@ -9,13 +9,13 @@
     - [x] Logic: Handle `.working` file creation, incremental updates, and final atomic rename (commit).
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Foundation' (Protocol in workflow.md) (79d33c6)
 
-## Phase 2: Agent Orchestration Refactor
-- [~] Task: Update `AssetFulfillmentAgent.run_parallel_async` to use the Working Copy strategy.
-    - [ ] Logic: Scan for existing `.working` files at startup to enable resume capability.
-- [ ] Task: Refactor parallel `worker` to perform "Live-Patching".
-    - [ ] Logic: Instead of gathering all results at the end, each worker triggers a thread-safe update to the `.working` file immediately upon success.
-- [ ] Task: Implement `asyncio.Lock` for thread-safe Markdown writes.
-- [ ] Task: Update UAR persistence to trigger after every successful asset fulfillment.
+## Phase 2: Agent Orchestration Refactor [checkpoint: 5421b97]
+- [x] Task: Update `AssetFulfillmentAgent.run_parallel_async` to use the Working Copy strategy. (748fd6a)
+    - [x] Logic: Scan for existing `.working` files at startup to enable resume capability.
+- [x] Task: Refactor parallel `worker` to perform "Live-Patching". (748fd6a)
+    - [x] Logic: Instead of gathering all results at the end, each worker triggers a thread-safe update to the `.working` file immediately upon success.
+- [x] Task: Implement `asyncio.Lock` for thread-safe Markdown writes. (748fd6a)
+- [x] Task: Update UAR persistence to trigger after every successful asset fulfillment. (748fd6a)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Refactor' (Protocol in workflow.md)
 
 ## Phase 3: Validation & Stress Testing
