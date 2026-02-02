@@ -16,7 +16,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Refactor the SOTA 2.0 workflow to move asset validation inline, implement a Mermaid QA loop, and fix the brittle 'fixer' logic that causes agents to get stuck.**
+- [x] **Track: Refactor the SOTA 2.0 workflow to move asset validation inline, implement a Mermaid QA loop, and fix the brittle 'fixer' logic that causes agents to get stuck.**
 *Link: [./tracks/universal_patcher_20260121/](./tracks/universal_patcher_20260121/)*
 
 ---
