@@ -12,6 +12,7 @@
   - Native Multimodal `inline_data` support.
   - Native JSON Schema enforcement.
   - VLM-driven semantic candidate selection for local asset matching.
+  - **Transactional Resilience**: Atomic file operations and breakpoint resume for long-running asset pipelines.
   - "Thinking" token (thoughts) capture and state integration.
   - Intelligent connection pooling and exponential backoff for network resilience.
   - High-concurrency parallel fulfillment with semaphore-based rate limiting.

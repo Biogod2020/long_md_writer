@@ -16,4 +16,4 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 - **Context-Aware Generation**: Implementation of "Full-Context Perception" to eliminate AI hallucinations and ensure cross-chapter terminology consistency.
 - **Autonomous Remediation & Section QA**: Closed-loop "Critic-Fixer" architecture for both text and visual components. Implements per-section AI self-correction followed by a centralized high-performance parallel fulfillment phase.
 - **Modular Asset Management**: A hierarchical "Workspace Mounting" system with Human-in-the-Loop selection, simultaneous multi-pool aggregation, and instant intra-session reuse to maximize asset consistency and production efficiency.
-- **Parallel Fulfillment Pipeline**: Orchestrates dozens of visual assets (SVG, Mermaid, sourced images) in parallel at the end of the writing phase, with batch human intervention for quality failures.
+- **Transactional Parallel Fulfillment**: Orchestrates dozens of visual assets in parallel with a transactional "Working Copy" mechanism. Ensures 100% resume capability and fault tolerance through incremental live-patching and physical asset idempotency.
