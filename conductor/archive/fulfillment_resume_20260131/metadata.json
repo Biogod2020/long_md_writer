@@ -1,0 +1,8 @@
+{
+  "track_id": "fulfillment_resume_20260131",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-01-31T09:55:00Z",
+  "updated_at": "2026-01-31T09:55:00Z",
+  "description": "实现资产履约的事务级增量回写与断点续传能力，通过 .working 副本确保进度不丢失。"
+}
