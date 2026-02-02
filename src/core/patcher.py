@@ -9,13 +9,12 @@ import subprocess
 import sys
 import hashlib
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Set
+from typing import Tuple, Optional
 from diff_match_patch import diff_match_patch
 
 class IndentationNormalizer:
     @staticmethod
     def get_indent(line: str) -> str:
-        import re
         match = re.match(r'^(\s*)', line)
         return match.group(1) if match else ""
 
@@ -81,25 +80,65 @@ def apply_native_patch(content: str, search_block: str, replace_block: str) -> O
         return None
 
 def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) -> Optional[str]:
-    """Last resort: Fuzzy matching using diff-match-patch."""
+    """Last resort: Fuzzy matching using diff-match-patch to find boundaries."""
     dmp = diff_match_patch()
-    dmp.Match_Threshold = 0.5
-    loc = dmp.match_main(content, search_block, 0)
+    # SOTA: Relax threshold slightly for technical content/math formulas
+    dmp.Match_Threshold = 0.6 
+    dmp.Match_Distance = 1000
     
-    if loc != -1:
-        if "\n" in search_block:
-            start_l = content.rfind("\n", 0, loc) + 1 if "\n" in content[:loc] else 0
-            end_l = content.find("\n", loc + len(search_block))
-            if end_l == -1: end_l = len(content)
-            else: end_l += 1
+    # 1. Find the best starting location
+    loc = dmp.match_main(content, search_block, 0)
+    if loc == -1:
+        return None
+        
+    # 2. Use diff to find where the search_block actually ends in the content
+    # We take a significantly larger chunk to ensure we capture the entire match
+    margin = max(len(search_block), 100)
+    content_chunk = content[loc : loc + len(search_block) + margin]
+    diffs = dmp.diff_main(search_block, content_chunk)
+    
+    # 3. Calculate how much of the content was "consumed" by the search_block
+    content_consumed = 0
+    search_consumed = 0
+    for op, text in diffs:
+        if op == 0: # Equal
+            content_consumed += len(text)
+            search_consumed += len(text)
+        elif op == 1: # Insertion in content (extra char in file)
+            content_consumed += len(text)
+        elif op == -1: # Deletion from content (missing char in file)
+            search_consumed += len(text)
             
-            indent = IndentationNormalizer.get_indent(content[start_l:])
-            r_lines = replace_block.splitlines()
-            indented_r = "".join([f"{indent}{l}\n" if l.strip() else "\n" for l in r_lines])
-            return content[:start_l] + indented_r + content[end_l:]
+        if search_consumed >= len(search_block):
+            break
+            
+    # 4. Perform the replacement
+    actual_match_end = loc + content_consumed
+    
+    # Special handling for multiline to preserve indentation if possible
+    if "\n" in search_block:
+        # Find start of line for the match to determine base indentation
+        line_start = content.rfind("\n", 0, loc) + 1 if "\n" in content[:loc] else 0
+        current_indent = IndentationNormalizer.get_indent(content[line_start:])
+        
+        # SOTA: Re-apply indentation to every line of the replacement block
+        r_lines = replace_block.splitlines()
+        if not r_lines:
+            indented_r = ""
         else:
-            return content[:loc] + replace_block + content[loc + len(search_block):]
-    return None
+            # Preserve original first-line indentation if it was already provided
+            first_line_indent = IndentationNormalizer.get_indent(r_lines[0])
+            if first_line_indent == current_indent:
+                indented_r = "\n".join(r_lines)
+            else:
+                indented_r = "\n".join([f"{current_indent}{l.lstrip()}" if l.strip() else "" for l in r_lines])
+        
+        if replace_block.endswith("\n") and not indented_r.endswith("\n"):
+            indented_r += "\n"
+            
+        return content[:loc] + indented_r + content[actual_match_end:]
+    else:
+        return content[:loc] + replace_block + content[actual_match_end:]
 
 def apply_smart_patch(content: str, search_block: str, replace_block: str) -> Tuple[str, bool]:
     """Tiered patching strategy."""

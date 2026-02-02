@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from ..core.gemini_client import GeminiClient, GeminiResponse
+from ..core.gemini_client import GeminiClient
 from ..core.types import Manifest, SectionInfo, AgentState
 
 
@@ -154,7 +154,7 @@ class ArchitectAgent:
                 log_path = Path(state.workspace_path) / "architect_raw_response.txt"
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 log_path.write_text(response.text, encoding="utf-8")
-            except:
+            except Exception:
                 pass
 
             if not response.success:
@@ -184,7 +184,7 @@ class ArchitectAgent:
                     try:
                         debug_path = Path(state.workspace_path) / "manifest_parse_error_content.txt"
                         debug_path.write_text(response.text, encoding="utf-8")
-                    except:
+                    except Exception:
                         pass
                     return state
                 # Continue loop to retry
@@ -238,7 +238,7 @@ class ArchitectAgent:
                 try:
                     text = Path(doc).read_text(encoding="utf-8")
                     ref_parts.append(f"### File: {doc}\n{text}\n")
-                except:
+                except Exception:
                     pass
             if len(ref_parts) > 1:
                 final_parts.append({"text": "\n".join(ref_parts)})
@@ -328,7 +328,7 @@ class ArchitectAgent:
         else:
             temperature = 0.7
 
-        print(f"    [Architect] Generating manifest using Native JSON Mode...")
+        print("    [Architect] Generating manifest using Native JSON Mode...")
         
         # Use native structured generation
         prompt_text = "\n".join([p.get("text", "") for p in parts if "text" in p])

@@ -201,7 +201,7 @@ class AssetFulfillmentAgent:
                 if cfg.get("id") == d.id:
                     return d.result_html
                 return match.group(0)
-            except:
+            except Exception:
                 return match.group(0)
 
         return block_pattern.sub(replace_match, content)
@@ -234,7 +234,7 @@ class AssetFulfillmentAgent:
                     return fulfillment_map[vid]
                 
                 return full_block
-            except:
+            except Exception:
                 return full_block
 
         new_content = block_pattern.sub(replace_match, content)

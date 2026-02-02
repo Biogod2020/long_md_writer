@@ -3,8 +3,7 @@ Fixer Component for Markdown QA
 Executes specific editing instructions on a target file.
 """
 
-import re
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, Any
 from src.core.gemini_client import GeminiClient
 from src.core.patcher import apply_smart_patch
 
@@ -110,10 +109,11 @@ def apply_patches(original_content: str, result: Dict) -> str:
              if success:
                  modified_content = new_content
              else:
-                 print(f"    [Fixer] ⚠️ Smart patch failed: {new_content[:100]}...")
                  # Fallback to simple replace if smart fails but search is exactly in content
                  if search_text in modified_content:
-                     print(f"    [Fixer] 🔄 Falling back to exact replace.")
+                     print(f"    [Fixer] 🔄 Smart patch failed, but exact match found. Falling back to exact replace for '{search_text[:30]}...'")
                      modified_content = modified_content.replace(search_text, replace_text, 1)
+                 else:
+                     print(f"    [Fixer] ❌ Patch failed: {new_content[:100]}...")
                  
     return modified_content

@@ -11,11 +11,8 @@ AssetCriticAgent: SOTA 2.0 Phase D 资产审计员
 - 在 HTML 转换前完成所有审计
 """
 
-import re
-import json
-import base64
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 from dataclasses import dataclass
 from enum import Enum
 
@@ -23,8 +20,8 @@ from ...core.gemini_client import GeminiClient
 from ...core.types import (
     AgentState,
     AssetEntry,
-    AssetQualityLevel,
 )
+from .processors.audit import audit_image_async, audit_svg_visual_async, check_svg_syntax
 
 
 class AuditResult(Enum):
