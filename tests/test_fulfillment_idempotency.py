@@ -1,6 +1,5 @@
 import pytest
-from pathlib import Path
-from src.core.types import AgentState, AssetEntry, AssetSource, AssetPriority, AssetVQAStatus
+from src.core.types import AgentState, AssetEntry, AssetSource
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
 from src.agents.asset_management.models import VisualDirective
 

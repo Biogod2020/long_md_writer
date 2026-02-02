@@ -13,7 +13,7 @@ import json
 import hashlib
 import asyncio
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Tuple
 from tqdm.asyncio import tqdm
 
 from ...core.gemini_client import GeminiClient
@@ -26,23 +26,17 @@ from ...core.types import (
     AssetVQAStatus,
 )
 from ...core.patcher import StuckDetector
-from ...core.json_utils import extract_json_from_text, parse_json_dict_robust
+from ...core.json_utils import extract_json_from_text
 from .models import VisualDirective
-from .processors.svg import generate_svg, generate_svg_async, repair_svg_async
+from .processors.svg import generate_svg_async, repair_svg_async
 from .processors.mermaid import (
-    generate_mermaid,
     generate_mermaid_async,
-    audit_mermaid_async,
-    repair_mermaid_async,
 )
 from .processors.audit import audit_svg_visual_async, render_svg_to_png_base64
-from .processors.focus import compute_focus, compute_focus_async
 from ..image_sourcing.agent import ImageSourcingAgent
 from .utils import (
     generate_figure_html,
-    generate_placeholder_html,
     generate_mermaid_html,
-    resolve_asset_path,
 )
 
 
@@ -69,6 +63,7 @@ class AssetFulfillmentAgent:
         self.skip_search = skip_search
         self.debug = debug
         self.semaphore = asyncio.Semaphore(max_concurrency)
+        self.uar_lock = asyncio.Lock() # SOTA: 用于确保 UAR 持久化线程安全
         self.stuck_detector = StuckDetector()
         self.sourcing_agent = ImageSourcingAgent(client=self.client, debug=debug)
 
@@ -81,106 +76,135 @@ class AssetFulfillmentAgent:
         debug_path = workspace_path / "fulfillment_debug"
         debug_path.mkdir(exist_ok=True)
 
-        # 1. 收集任务
+        # 1. 收集任务 (使用 WorkingCopyManager 管理临时副本)
         all_tasks = []
+        file_managers = {} # {file_path: WorkingCopyManager}
+
         for md_path_str in state.completed_md_sections:
             md_path = Path(md_path_str)
             if not md_path.exists(): continue
-            content = md_path.read_text(encoding="utf-8")
+            
+            # SOTA: 初始化事务管理器
+            from .utils import WorkingCopyManager
+            manager = WorkingCopyManager(md_path)
+            working_path = manager.start_session()
+            file_managers[md_path] = manager
+
+            # 从 .working 副本解析指令 (可能已经包含部分注入)
+            content = working_path.read_text(encoding="utf-8")
             directives = self._parse_visual_directives(content)
+            
             for d in directives:
                 all_tasks.append({
-                    "file_path": md_path,
+                    "original_path": md_path,
+                    "working_path": working_path,
+                    "manager": manager,
                     "namespace": md_path.stem.replace("sec-", "s").replace("-", ""),
                     "directive": d
                 })
 
         if not all_tasks:
             print("[AssetFulfillment] 📭 未发现待处理指令")
+            # 即使没有任务，也可能需要 commit 之前残留的副本
+            for manager in file_managers.values():
+                manager.commit()
             return state
 
-        # 2. 并行执行与进度条
+        # 2. 并行执行
         async def worker(task):
             d = task["directive"]
-            trace = {"id": d.id, "file": task["file_path"].name, "steps": []}
+            trace = {"id": d.id, "file": task["original_path"].name, "steps": []}
             async with self.semaphore:
                 try:
-                    # 策略决策
+                    # SOTA: 物理预检 - 幂等性保证
+                    if await self._check_asset_exists(d, uar, workspace_path):
+                        trace["status"] = "SKIPPED_EXISTING"
+                        # 仍然需要回写 (如果工作副本中还没替换)
+                        await task["manager"].update_content(
+                            self._apply_single_patch(task["working_path"].read_text(encoding="utf-8"), d)
+                        )
+                        return (task["original_path"], d, None)
+
                     d_final = await self._decide_fulfillment_strategy(d, uar, state)
                     trace["action"] = d_final.action.value
                     
-                    # 执行履约 (返回指令和新产生的资产条目)
+                    # 执行履约
                     result_d, new_asset = await self._fulfill_directive_async(
                         d_final, uar, 
                         workspace_path / "agent_generated", 
                         workspace_path / "agent_sourced", 
                         task["namespace"], workspace_path, state, trace,
-                        target_file=task["file_path"]
+                        target_file=task["original_path"]
                     )
                     
+                    # SOTA: 实时增量回写 (Live-Patching)
+                    if result_d.fulfilled and result_d.result_html:
+                        content = task["working_path"].read_text(encoding="utf-8")
+                        new_content = self._apply_single_patch(content, result_d)
+                        await task["manager"].update_content(new_content)
+                        
+                        # SOTA: 实时注册到 UAR 并持久化，确保断点后能看到最新资产
+                        if new_asset:
+                            async with self.uar_lock:
+                                uar.register_immediate(new_asset)
+
                     # 保存 Trace 日志
                     trace_file = debug_path / f"{d.id}_trace.json"
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
-                    return (task["file_path"], result_d, new_asset)
+                    return (task["original_path"], result_d, new_asset)
                 except Exception as e:
                     import traceback
-                    error_detail = traceback.format_exc()
                     d.error = str(e)
-                    trace["error"] = error_detail
+                    trace["error"] = traceback.format_exc()
                     trace["status"] = "CRASHED"
-                    
-                    # 保存崩溃时的 Trace 日志
                     trace_file = debug_path / f"{d.id}_trace.json"
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
-                    
-                    # 记录到 state.errors
                     state.errors.append(f"Fulfillment Crash [{d.id}]: {str(e)}")
                     return (task["file_path"], d, None)
 
         print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
         results = await tqdm.gather(*(worker(t) for t in all_tasks), desc="Fulfillment Progress")
 
-        # 3. 汇总并注册资产 (SOTA: 批量原子写入，防止 Race Condition)
-        file_map = {}
-        new_assets_list = []
+        # 3. 汇总结果
+        new_assets_count = 0
         reused_count = 0
-        mermaid_count = 0
         
         for fp, d, asset in results:
-            if fp not in file_map: file_map[fp] = []
-            file_map[fp].append(d)
-            
             if asset:
-                # 收集新产生的资产 (SVG, Web Sourced)
-                new_assets_list.append(asset)
+                new_assets_count += 1
             elif d.fulfilled:
-                if d.action == AssetFulfillmentAction.USE_EXISTING:
-                    reused_count += 1
-                elif d.action == AssetFulfillmentAction.GENERATE_MERMAID:
-                    mermaid_count += 1
+                reused_count += 1
 
             if not d.fulfilled:
-                state.failed_directives.append({
-                    "id": d.id, 
-                    "file": fp.name, 
-                    "error": d.error,
-                    "description": d.description,
-                    "action": d.action.value if hasattr(d.action, "value") else str(d.action),
-                    "context_preview": d.get_full_context()[:200] + "..."
-                })
+                state.failed_directives.append({"id": d.id, "file": fp.name, "error": d.error})
                 state.asset_revision_needed = True
 
-        # SOTA: 一次性执行批量注册与持久化，效率最高且最安全
-        if new_assets_list:
-            uar.register_batch(new_assets_list)
+        # SOTA: 事务级提交 (Commit)
+        for manager in file_managers.values():
+            manager.commit()
 
-        # 物理回写
-        for fp, directives in file_map.items():
-            self.apply_fulfillment_to_file(fp, directives)
-
-        print(f"[AssetFulfillment] ✅ 履约完成: 新增 {len(new_assets_list)}, 复用 {reused_count}, Mermaid {mermaid_count}")
+        print(f"[AssetFulfillment] ✅ 履约完成: 新增 {new_assets_count}, 复用 {reused_count}")
         state.batch_fulfillment_complete = True
         return state
+
+    def _apply_single_patch(self, content: str, d: VisualDirective) -> str:
+        """执行单处动态 ID 匹配替换"""
+        # 使用 SOTA 4.0 的跨行匹配模式
+        block_pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})[\s\S]*?:::', re.DOTALL)
+        
+        def replace_match(match):
+            json_str = match.group(1)
+            try:
+                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
+                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
+                cfg = json.loads(clean_json)
+                if cfg.get("id") == d.id:
+                    return d.result_html
+                return match.group(0)
+            except:
+                return match.group(0)
+
+        return block_pattern.sub(replace_match, content)
 
     def apply_fulfillment_to_file(self, file_path: Path, directives: List[VisualDirective]):
         """

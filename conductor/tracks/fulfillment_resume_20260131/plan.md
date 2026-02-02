@@ -19,8 +19,8 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Agent Refactor' (Protocol in workflow.md) (0c9a5a1)
 
 ## Phase 3: Validation & Stress Testing
-- [~] Task: Write E2E test `tests/test_fulfillment_resume_e2e.py`.
-    - [ ] Scenario: Run 50% of tasks, simulate a `SIGKILL`, restart, and verify zero redundant API calls and 100% file integrity.
-- [ ] Task: Verify final file cleanup (ensure `.working` files are removed on successful completion).
-- [ ] Task: Run full project build and linting checks.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Validation' (Protocol in workflow.md)
+- [x] Task: Write E2E test `tests/test_fulfillment_resume_e2e.py`. (ec77e4e)
+    - [x] Scenario: Run 50% of tasks, simulate a `SIGKILL`, restart, and verify zero redundant API calls and 100% file integrity.
+- [x] Task: Verify final file cleanup (ensure `.working` files are removed on successful completion). (16de3aa)
+- [x] Task: Run full project build and linting checks. (16de3aa)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Validation' (Protocol in workflow.md) (07ffb91)

@@ -7,7 +7,7 @@ Shared helper functions for asset processing.
 from pathlib import Path
 from typing import Optional
 
-from ...core.types import AssetEntry, CropMetadata
+from ...core.types import AssetEntry
 
 
 import shutil
