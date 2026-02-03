@@ -16,11 +16,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [x] **Track: Refactor the SOTA 2.0 workflow to move asset validation inline, implement a Mermaid QA loop, and fix the brittle 'fixer' logic that causes agents to get stuck.**
-*Link: [./tracks/universal_patcher_20260121/](./tracks/universal_patcher_20260121/)*
-
----
-
 - [~] **Track: 不允许writer直接复用资产，所有的资产使用+创作+sourcing都要通过fulfillment，然后需要所有章节创作完之后fulfillment agent并行处理所有visual的内容，并在每个section后设置纯文本输入QA。**
 *Link: [./tracks/parallel_fulfillment_20260121/](./tracks/parallel_fulfillment_20260121/)*
 
