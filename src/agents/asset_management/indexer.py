@@ -161,7 +161,13 @@ class AssetIndexerAgent:
         self._save_cache()
 
         if uar.mounted_workspaces:
-            await self._interactive_selection_flow(state, uar)
+            if getattr(state, "auto_mode", False):
+                print("[AssetIndexer] AutoMode: 自动将所有挂载库资产加入白名单")
+                for ws_name, assets in uar.mounted_workspaces.items():
+                    for aid in assets.keys():
+                        uar.add_to_whitelist(aid)
+            else:
+                await self._interactive_selection_flow(state, uar)
 
         return state
 

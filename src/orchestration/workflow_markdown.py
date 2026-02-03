@@ -11,20 +11,18 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
 from ..core.gemini_client import GeminiClient
-from ..core.types import AgentState, AssetSource, AssetVQAStatus
+from ..core.types import AgentState
 
 # SOTA 2.0 Agents
-from ..agents.asset_management import AssetIndexerAgent, AssetFulfillmentAgent, AssetCriticAgent
+from ..agents.asset_management import AssetIndexerAgent, AssetFulfillmentAgent
 from ..agents.clarifier_agent import ClarifierAgent
 from ..agents.refiner_agent import RefinerAgent
 from ..agents.architect_agent import ArchitectAgent
 from ..agents.techspec_agent import TechSpecAgent
 from ..agents.writer_agent import WriterAgent
-from ..agents.editorial_qa_agent import EditorialQAAgent
 from ..agents.markdown_qa_agent import MarkdownQAAgent
 
 
-from ..agents.visual_qa.renderer import PlaywrightRenderer
 
 
 class SOTA2NodeFactory:
@@ -98,7 +96,7 @@ class SOTA2NodeFactory:
         return await self.writer.run(state)
 
     async def markdown_qa_node(self, state: AgentState) -> AgentState:
-        print(f"\n[SOTA2] 📋 Phase 3.2: Markdown QA (AI Internal Review)")
+        print("\n[SOTA2] 📋 Phase 3.2: Markdown QA (AI Internal Review)")
         # 只针对最新完成的章节
         return await self.markdown_qa.run(state)
 
@@ -197,13 +195,22 @@ async def run_sota2_workflow(
     skip_asset_audit: bool = False,
     debug_mode: bool = False,
     mounted_workspaces: Optional[dict[str, str]] = None,
+    auto_mode: bool = False,
 ) -> AgentState:
     if not job_id: job_id = f"sota2_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     workspace_path = Path(workspace_base) / job_id
     workspace_path.mkdir(parents=True, exist_ok=True)
     for d in ["md", "agent_generated", "agent_sourced"]: (workspace_path / d).mkdir(exist_ok=True)
 
-    initial_state = AgentState(job_id=job_id, workspace_path=str(workspace_path), user_intent=user_intent, reference_materials=reference_materials, debug_mode=debug_mode, uar_path=str(workspace_path / "assets.json"))
+    initial_state = AgentState(
+        job_id=job_id, 
+        workspace_path=str(workspace_path), 
+        user_intent=user_intent, 
+        reference_materials=reference_materials, 
+        debug_mode=debug_mode, 
+        uar_path=str(workspace_path / "assets.json"),
+        auto_mode=auto_mode
+    )
     uar = initial_state.get_uar()
     if mounted_workspaces:
         for name, path in mounted_workspaces.items(): uar.mount_workspace(name, path)
@@ -244,7 +251,6 @@ async def run_sota2_workflow(
                     step_file.write_text(s_obj.model_dump_json(indent=2), encoding="utf-8")
 
             # 检查中断
-
             state_info = app.get_state(config)
             if not state_info.next: return last_state if isinstance(last_state, AgentState) else AgentState(**last_state)
             
@@ -252,62 +258,75 @@ async def run_sota2_workflow(
             current_values = AgentState(**state_info.values) if isinstance(state_info.values, dict) else state_info.values
             update_data = {}
 
-            if next_node == "refiner":
-                if not current_values.clarifier_answers:
-                    print("💡 Clarifying Questions:")
-                    for i, q in enumerate(current_values.clarifier_questions, 1): print(f"  {i}. {q.get('question')}")
-                    print("\n(Type answers, 'DONE' to finish)")
-                    ans = []
-                    while True:
-                        line = input().strip()
-                        if line.upper() == "DONE": break
-                        if line: ans.append(line)
-                    update_data = {"clarifier_answers": {q['id']: ans[i] if i < len(ans) else "N/A" for i, q in enumerate(current_values.clarifier_questions)}}
-            elif next_node == "review_brief":
-                print("📝 Project Brief:")
-                print("-" * 40)
-                print(current_values.project_brief)
-                print("-" * 40)
-                print("\n输入 'approve' 通过，或输入修改建议:")
-                fb = input("> ").strip()
-                if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
-                    update_data = {"brief_approved": True, "user_brief_feedback": None}
-                else:
-                    update_data = {"brief_approved": False, "user_brief_feedback": fb}
-            elif next_node == "review_outline":
-                print("🏗️ Manifest (大纲):")
-                print("-" * 40)
-                if current_values.manifest:
-                    print(f"标题: {current_values.manifest.project_title}")
-                    print(f"章节数: {len(current_values.manifest.sections)}")
-                    for s in current_values.manifest.sections:
-                        print(f"  - {s.id}: {s.title} (~{s.estimated_words} 字)")
-                        print(f"    摘要: {s.summary}")
-                print("-" * 40)
-                print("\n输入 'approve' 通过，或输入修改建议:")
-                fb = input("> ").strip()
-                if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
-                    update_data = {"outline_approved": True, "user_outline_feedback": None}
-                else:
-                    update_data = {"outline_approved": False, "user_outline_feedback": fb}
-            elif next_node == "markdown_review":
-                last_file = Path(current_values.completed_md_sections[-1]).name if current_values.completed_md_sections else "N/A"
-                print(f"📋 Reviewing: {last_file}\nApprove? (y/feedback)")
-                fb = input().strip()
-                if fb.lower() in ['y', 'yes', '']:
+            if auto_mode:
+                print(f"  [AutoMode] Bypassing HITL at node: {next_node}")
+                if next_node == "refiner":
+                    update_data = {"clarifier_answers": {q['id']: "Proceed with best judgment." for q in current_values.clarifier_questions}}
+                elif next_node == "review_brief":
+                    update_data = {"brief_approved": True}
+                elif next_node == "review_outline":
+                    update_data = {"outline_approved": True}
+                elif next_node == "markdown_review":
                     update_data = {"markdown_approved": True}
-                else:
-                    update_data = {"markdown_approved": False, "user_markdown_feedback": fb}
-            elif next_node == "batch_asset_review":
-                print("\n" + "!"*20 + " BATCH ASSET FAILURE " + "!"*20)
-                for fd in current_values.failed_directives:
-                    print(f"- [{fd['id']}] in {fd['file']}: {fd['error']}")
-                print("\nOptions: retry | skip | DONE")
-                choice = input("> ").strip().lower()
-                if choice == 'retry':
-                    update_data = {"asset_revision_needed": False, "failed_directives": []}
-                else:
+                elif next_node == "batch_asset_review":
                     update_data = {"asset_revision_needed": False}
+            else:
+                if next_node == "refiner":
+                    if not current_values.clarifier_answers:
+                        print("💡 Clarifying Questions:")
+                        for i, q in enumerate(current_values.clarifier_questions, 1): print(f"  {i}. {q.get('question')}")
+                        print("\n(Type answers, 'DONE' to finish)")
+                        ans = []
+                        while True:
+                            line = input().strip()
+                            if line.upper() == "DONE": break
+                            if line: ans.append(line)
+                        update_data = {"clarifier_answers": {q['id']: ans[i] if i < len(ans) else "N/A" for i, q in enumerate(current_values.clarifier_questions)}}
+                elif next_node == "review_brief":
+                    print("📝 Project Brief:")
+                    print("-" * 40)
+                    print(current_values.project_brief)
+                    print("-" * 40)
+                    print("\n输入 'approve' 通过，或输入修改建议:")
+                    fb = input("> ").strip()
+                    if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
+                        update_data = {"brief_approved": True, "user_brief_feedback": None}
+                    else:
+                        update_data = {"brief_approved": False, "user_brief_feedback": fb}
+                elif next_node == "review_outline":
+                    print("🏗️ Manifest (大纲):")
+                    print("-" * 40)
+                    if current_values.manifest:
+                        print(f"标题: {current_values.manifest.project_title}")
+                        print(f"章节数: {len(current_values.manifest.sections)}")
+                        for s in current_values.manifest.sections:
+                            print(f"  - {s.id}: {s.title} (~{s.estimated_words} 字)")
+                            print(f"    摘要: {s.summary}")
+                    print("-" * 40)
+                    print("\n输入 'approve' 通过，或输入修改建议:")
+                    fb = input("> ").strip()
+                    if fb.lower() in ['approve', 'y', 'yes', 'ok', '']:
+                        update_data = {"outline_approved": True, "user_outline_feedback": None}
+                    else:
+                        update_data = {"outline_approved": False, "user_outline_feedback": fb}
+                elif next_node == "markdown_review":
+                    last_file = Path(current_values.completed_md_sections[-1]).name if current_values.completed_md_sections else "N/A"
+                    print(f"📋 Reviewing: {last_file}\nApprove? (y/feedback)")
+                    fb = input().strip()
+                    if fb.lower() in ['y', 'yes', '']:
+                        update_data = {"markdown_approved": True}
+                    else:
+                        update_data = {"markdown_approved": False, "user_markdown_feedback": fb}
+                elif next_node == "batch_asset_review":
+                    print("\n" + "!"*20 + " BATCH ASSET FAILURE " + "!"*20)
+                    for fd in current_values.failed_directives:
+                        print(f"- [{fd['id']}] in {fd['file']}: {fd['error']}")
+                    print("\nOptions: retry | skip | DONE")
+                    choice = input("> ").strip().lower()
+                    if choice == 'retry':
+                        update_data = {"asset_revision_needed": False, "failed_directives": []}
+                    else:
+                        update_data = {"asset_revision_needed": False}
 
             if update_data:
                 for k, v in update_data.items(): setattr(current_values, k, v)

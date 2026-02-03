@@ -7,7 +7,7 @@ handling common issues like Markdown code fences, trailing commas, and malformed
 
 import json
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 # Common JSON extraction patterns
 _JSON_FENCES_PATTERN = re.compile(r"```(?:json)?\s*\n?([\s\S]*?)\n?```", re.IGNORECASE)
@@ -65,14 +65,43 @@ def fix_common_json_errors(json_str: str) -> str:
     json_str = re.sub(r",\s*([\]}])", r"\1", json_str)
     
     # B. SOTA: Handle unescaped newlines inside JSON strings
-    # This replaces real newlines within double quotes with \n
-    # Note: This regex is a heuristic and might fail on extremely complex nested quotes
     def replace_newlines(match):
         return match.group(0).replace('\n', '\\n').replace('\r', '\\r')
     
     json_str = re.sub(r'"([^"\\]|\\.)*"', replace_newlines, json_str)
     
-    # C. Fix missing quotes around boolean values or nulls if they are capitalized
+    # C. SOTA: Handle unescaped backslashes (extremely common in LaTeX/MathJax output)
+    # We look for a backslash that is NOT followed by a valid JSON escape char (", \, /, b, f, n, r, t, u)
+    # and escape it by doubling it.
+    def escape_lone_backslashes(match):
+        s = match.group(0)
+        # Regex to find backslashes not followed by valid escape chars
+        # We process the inside of the string
+        inner = s[1:-1]
+        # Replace \ that is NOT followed by [\"\/bfnrtu] with \\
+        # Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+        fixed_inner = ""
+        i = 0
+        while i < len(inner):
+            if inner[i] == '\\':
+                # Check if it's already a valid escape
+                if i + 1 < len(inner):
+                    next_char = inner[i+1]
+                    if next_char in '"\\/bfnrtu':
+                        fixed_inner += '\\' + next_char
+                        i += 2
+                        continue
+                # It's an invalid escape or lone backslash at the end
+                fixed_inner += '\\\\'
+                i += 1
+            else:
+                fixed_inner += inner[i]
+                i += 1
+        return f'"{fixed_inner}"'
+
+    json_str = re.sub(r'"([^"\\]|\\.)*"', escape_lone_backslashes, json_str)
+
+    # D. Fix missing quotes around boolean values or nulls if they are capitalized
     json_str = re.sub(r':\s*True\b', ': true', json_str)
     json_str = re.sub(r':\s*False\b', ': false', json_str)
     json_str = re.sub(r':\s*None\b', ': null', json_str)

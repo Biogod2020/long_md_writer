@@ -25,7 +25,7 @@ from ...core.types import (
     AssetFulfillmentAction,
     AssetVQAStatus,
 )
-from ...core.patcher import StuckDetector
+from ...core.patcher import StuckDetector, apply_smart_patch
 from ...core.json_utils import extract_json_from_text
 from .models import VisualDirective
 from .processors.svg import generate_svg_async, repair_svg_async
@@ -160,7 +160,7 @@ class AssetFulfillmentAgent:
                     trace_file = debug_path / f"{d.id}_trace.json"
                     trace_file.write_text(json.dumps(trace, indent=2, ensure_ascii=False), encoding="utf-8")
                     state.errors.append(f"Fulfillment Crash [{d.id}]: {str(e)}")
-                    return (task["file_path"], d, None)
+                    return (task["original_path"], d, None)
 
         print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
         results = await tqdm.gather(*(worker(t) for t in all_tasks), desc="Fulfillment Progress")
@@ -188,62 +188,46 @@ class AssetFulfillmentAgent:
         return state
 
     def _apply_single_patch(self, content: str, d: VisualDirective) -> str:
-        """执行单处动态 ID 匹配替换"""
-        # 使用 SOTA 4.0 的跨行匹配模式
-        block_pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})[\s\S]*?:::', re.DOTALL)
+        """执行单处动态 ID 匹配替换 (使用 Universal Smart Patcher)"""
+        # SOTA 4.0: Use the high-precision patcher instead of fragile regex for physical write-back
+        new_content, success = apply_smart_patch(content, d.raw_block, d.result_html)
+        if success:
+            return new_content
+            
+        # Fallback: If exact raw_block matching fails, try to reconstruct it slightly (e.g. whitespace)
+        # but apply_smart_patch with high distance should already handle most cases.
+        print(f"    [Fulfillment] ⚠️ Smart patch failed for {d.id}. Falling back to regex attempt.")
         
-        def replace_match(match):
-            json_str = match.group(1)
-            try:
-                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
-                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
-                cfg = json.loads(clean_json)
-                if cfg.get("id") == d.id:
-                    return d.result_html
-                return match.group(0)
-            except Exception:
-                return match.group(0)
-
-        return block_pattern.sub(replace_match, content)
+        block_pattern = re.compile(re.escape(d.raw_block), re.DOTALL)
+        if block_pattern.search(content):
+            return block_pattern.sub(d.result_html, content)
+            
+        return content
 
     def apply_fulfillment_to_file(self, file_path: Path, directives: List[VisualDirective]):
         """
-        SOTA 4.0 动态回写逻辑：实时重新扫描文件，通过 ID 锚点执行物理替换。
+        SOTA 4.0 动态回写逻辑：使用 Universal Patcher 执行物理固化。
         """
         content = file_path.read_text(encoding="utf-8")
-        fulfillment_map = {d.id: d.result_html for d in directives if d.fulfilled and d.result_html}
+        modified_content = content
         
-        if not fulfillment_map:
-            return
-
-        # 匹配模式必须与 _parse_visual_directives 保持高度一致
-        block_pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})[\s\S]*?:::', re.DOTALL)
+        for d in directives:
+            if d.fulfilled and d.result_html:
+                new_content, success = apply_smart_patch(modified_content, d.raw_block, d.result_html)
+                if success:
+                    modified_content = new_content
+                    print(f"    [Fulfillment] 🚀 物理注入成功 (Smart): {d.id}")
+                else:
+                    # Final fallback to regex if smart patch rejected it
+                    print(f"    [Fulfillment] ⚠️ Smart patch rejected {d.id}. Trying exact sub.")
+                    if d.raw_block in modified_content:
+                        modified_content = modified_content.replace(d.raw_block, d.result_html)
         
-        def replace_match(match):
-            full_block = match.group(0)
-            json_str = match.group(1)
-            try:
-                # 预处理并提取 ID
-                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
-                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
-                cfg = json.loads(clean_json)
-                vid = cfg.get("id")
-                
-                if vid in fulfillment_map:
-                    print(f"    [Fulfillment] 🚀 物理注入成功: {vid}")
-                    return fulfillment_map[vid]
-                
-                return full_block
-            except Exception:
-                return full_block
-
-        new_content = block_pattern.sub(replace_match, content)
-        
-        if new_content != content:
-            file_path.write_text(new_content, encoding="utf-8")
+        if modified_content != content:
+            file_path.write_text(modified_content, encoding="utf-8")
             print(f"  [Fulfillment] ✅ {file_path.name}: 已成功完成物理固化。")
         else:
-            print(f"  [Fulfillment] ❌ {file_path.name}: 匹配失败，无法执行替换。")
+            print(f"  [Fulfillment] ❌ {file_path.name}: 未检测到可替换内容。")
 
     async def _check_asset_exists(self, d: VisualDirective, uar, ws_path: Path) -> bool:
         """

@@ -84,7 +84,7 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
     dmp = diff_match_patch()
     # SOTA: Stricter threshold (0.0=exact, 1.0=anything)
     dmp.Match_Threshold = 0.4 
-    dmp.Match_Distance = 1000
+    dmp.Match_Distance = 100000 # Increased from 1000 to find better matches in larger files
     
     # 1. Find the best starting location
     loc = dmp.match_main(content, search_block, 0)
@@ -92,7 +92,6 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
         return None
         
     # 2. Find precise boundaries using diff
-    # Use a safe margin to capture shifts
     margin = max(len(search_block), 100)
     match_region = content[loc : loc + len(search_block) + margin]
     diffs = dmp.diff_main(search_block, match_region)
@@ -103,9 +102,9 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
         if op == 0: # Equal
             content_consumed += len(text)
             search_consumed += len(text)
-        elif op == 1: # Insertion in content (extra char in file)
+        elif op == 1: # Insertion in content
             content_consumed += len(text)
-        elif op == -1: # Deletion from content (missing char in file)
+        elif op == -1: # Deletion from content
             search_consumed += len(text)
         if search_consumed >= len(search_block):
             break
@@ -114,7 +113,6 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
     matched_content = content[loc:actual_match_end]
 
     # 3. Verify quality of the match
-    # Compare search_block with the EXACT segment it matched in content
     diffs_for_score = dmp.diff_main(search_block, matched_content)
     levenshtein = dmp.diff_levenshtein(diffs_for_score)
     similarity = 1 - (levenshtein / max(len(search_block), len(matched_content), 1))

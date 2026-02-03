@@ -6,7 +6,7 @@ Uses un-cut context and streaming for robustness.
 
 import json
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict
 from src.core.gemini_client import GeminiClient
 from src.core.json_utils import parse_json_dict_robust
 
@@ -115,12 +115,13 @@ If perfect, "APPROVE".
     
     # 3. Parse JSON using robust utility
     result = parse_json_dict_robust(text)
+    
     if result and "verdict" in result:
         # Normalize verdict keys
         result["verdict"] = result["verdict"].upper()
         return result
     else:
-        print(f"    [Critic] ❌ JSON Parse Error. Attempting salvage via Flash...")
+        print("    [Critic] ❌ JSON Parse Error. Attempting salvage via Flash...")
         
         # SOTA: Emergency Salvage logic
         # We ask a lightweight model to just extract the JSON from the mess
@@ -139,7 +140,7 @@ Malformed Text:
             if salvage_resp.success:
                 salvaged_result = parse_json_dict_robust(salvage_resp.text)
                 if salvaged_result and "verdict" in salvaged_result:
-                    print(f"    [Critic] ✅ Salvage SUCCESS.")
+                    print("    [Critic] ✅ Salvage SUCCESS.")
                     salvaged_result["verdict"] = salvaged_result["verdict"].upper()
                     return salvaged_result
         except Exception as e:
@@ -153,6 +154,6 @@ Malformed Text:
         # SOTA Safety: Default to MODIFY
         return {
             "verdict": "MODIFY", 
-            "feedback": f"Critical Error: AI output was not valid JSON even after salvage. Raw saved to workspace.",
+            "feedback": "Critical Error: AI output was not valid JSON even after salvage. Raw saved to workspace.",
             "section_feedback": {}
         }

@@ -8,7 +8,7 @@ from src.core.gemini_client import GeminiClient
 from src.core.patcher import apply_smart_patch
 
 
-FIXER_SYSTEM_PROMPT = """You are a High-Precision Content Patcher Agent.
+FIXER_SYSTEM_PROMPT = r"""You are a High-Precision Content Patcher Agent.
 Your ONLY goal is to generate a JSON patch to fix a specific issue in a text file based on instructions.
 
 ### SOTA Patching Strategy:
@@ -35,6 +35,7 @@ Your ONLY goal is to generate a JSON patch to fix a specific issue in a text fil
 ### Rules:
 - **Zero Hallucination**: The `search` field MUST match the input text character-for-character. Do not correct typos in the `search` field; copy them exactly.
 - **Minimal Scope**: Replace only what is necessary, but capture enough context to be unique.
+- **JSON Escaping**: You MUST double-escape backslashes if they are part of the text (e.g., LaTeX `\Phi` becomes `\\Phi`). This is CRITICAL for valid JSON.
 - **No Markdown in JSON**: Return raw JSON.
 """
 
@@ -84,7 +85,15 @@ Identify the text block to change and generate the JSON patch.
     result = parse_json_dict_robust(text)
     
     if not result or "patches" not in result:
-        print(f"    [Fixer] ⚠️ JSON Parse Error or no patches found in: {text[:100]}...")
+        # 🧪 SOTA DEBUG: Save raw evidence
+        import os
+        from datetime import datetime
+        debug_filename = f"debug_fixer_fail_{datetime.now().strftime('%H%M%S')}.txt"
+        with open(debug_filename, "w", encoding="utf-8") as f:
+            f.write(f"--- ADVICE ---\n{advice}\n\n--- RAW LLM TEXT ---\n{text}")
+        
+        print(f"    [Fixer] ⚠️ JSON Parse Error. Raw evidence saved to: {debug_filename}")
+        print(f"    [Fixer] ⚠️ Snippet: {text[:100]}...")
         return {"status": "FAILED", "reason": "No valid JSON patches found"}
         
     return {"status": "FIXED", "patches": result["patches"]}

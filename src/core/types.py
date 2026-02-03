@@ -9,7 +9,7 @@ SOTA 2.0 升级：
 
 from typing import Optional, Literal, Any, Union
 from enum import Enum
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field
 import json
 from pathlib import Path
 import hashlib
@@ -866,6 +866,7 @@ class AgentState(BaseModel):
     markdown_approved: bool = Field(default=False, description="Markdown 是否通过人机审核")
     user_markdown_feedback: Optional[str] = Field(default=None, description="用户对 Markdown 的修改意见")
     debug_mode: bool = Field(default=False, description="是否开启调试模式，开启后将保存每一步的状态")
+    auto_mode: bool = Field(default=False, description="是否开启自动模式 (绕过 HITL)")
     
     def is_manifest_ready(self) -> bool:
         """检查清单是否就绪"""
