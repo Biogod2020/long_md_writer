@@ -11,6 +11,7 @@
 - **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
   - Native Multimodal `inline_data` support.
   - Native JSON Schema enforcement.
+  - **Robust JSON Parsing**: Advanced error-correction for malformed LLM outputs, including unescaped LaTeX backslashes and illegal whitespace characters.
   - VLM-driven semantic candidate selection for local asset matching.
   - **High-Precision Patching**: Fuzzy text matching and indentation-agnostic patching logic via `diff-match-patch`.
   - **Transactional Resilience**: Atomic file operations and breakpoint resume for long-running asset pipelines.
