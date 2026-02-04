@@ -1,6 +1,5 @@
 
 import sys
-import os
 import json
 import asyncio
 from pathlib import Path
@@ -44,7 +43,7 @@ async def debug_qa_from_checkpoint():
     # LangGraph state needs to be a dict or AgentState instance
     # We'll use the dict but ensure it matches AgentState keys
     state_dict["skip_markdown_qa"] = False
-    state = AgentState(**state_dict)
+    AgentState(**state_dict)
 
     # 2. Initialize Graph
     client = GeminiClient(timeout=300)

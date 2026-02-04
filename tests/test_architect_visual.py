@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from src.agents.architect_agent import ArchitectAgent
 from src.core.types import AgentState, AssetEntry, AssetSource, AssetPriority, UniversalAssetRegistry
 import json

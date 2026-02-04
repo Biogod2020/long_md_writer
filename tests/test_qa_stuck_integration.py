@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from src.agents.editorial_qa_agent import EditorialQAAgent, QASeverity, QAIssue, QAIssueType
 from src.core.types import AgentState
 

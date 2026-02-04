@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
-from src.core.types import AssetEntry, AssetSource, AssetQualityLevel, AgentState, UniversalAssetRegistry
+from src.core.types import AssetEntry, AssetSource, UniversalAssetRegistry
 from enum import Enum
-import asyncio
 
 class AssetPriority(str, Enum):
     MANDATORY = "MANDATORY"

@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
-from src.core.types import AgentState, AssetEntry, AssetSource
-import asyncio
+from src.core.types import AssetEntry, AssetSource
 
 class TestAssetReuseScoring(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

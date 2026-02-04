@@ -1,7 +1,6 @@
 import asyncio
 import sys
 import uuid
-import json
 from pathlib import Path
 from datetime import datetime
 

@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from src.agents.editorial_qa_agent import EditorialQAAgent, QAIssueType
+from src.agents.editorial_qa_agent import EditorialQAAgent
 from src.core.types import AgentState, AssetEntry, AssetSource, AssetPriority, UniversalAssetRegistry
-import asyncio
 
 class TestEditorialMandatoryAudit(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

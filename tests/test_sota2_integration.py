@@ -7,7 +7,6 @@ SOTA 2.0 集成测试
 - 图像资产: assets/ 文件夹
 """
 
-import asyncio
 import sys
 from pathlib import Path
 
@@ -18,14 +17,13 @@ from src.core.types import (
     AgentState,
     Manifest,
     SectionInfo,
-    UniversalAssetRegistry,
     AssetEntry,
     AssetSource,
     AssetQualityLevel,
 )
 from src.agents.asset_indexer_agent import AssetIndexerAgent
 from src.agents.writer_agent import WriterAgent
-from src.agents.asset_fulfillment_agent import AssetFulfillmentAgent, VisualDirective
+from src.agents.asset_fulfillment_agent import AssetFulfillmentAgent
 from src.agents.asset_critic_agent import AssetCriticAgent, AuditResult
 from src.core.validators import MarkdownValidator
 
@@ -269,7 +267,7 @@ $$V_{II} = V_I + V_{III}$$
 '''
 
     result = validator.validate_all(good_content, namespace="s1")
-    print(f"\n  测试用例 1 (正确内容):")
+    print("\n  测试用例 1 (正确内容):")
     print(f"    is_valid: {result.is_valid}")
     print(f"    问题数量: {len(result.issues)}")
     assert result.is_valid, "Expected good_content to pass validation"
@@ -290,7 +288,7 @@ $$V_{II} = V_I + V_{III}$$
 '''
 
     result = validator.validate_all(bad_content, namespace="s1")
-    print(f"\n  测试用例 2 (错误内容):")
+    print("\n  测试用例 2 (错误内容):")
     print(f"    is_valid: {result.is_valid}")
     print(f"    问题数量: {len(result.issues)}")
     assert not result.is_valid, "Expected bad_content to fail validation"
@@ -420,7 +418,7 @@ def test_asset_critic():
             workspace_path=Path(tmpdir)
         )
 
-        print(f"\n  审计结果:")
+        print("\n  审计结果:")
         print(f"    资产 ID: {report.asset_id}")
         print(f"    结果: {report.result.value}")
         print(f"    分数: {report.score:.0%}")
@@ -471,7 +469,7 @@ def test_phase_d_integration():
 
     with tempfile.TemporaryDirectory() as tmpdir:
         state = AgentState(job_id="test-phase-d", workspace_path=tmpdir)
-        uar = state.initialize_uar()
+        state.initialize_uar()
 
         print("\n  步骤 1: 资产履约...")
 

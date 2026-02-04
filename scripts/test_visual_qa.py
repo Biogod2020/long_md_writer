@@ -6,7 +6,7 @@ Tests the Critic-Fixer dual-agent architecture.
 import os
 from pathlib import Path
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState, Manifest, SectionInfo, StyleMapping
+from src.core.types import AgentState, Manifest, StyleMapping
 from src.agents.visual_qa import VisualQAAgent
 
 def test_visual_qa():

@@ -2,7 +2,6 @@
 import os
 import sys
 from pathlib import Path
-import json
 
 os.environ["GEMINI_AUTH_PASSWORD"] = "123456"
 
@@ -16,7 +15,7 @@ def test_cn_sourcing_fast():
     # Setup paths
     workspace_dir = (Path(__file__).parent / "resources" / "test_workspace_images_cn").resolve()
     html_file = workspace_dir / "html" / "test_retry.html"
-    assets_dir = workspace_dir / "assets" / "images"
+    workspace_dir / "assets" / "images"
 
     
     # Initialize agent
@@ -24,7 +23,7 @@ def test_cn_sourcing_fast():
     
     # Read HTML
     with open(html_file, 'r', encoding='utf-8') as f:
-        html_content = f.read()
+        f.read()
     
     # Initialize AgentState
     state = AgentState(
@@ -34,7 +33,7 @@ def test_cn_sourcing_fast():
     )
     
     # Process
-    print(f"Starting FAST ImageSourcingAgent CN test...")
+    print("Starting FAST ImageSourcingAgent CN test...")
     
     agent.run(state)
 

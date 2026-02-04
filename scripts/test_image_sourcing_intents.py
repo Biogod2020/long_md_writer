@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.agents.image_sourcing.agent import ImageSourcingAgent
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState
 
 async def run_intent_stress_test():
     print("\n" + "="*70)

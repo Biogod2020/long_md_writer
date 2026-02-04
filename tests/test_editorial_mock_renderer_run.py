@@ -1,6 +1,5 @@
 import unittest
 from pathlib import Path
-import os
 import shutil
 
 # Mocking the renderer logic

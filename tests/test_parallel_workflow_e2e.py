@@ -1,9 +1,8 @@
 import unittest
-import asyncio
 import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
-from src.core.types import AgentState, Manifest, SectionInfo, UniversalAssetRegistry
+from src.core.types import AgentState, Manifest, SectionInfo
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
 from src.core.gemini_client import GeminiClient, GeminiResponse
 
@@ -65,7 +64,6 @@ Text D.""", encoding="utf-8")
         # 2. Run Parallel Fulfillment
         agent = AssetFulfillmentAgent(client=self.mock_client, skip_generation=False)
         # Mock audit_svg_visual_async to always pass to avoid repair loop complexity in this E2E
-        import src.agents.asset_management.fulfillment as fulfillment_module
         with unittest.mock.patch('src.agents.asset_management.fulfillment.audit_svg_visual_async', 
                                  AsyncMock(return_value={"result": "pass", "overall_score": 100})):
             updated_state = await agent.run_parallel_async(state)

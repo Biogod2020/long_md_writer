@@ -5,7 +5,6 @@ Simulates human approval to run the pipeline non-interactively.
 
 import os
 import uuid
-import json
 from pathlib import Path
 from src.core.gemini_client import GeminiClient
 from src.core.types import AgentState

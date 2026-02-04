@@ -21,11 +21,7 @@ from src.core.types import (
     AgentState,
     Manifest,
     SectionInfo,
-    AssetEntry,
-    AssetSource,
-    AssetQualityLevel,
 )
-from src.core.gemini_client import GeminiClient
 from src.agents.asset_indexer_agent import AssetIndexerAgent
 from src.agents.writer_agent import WriterAgent
 from src.agents.asset_fulfillment_agent import AssetFulfillmentAgent
@@ -192,7 +188,7 @@ async def run_e2e_test():
             else:
                 writer_output = ""
 
-        print(f"\n  创作完成!")
+        print("\n  创作完成!")
         print(f"  输出长度: {len(writer_output):,} 字符")
 
         # 保存 Writer 输出
@@ -227,7 +223,7 @@ async def run_e2e_test():
     namespace = state.manifest.sections[0].metadata.get("namespace", "s1")
     state, fulfilled_content = await fulfillment_agent.run_async(state, writer_output, namespace)
 
-    print(f"\n  履约完成!")
+    print("\n  履约完成!")
     print(f"  输出长度: {len(fulfilled_content):,} 字符")
 
     # 检查是否还有未处理的 :::visual
@@ -352,11 +348,6 @@ async def test_e2e_sota2_pipeline():
 
 def test_e2e_import_check():
     """快速测试：验证所有导入正常"""
-    from src.core.types import AgentState, Manifest, SectionInfo
-    from src.agents.asset_indexer_agent import AssetIndexerAgent
-    from src.agents.writer_agent import WriterAgent
-    from src.agents.asset_fulfillment_agent import AssetFulfillmentAgent
-    from src.agents.asset_critic_agent import AssetCriticAgent
     from src.core.validators import MarkdownValidator
 
     # 验证可以实例化

@@ -6,7 +6,6 @@
 import re
 from pathlib import Path
 import markdown
-from markdown.extensions.toc import TocExtension
 
 # 配置
 WORKSPACE = Path("workspace/ecg_lecture/ecg_v3")

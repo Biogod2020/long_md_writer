@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.core.types import UniversalAssetRegistry, AssetEntry, AssetSource, AgentState, AssetFulfillmentAction
+from src.core.types import UniversalAssetRegistry, AssetEntry, AssetSource, AssetFulfillmentAction
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
 from src.agents.asset_management.models import VisualDirective
-import asyncio
 
 class TestIntraSessionReuse(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

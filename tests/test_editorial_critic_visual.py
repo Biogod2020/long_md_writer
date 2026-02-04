@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from src.agents.editorial_qa_agent import EditorialQAAgent, QAIssueType, QASeverity
+from src.agents.editorial_qa_agent import EditorialQAAgent, QAIssueType
 from src.core.types import AgentState
 from tests.resources.mock_renderer import MockRenderer
 from pathlib import Path

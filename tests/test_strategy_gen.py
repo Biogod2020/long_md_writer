@@ -1,14 +1,12 @@
 import os
 import sys
 from pathlib import Path
-import json
 
 os.environ["GEMINI_AUTH_PASSWORD"] = "123456"
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent))
 
-from src.core.types import AgentState
 from src.agents.image_sourcing_agent import ImageSourcingAgent
 
 def test_strategy():
@@ -35,7 +33,6 @@ def test_strategy():
         print(f"Input Description: {tc['desc']}")
         
         # Manually call client to see raw response if needed
-        prompt = agent._generate_search_strategy.__doc__ # Not really, let's just use the method
         strategy = agent._generate_search_strategy(tc['desc'], tc['context'])
         
         # We can inspect the client's last response if we add a way, 

@@ -29,7 +29,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.core.gemini_client import GeminiClient
 from src.core.types import UniversalAssetRegistry, AssetEntry, AssetSource, AssetQualityLevel
-from src.agents.asset_management.processors.vision import analyze_image, analyze_image_async
+from src.agents.asset_management.processors.vision import analyze_image
 
 
 # 配置
@@ -98,7 +98,7 @@ def main():
     client = GeminiClient() if not args.skip_vision else None
 
     # 扫描图片
-    print(f"\n🔍 开始扫描资产目录...")
+    print("\n🔍 开始扫描资产目录...")
     image_files = scan_images(IMAGES_PATH)
     print(f"📷 发现 {len(image_files)} 个图片文件")
 

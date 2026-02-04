@@ -102,7 +102,7 @@ async def main():
         print("=" * 70)
 
         # 输出结果摘要
-        print(f"\n📊 结果摘要:")
+        print("\n📊 结果摘要:")
         print(f"  - Job ID: {final_state.job_id}")
         print(f"  - 工作目录: {final_state.workspace_path}")
 
@@ -117,7 +117,7 @@ async def main():
             print(f"    - {Path(md_path).name}")
 
         if final_state.errors:
-            print(f"\n❌ 错误:")
+            print("\n❌ 错误:")
             for err in final_state.errors:
                 print(f"  - {err}")
 

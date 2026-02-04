@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 from src.core.gemini_client import GeminiClient

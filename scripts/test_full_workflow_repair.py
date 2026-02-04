@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.orchestration.workflow_markdown import create_sota2_workflow
-from src.core.types import AgentState, Manifest, SectionInfo
+from src.core.types import AgentState, Manifest
 from src.core.gemini_client import GeminiClient
 
 RESUME_JOB_ID = "sota2_20260120_164630"

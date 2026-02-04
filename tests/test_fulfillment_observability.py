@@ -1,4 +1,3 @@
-import asyncio
 import unittest
 from pathlib import Path
 import tempfile
@@ -10,7 +9,7 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.core.types import AgentState, Manifest, SectionInfo, UniversalAssetRegistry
+from src.core.types import AgentState, Manifest, SectionInfo
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
 
 class TestFulfillmentObservability(unittest.IsolatedAsyncioTestCase):

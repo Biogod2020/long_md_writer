@@ -1,5 +1,5 @@
 import unittest
-from src.core.types import AssetEntry, AssetSource, AssetVQAStatus, CropMetadata
+from src.core.types import AssetEntry
 from pathlib import Path
 import tempfile
 import shutil

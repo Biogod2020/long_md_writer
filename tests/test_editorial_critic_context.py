@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock
 from src.agents.editorial_qa_agent import EditorialQAAgent, QAIssueType
 from src.core.types import AgentState
-from pathlib import Path
 import asyncio
 
 class TestEditorialCriticContext(unittest.TestCase):

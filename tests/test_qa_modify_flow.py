@@ -1,7 +1,5 @@
 
 import asyncio
-import os
-import json
 from pathlib import Path
 from src.core.gemini_client import GeminiClient
 from src.core.types import AgentState, Manifest, SectionInfo

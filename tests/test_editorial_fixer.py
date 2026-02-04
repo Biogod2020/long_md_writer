@@ -1,9 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.agents.editorial_qa_agent import EditorialQAAgent, QAIssueType
+from src.agents.editorial_qa_agent import EditorialQAAgent
 from src.core.types import AgentState
-from pathlib import Path
-import asyncio
 
 class TestEditorialFixer(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

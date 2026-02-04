@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from src.agents.writer_agent import WriterAgent
 from src.core.types import AgentState, AssetEntry, AssetSource, AssetPriority, UniversalAssetRegistry, Manifest, SectionInfo
-import asyncio
 
 class TestWriterVisual(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

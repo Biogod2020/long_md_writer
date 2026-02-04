@@ -14,7 +14,6 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.orchestration.workflow_markdown import run_sota2_workflow
-from src.core.gemini_client import GeminiClient
 
 
 def main():
@@ -119,7 +118,7 @@ def main():
     if reference_materials:
         print(f"📚 参考资料: {len(args.reference)} 个文件, 共 {len(reference_materials)} 字符")
     else:
-        print(f"📚 参考资料: (无)")
+        print("📚 参考资料: (无)")
     
     try:
         asyncio.run(run_sota2_workflow(

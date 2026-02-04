@@ -139,7 +139,7 @@ def test_streaming_json_direct():
     
     try:
         data = response.json()
-        print(f"✅ JSON parsed successfully")
+        print("✅ JSON parsed successfully")
         print(f"Type: {type(data)}")
         if isinstance(data, list):
             print(f"List length: {len(data)}")

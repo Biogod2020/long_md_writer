@@ -1,6 +1,5 @@
 
 import sys
-import os
 import json
 import asyncio
 import shutil

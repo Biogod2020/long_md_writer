@@ -1,14 +1,12 @@
 import unittest
 import sys
 from pathlib import Path
-import json
-import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.core.gemini_client import GeminiClient, GeminiResponse
+from src.core.gemini_client import GeminiClient
 
 class TestNativeGeminiClient(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

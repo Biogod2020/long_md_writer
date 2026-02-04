@@ -1,6 +1,5 @@
 import unittest
 import re
-import json
 from pathlib import Path
 
 class TestFulfillmentPatching(unittest.TestCase):
@@ -22,7 +21,7 @@ class TestFulfillmentPatching(unittest.TestCase):
         
         def replace_match(match):
             try:
-                config_json = "{" + match.group(1) + "}"
+                "{" + match.group(1) + "}"
                 # Robust extraction might be needed if match.group(1) is partial
                 # But here we assume the regex captures the JSON content.
                 # Let's try to parse the whole block's config

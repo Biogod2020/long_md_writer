@@ -1,12 +1,10 @@
 import unittest
 import os
 from pathlib import Path
-import asyncio
-import json
 import base64
 import tempfile
 import shutil
-from src.core.types import AgentState, AssetPriority, Manifest, SectionInfo
+from src.core.types import AgentState
 from src.core.gemini_client import GeminiClient
 from src.agents.asset_management.indexer import AssetIndexerAgent
 from src.agents.architect_agent import ArchitectAgent

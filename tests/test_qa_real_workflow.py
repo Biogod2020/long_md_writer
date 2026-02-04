@@ -87,10 +87,10 @@ async def run_real_qa_verification():
         print("📊 VERIFICATION RESULTS")
         print(f"Verdict Status: {final_state.md_qa_needs_revision}")
         if getattr(final_state, 'rewrite_needed', False):
-            print(f"Rewrite Triggered: YES")
+            print("Rewrite Triggered: YES")
             print(f"Feedback Summary: {getattr(final_state, 'rewrite_feedback', '')[:200]}...")
         else:
-            print(f"Rewrite Triggered: NO")
+            print("Rewrite Triggered: NO")
             
         # Check if files changed
         print("\nChecking for file changes...")

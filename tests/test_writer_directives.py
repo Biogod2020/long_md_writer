@@ -1,9 +1,8 @@
 import unittest
-import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
 from src.agents.writer_agent import WriterAgent
-from src.core.types import AgentState, Manifest, SectionInfo, UniversalAssetRegistry, AssetEntry, AssetSource
+from src.core.types import AgentState, Manifest, SectionInfo, AssetEntry, AssetSource
 from src.core.gemini_client import GeminiClient, GeminiResponse
 
 class TestWriterDirectives(unittest.IsolatedAsyncioTestCase):

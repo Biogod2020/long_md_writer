@@ -49,7 +49,7 @@ def test_fixer():
         print("\n❌ Fixer returned None")
         return
     
-    print(f"\n📋 Fixer Result:")
+    print("\n📋 Fixer Result:")
     print(f"   Status: {fix_result.get('status')}")
     print(f"   Target File: {fix_result.get('target_file')}")
     print(f"   Explanation: {fix_result.get('explanation', 'N/A')}")

@@ -10,16 +10,14 @@ Phase B & E 集成测试
 import asyncio
 import sys
 from pathlib import Path
-from datetime import datetime
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.core.types import AgentState, Manifest, SectionInfo
+from src.core.types import AgentState
 from src.agents.script_decorator_agent import (
     ScriptDecoratorAgent,
     ScriptDirective,
-    AVAILABLE_CONTROLLERS,
     get_components_schema
 )
 from src.agents.editorial_qa_agent import (
@@ -27,8 +25,7 @@ from src.agents.editorial_qa_agent import (
     QAReport,
     QAIssue,
     QAIssueType,
-    QASeverity,
-    extract_semantic_summary
+    QASeverity
 )
 
 
@@ -387,11 +384,11 @@ def test_qa_report_serialization():
     )
 
     data = report.to_dict()
-    print(f"\n序列化结果:")
+    print("\n序列化结果:")
     import json
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
-    assert data["passed"] == False
+    assert not data["passed"]
     assert len(data["issues"]) == 1
     assert data["issues"][0]["type"] == "missing_alt"
     assert data["issues"][0]["severity"] == "warning"
@@ -411,7 +408,7 @@ async def test_semantic_summary_extraction():
     print("  - 返回 SemanticSummary 对象")
     print("  - 包含: title, core_concepts, key_terms, visual_assets, dependencies, summary")
 
-    from src.agents.editorial_qa_agent import SemanticSummary, save_semantic_summary
+    from src.agents.editorial_qa_agent import SemanticSummary
 
     # 创建模拟摘要
     summary = SemanticSummary(
@@ -430,7 +427,7 @@ async def test_semantic_summary_extraction():
     )
 
     data = summary.to_dict()
-    print(f"\n模拟摘要序列化:")
+    print("\n模拟摘要序列化:")
     import json
     print(json.dumps(data, indent=2, ensure_ascii=False))
 

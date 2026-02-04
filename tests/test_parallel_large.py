@@ -31,7 +31,7 @@ async def test_parallel_large():
         }
     ]
     
-    print(f"Starting 3 parallel tasks with ~200k chars each...")
+    print("Starting 3 parallel tasks with ~200k chars each...")
     responses = await client.generate_parallel_async(tasks, debug=True)
     
     for i, resp in enumerate(responses):

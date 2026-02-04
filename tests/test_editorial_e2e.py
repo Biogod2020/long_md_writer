@@ -5,7 +5,6 @@ from src.core.types import AgentState
 from tests.resources.mock_renderer import MockRenderer
 from pathlib import Path
 import shutil
-import asyncio
 
 class TestEditorialE2E(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

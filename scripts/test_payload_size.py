@@ -1,5 +1,4 @@
 import asyncio
-import os
 import base64
 from pathlib import Path
 from PIL import Image

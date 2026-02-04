@@ -1,6 +1,4 @@
 import asyncio
-import os
-from pathlib import Path
 from src.core.gemini_client import GeminiClient
 from src.agents.asset_management.processors.audit import audit_svg_visual_async
 from src.core.types import AgentState
@@ -42,7 +40,6 @@ async def test_svg_stress_patching():
     png_b64 = render_svg_to_png_base64(svg_code)
     
     # 3. 模拟 Audit -> Repair 流程
-    from src.agents.asset_management.processors.audit import audit_svg_visual_async
     from src.agents.asset_management.processors.svg import repair_svg_async
     
     print("\n[Step 1] Auditing huge SVG...")

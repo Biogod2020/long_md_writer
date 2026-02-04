@@ -13,7 +13,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState, Manifest, SectionInfo
+from src.core.types import AgentState
 
 # SOTA 2.0 Agents
 from src.agents.asset_indexer_agent import AssetIndexerAgent
@@ -118,7 +118,7 @@ async def run_sota2_auto():
         for i, q in enumerate(questions)
     }
     state.clarifier_answers = auto_answers
-    print(f"  ✓ 自动回答澄清问题")
+    print("  ✓ 自动回答澄清问题")
 
     # Refiner (async)
     print("\n[1.2] Refiner...")
@@ -192,7 +192,7 @@ async def run_sota2_auto():
             print("  [Fulfillment] 履约资产...")
             state, fulfilled = await fulfillment.run_async(state, content, namespace)
             md_path.write_text(fulfilled, encoding="utf-8")
-            print(f"  [Fulfillment] ✓ 完成")
+            print("  [Fulfillment] ✓ 完成")
 
             # Critic - 审核 AI 生成的资产
             print("  [Critic] 审计资产...")
@@ -215,7 +215,7 @@ async def run_sota2_auto():
             # Note: Writer already adds to completed_md_sections and increments index
             pass
         else:
-            print(f"  [Writer] ❌ 文件未生成")
+            print("  [Writer] ❌ 文件未生成")
             # Only increment on failure - Writer handles success case
             state.current_section_index += 1
 
@@ -239,7 +239,7 @@ async def run_sota2_auto():
             state, report = await editorial.run_async(state, content, namespace)
 
             if report.passed:
-                print(f"    ✅ 通过")
+                print("    ✅ 通过")
             else:
                 print(f"    ⚠️ {len(report.issues)} 个问题:")
                 for issue in report.issues[:3]:
@@ -252,7 +252,7 @@ async def run_sota2_auto():
     print(" 完成!")
     print("=" * 70)
 
-    print(f"\n📊 结果摘要:")
+    print("\n📊 结果摘要:")
     print(f"  Job ID: {state.job_id}")
     print(f"  工作目录: {state.workspace_path}")
 
@@ -271,7 +271,7 @@ async def run_sota2_auto():
     print(f"  总字符数: {total_chars:,}")
 
     if state.asset_registry:
-        print(f"\n🎨 资产:")
+        print("\n🎨 资产:")
         by_source = {}
         for a in state.asset_registry.assets.values():
             s = a.source.value
@@ -285,7 +285,7 @@ async def run_sota2_auto():
             print(f"    - {e}")
 
     # 列出生成的文件
-    print(f"\n📁 生成的文件:")
+    print("\n📁 生成的文件:")
     for f in sorted(workspace.rglob("*")):
         if f.is_file():
             print(f"    - {f.relative_to(workspace)}")

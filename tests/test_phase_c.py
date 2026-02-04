@@ -11,9 +11,7 @@ Phase C 集成测试: 实验管理与 Profile 持久化
 import sys
 import json
 import tempfile
-import shutil
 from pathlib import Path
-from datetime import datetime
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -29,12 +27,7 @@ from src.core.types import (
 )
 from src.core.persistence import (
     ProfileManager,
-    ProjectProfile,
     ProfileStatus,
-    PromptSnapshot,
-    InputBlueprint,
-    UARCheckpoint,
-    AssetDecision,
     AssetService,
     reload_profile_to_state,
     check_input_changes
@@ -115,7 +108,7 @@ def test_profile_manager_create():
             tags=["测试", "实验"]
         )
 
-        print(f"\n创建的 Profile:")
+        print("\n创建的 Profile:")
         print(f"  ID: {profile.profile_id}")
         print(f"  标题: {profile.project_title}")
         print(f"  状态: {profile.status.value}")
@@ -143,7 +136,7 @@ def test_profile_manager_save_load():
         manager = ProfileManager(profiles_dir=Path(tmpdir))
 
         # 创建并配置 Profile
-        profile = manager.create_profile(
+        manager.create_profile(
             project_title="保存加载测试",
             profile_id="save-load-test"
         )
@@ -173,7 +166,7 @@ def test_profile_manager_save_load():
         manager2 = ProfileManager(profiles_dir=Path(tmpdir))
         loaded = manager2.load_profile("save-load-test")
 
-        print(f"\n加载的 Profile:")
+        print("\n加载的 Profile:")
         print(f"  ID: {loaded.profile_id}")
         print(f"  提示词数量: {len(loaded.prompts)}")
         print(f"  输入蓝图: {'有' if loaded.input_blueprint else '无'}")
@@ -335,7 +328,7 @@ def test_profile_record_manifest():
         # 验证
         profile = manager.current_profile
         assert profile.manifest is not None
-        print(f"\n记录的 Manifest:")
+        print("\n记录的 Manifest:")
         print(f"  标题: {profile.manifest['project_title']}")
         print(f"  章节数: {len(profile.manifest['sections'])}")
 
@@ -503,7 +496,7 @@ def test_asset_service_dashboard():
     # 获取看板数据
     dashboard = service.get_asset_dashboard(state)
 
-    print(f"\n资产看板:")
+    print("\n资产看板:")
     print(f"  总资产数: {dashboard['total']}")
     print(f"  按来源分布: {dashboard['by_source']}")
     print(f"  按质量分布: {dashboard['by_quality']}")
@@ -533,7 +526,7 @@ def test_asset_service_report():
     # 导出报告
     report = service.export_report()
 
-    print(f"\n报告内容:")
+    print("\n报告内容:")
     print(f"  生成时间: {report['generated_at']}")
     print(f"  总决策数: {report['total_decisions']}")
     print(f"  摘要: {json.dumps(report['summary'], ensure_ascii=False, indent=4)}")
@@ -582,7 +575,7 @@ def test_profile_reload():
         restored_state = reload_profile_to_state(loaded_profile, new_state)
 
         # 验证恢复
-        print(f"\n恢复后的状态:")
+        print("\n恢复后的状态:")
         print(f"  Manifest 标题: {restored_state.manifest.project_title if restored_state.manifest else 'None'}")
         print(f"  Manifest 章节数: {len(restored_state.manifest.sections) if restored_state.manifest else 0}")
 
@@ -689,7 +682,7 @@ def test_full_serialization():
 
         # 验证文件
         profile_dir = Path(tmpdir) / "serial-test"
-        print(f"\n生成的文件:")
+        print("\n生成的文件:")
         for f in profile_dir.iterdir():
             print(f"  - {f.name}: {f.stat().st_size} bytes")
 

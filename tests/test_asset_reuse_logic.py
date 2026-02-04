@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
-from src.core.types import AgentState, AssetEntry, AssetSource, AssetFulfillmentAction
+from src.core.types import AssetEntry, AssetSource, AssetFulfillmentAction
 from src.agents.asset_management.models import VisualDirective
-import asyncio
 
 class TestAssetReuseLogic(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

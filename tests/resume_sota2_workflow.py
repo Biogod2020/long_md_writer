@@ -1,14 +1,12 @@
 import asyncio
 import sys
-import uuid
-import json
 from pathlib import Path
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.orchestration.workflow_markdown import create_sota2_workflow
-from src.core.types import AgentState, UniversalAssetRegistry
+from src.core.types import AgentState
 from src.core.gemini_client import GeminiClient
 
 # ============================================================================ 
@@ -62,9 +60,8 @@ async def interactive_resume():
     while True:
         try:
             print("\n" + "."*30 + " 执行工作流 " + "."*30)
-            last_state = None
             async for event in app.astream(None, config=config, stream_mode="values"):
-                last_state = event
+                pass
 
             # 检查是否由于中断而结束
             state_info = app.get_state(config)

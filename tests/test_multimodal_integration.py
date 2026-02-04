@@ -1,16 +1,14 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.core.types import AgentState, AssetEntry, AssetSource, AssetPriority, UniversalAssetRegistry, Manifest, SectionInfo
+from src.core.types import AgentState, AssetPriority
 from src.agents.asset_management.indexer import AssetIndexerAgent
 from src.agents.architect_agent import ArchitectAgent
 from src.agents.writer_agent import WriterAgent
 from src.agents.editorial_qa_agent import EditorialQAAgent
-import asyncio
 from pathlib import Path
 import tempfile
 import shutil
 import json
-import base64
 
 class TestMultimodalIntegration(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -49,7 +47,7 @@ class TestMultimodalIntegration(unittest.IsolatedAsyncioTestCase):
         # 1. Indexing
         indexer = AssetIndexerAgent(client=self.mock_client, input_dir=str(self.inputs_dir), skip_vision=True)
         # Mocking vision result
-        with patch.object(indexer, "_process_image_async", wraps=indexer._process_image_async) as mock_proc:
+        with patch.object(indexer, "_process_image_async", wraps=indexer._process_image_async):
             state = await indexer.run_async(state)
         
         uar = state.get_uar()

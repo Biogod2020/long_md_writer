@@ -1,7 +1,6 @@
 import unittest
 import os
 from pathlib import Path
-import asyncio
 from src.agents.editorial_qa_agent import EditorialQAAgent
 from src.agents.visual_qa.renderer import PlaywrightRenderer
 from src.core.types import AgentState

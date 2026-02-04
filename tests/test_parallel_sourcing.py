@@ -28,7 +28,7 @@ def test_parallel_sourcing():
     )
     
     start_time = time.time()
-    print(f"Starting PARALLEL ImageSourcingAgent Test...")
+    print("Starting PARALLEL ImageSourcingAgent Test...")
     agent.run(state)
     end_time = time.time()
     

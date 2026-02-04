@@ -66,7 +66,7 @@ Identify any factual errors, missing information, or stylistic inconsistencies.
 Provide a concise list of major issues found. Be specific.
 """
 
-    print(f"--- Prompt Statistics ---")
+    print("--- Prompt Statistics ---")
     print(f"Total Prompt size: {len(prompt)} chars")
     
     # 5. Send to API

@@ -8,8 +8,7 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.core.types import AssetEntry, AssetSource, AssetQualityLevel
-from src.core.path_utils import get_project_root
+from src.core.types import AssetEntry, AssetSource
 
 class TestAssetPathResolution(unittest.TestCase):
     def setUp(self):

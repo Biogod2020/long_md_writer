@@ -11,7 +11,6 @@
 """
 
 import sys
-import os
 import asyncio
 from pathlib import Path
 
@@ -20,7 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState, AssetSource
+from src.core.types import AgentState
 from src.agents.asset_management import AssetIndexerAgent
 
 async def simulate_workflow():
@@ -52,7 +51,7 @@ async def simulate_workflow():
 
     # 2. 模拟节点：AssetIndexerAgent (Phase 0)
     # 目标：扫描同一个目录，但由于 UAR 已有记录，应全部跳过 API 调用
-    print(f"\n[Node: AssetIndexer] 执行资产同步...")
+    print("\n[Node: AssetIndexer] 执行资产同步...")
     client = GeminiClient()
     
     # 强制不使用 skip_vision，看看它是否够聪明能利用 UAR 的去重逻辑
@@ -74,7 +73,7 @@ async def simulate_workflow():
 
     # 3. 模拟节点：WriterAgent 语义匹配 (核心生产力)
     # 场景：Writer 想要一张“心脏解剖图”，看看能不能从全局库里搜出来
-    print(f"\n[Node: Writer] 模拟语义搜索...")
+    print("\n[Node: Writer] 模拟语义搜索...")
     uar = state.get_uar()
     
     test_query = "心脏解剖结构示意图，包含心房和心室"
@@ -88,9 +87,9 @@ async def simulate_workflow():
         print(f"     [{i+1}] ID: {asset.id} | Label: {asset.semantic_label}")
         
     if candidates:
-        print(f"\n✨ 结论：项目成功识别了全局库中的资产，Writer 现在可以直接注入这些图片而无需重新扫描！")
+        print("\n✨ 结论：项目成功识别了全局库中的资产，Writer 现在可以直接注入这些图片而无需重新扫描！")
     else:
-        print(f"\n⚠️ 未找到候选资产，请确认 reindex 脚本是否成功生成了语义标签。")
+        print("\n⚠️ 未找到候选资产，请确认 reindex 脚本是否成功生成了语义标签。")
 
     print("\n" + "="*70)
     print(" ✅ 生产环境模拟完成")

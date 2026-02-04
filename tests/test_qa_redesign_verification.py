@@ -1,10 +1,7 @@
 
 import sys
-import os
 import json
-import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # Add project root to sys.path
 root_dir = Path(__file__).parent.parent

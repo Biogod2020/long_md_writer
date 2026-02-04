@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from src.core.types import UniversalAssetRegistry, AssetEntry, AssetSource, AgentState
-from src.agents.asset_management.indexer import AssetIndexerAgent
-import asyncio
+from src.core.types import UniversalAssetRegistry, AssetEntry, AssetSource
 import json
 
 class TestAssetDiscoverySelection(unittest.IsolatedAsyncioTestCase):

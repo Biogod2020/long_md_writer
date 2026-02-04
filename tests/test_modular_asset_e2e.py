@@ -1,9 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.core.types import AgentState, AssetEntry, AssetSource, UniversalAssetRegistry
+from src.core.types import AgentState
 from src.agents.asset_management.indexer import AssetIndexerAgent
 from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
-import asyncio
 from pathlib import Path
 import tempfile
 import shutil

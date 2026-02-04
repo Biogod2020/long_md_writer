@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.agents.architect_agent import ArchitectAgent
 from src.core.types import AgentState
 from pathlib import Path
-import json
 
 # 创建临时工作目录
 workspace = Path("/tmp/test_architect")
@@ -68,7 +67,7 @@ def test_initial_generation():
         return None
     
     if result.manifest:
-        print(f"✅ 成功生成 Manifest!")
+        print("✅ 成功生成 Manifest!")
         print(f"   - 标题: {result.manifest.project_title}")
         print(f"   - 章节数: {len(result.manifest.sections)}")
         total_words = sum(s.estimated_words for s in result.manifest.sections)
@@ -108,9 +107,9 @@ def test_feedback_adherence(initial_state: AgentState):
         print(f"   修改后总字数: {new_total}")
         
         if new_total <= 10000:
-            print(f"✅ 成功! 字数已控制在 10000 以内")
+            print("✅ 成功! 字数已控制在 10000 以内")
         else:
-            print(f"⚠️ 警告: 字数仍超过 10000")
+            print("⚠️ 警告: 字数仍超过 10000")
         
         for sec in result.manifest.sections:
             status = "✅" if sec.estimated_words <= 2000 else "⚠️"
@@ -140,7 +139,7 @@ def test_json_robustness():
     
     for i, (json_str, should_pass) in enumerate(test_cases):
         try:
-            result = agent._parse_manifest(json_str)
+            agent._parse_manifest(json_str)
             if should_pass:
                 print(f"   ✅ 测试用例 {i+1}: 解析成功 (预期成功)")
             else:
