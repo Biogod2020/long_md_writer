@@ -138,7 +138,8 @@ async def compute_focus_async(
     try:
         response = await client.generate_async(
             parts=parts,
-            system_instruction="你是一个视觉分析专家。请精确定位图片中的焦点区域。"
+            system_instruction="你是一个视觉分析专家。请精确定位图片中的焦点区域。",
+            stream=True
         )
 
         if not response.success:

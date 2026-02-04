@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from ..core.gemini_client import GeminiClient
-from ..core.types import AgentState, AssetQualityLevel
+from ..core.types import AgentState
 from ..core.patcher import StuckDetector
 from .markdown_qa.fixer import run_markdown_fixer, apply_patches
 
@@ -253,14 +253,14 @@ class EditorialQAAgent:
             is_stuck = not stuck_detector.check_progress(combined_advice, current_content)
             
             if is_stuck:
-                print(f"  [EditorialQA] ⚠️ 检测到重复修复建议且内容未变化，触发 Backoff 策略...")
+                print("  [EditorialQA] ⚠️ 检测到重复修复建议且内容未变化，触发 Backoff 策略...")
                 for issue in issues:
                     issue.suggestion = f"PREVIOUS ATTEMPT FAILED. You MUST provide more context in your SEARCH block to ensure a unique match. {issue.suggestion}"
                 
                 # 使用 state.loop_metadata 跟踪重试
                 retry_key = f"qa_retry_{namespace}"
                 if state.loop_metadata.get(retry_key, False):
-                    print(f"  [EditorialQA] ❌ 第二次尝试仍卡住，停止迭代。")
+                    print("  [EditorialQA] ❌ 第二次尝试仍卡住，停止迭代。")
                     break
                 state.loop_metadata[retry_key] = True
             else:
@@ -377,7 +377,7 @@ class EditorialQAAgent:
                     severity=QASeverity.ERROR,
                     location="全量文本",
                     message=f"缺少强制性资产: [{aid}] ({label})",
-                    suggestion=f"请在文中合适位置插入该图片，它是用户要求的必备素材。"
+                    suggestion="请在文中合适位置插入该图片，它是用户要求的必备素材。"
                 ))
         return issues
 
@@ -390,7 +390,7 @@ class EditorialQAAgent:
                 issue_type=QAIssueType.BROKEN_REFERENCE,
                 severity=QASeverity.ERROR,
                 location=f"位置 {match.start()}",
-                message=f"发现未履约的 :::visual 指令",
+                message="发现未履约的 :::visual 指令",
                 suggestion="请运行 AssetFulfillmentAgent 处理此指令"
             ))
         return issues

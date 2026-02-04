@@ -4,7 +4,7 @@ Markdown Critic: Identifies content, logical, and structural issues in Markdown.
 
 import json
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 from ...core.gemini_client import GeminiClient
 from ...core.types import AgentState
 from ...core.debug_utils import save_debug_log

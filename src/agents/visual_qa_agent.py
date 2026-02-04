@@ -5,7 +5,7 @@ VisualQAAgent: Uses VLM to check the rendered HTML and apply targeted fixes.
 import json
 import os
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from DrissionPage import ChromiumOptions, ChromiumPage
 
 from ..core.gemini_client import GeminiClient
@@ -94,10 +94,10 @@ class VisualQAAgent:
             print("  [VisualQA] No HTML sections to check.")
             return state
 
-        print(f"  [VisualQA] Starting Critic-Fixer Loop (no iteration limit for testing)...")
+        print("  [VisualQA] Starting Critic-Fixer Loop (no iteration limit for testing)...")
 
         any_modified = False
-        workspace = Path(state.workspace_path)
+        Path(state.workspace_path)
 
         for section_path in state.completed_html_sections:
             section_name = Path(section_path).name
@@ -113,7 +113,7 @@ class VisualQAAgent:
                 critique = self._run_critic(state, section_path)
                 
                 if critique is None:
-                    print(f"    [Critic] ⚠️ Error during critique. Moving to next section.")
+                    print("    [Critic] ⚠️ Error during critique. Moving to next section.")
                     break
                 
                 if critique.get("verdict") == "PASS":
@@ -122,7 +122,7 @@ class VisualQAAgent:
                 
                 issues = critique.get("issues", [])
                 if not issues:
-                    print(f"    [Critic] ✅ No issues found. PASSED.")
+                    print("    [Critic] ✅ No issues found. PASSED.")
                     break
                 
                 print(f"    [Critic] Found {len(issues)} issue(s):")
@@ -186,7 +186,7 @@ class VisualQAAgent:
 
                 else:
                     # Sequential Fallback
-                    print(f"    [VisualQA] Running sequential fixes...")
+                    print("    [VisualQA] Running sequential fixes...")
                     fixes_applied = 0
                     for issue in issues:
                         print(f"\n    [Fixer] Addressing: {issue.get('id', 'unknown')}")
@@ -211,10 +211,10 @@ class VisualQAAgent:
                 self._regenerate_section_preview(state, section_path)
 
         if any_modified:
-            print(f"\n  [VisualQA] Files were modified. Requesting re-assembly.")
+            print("\n  [VisualQA] Files were modified. Requesting re-assembly.")
             state.vqa_needs_reassembly = True
         else:
-            print(f"\n  [VisualQA] All sections processed. No modifications needed.")
+            print("\n  [VisualQA] All sections processed. No modifications needed.")
             state.vqa_needs_reassembly = False
 
         return state

@@ -4,7 +4,7 @@ This agent runs BEFORE the Refiner to gather missing information.
 """
 
 from typing import Optional
-from ..core.gemini_client import GeminiClient, GeminiResponse
+from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState
 
 

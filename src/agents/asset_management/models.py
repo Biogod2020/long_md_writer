@@ -4,7 +4,7 @@ Asset Management Models
 Shared data structures for asset processing.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from ...core.types import AssetFulfillmentAction

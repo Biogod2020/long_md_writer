@@ -11,12 +11,10 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Union
 
-from ..core.gemini_client import GeminiClient, GeminiResponse
+from ..core.gemini_client import GeminiClient
 from ..core.types import (
     AgentState,
     SectionInfo,
-    AssetFulfillmentAction,
-    AssetQualityLevel,
 )
 
 
@@ -342,7 +340,7 @@ class WriterAgent:
 
         # 章节元数据
         if hasattr(section, 'metadata') and section.metadata:
-            text_parts.append(f"\n**章节元数据 (设计意图)**:\n")
+            text_parts.append("\n**章节元数据 (设计意图)**:\n")
             for k, v in section.metadata.items():
                 text_parts.append(f"- {k}: {v}\n")
             text_parts.append("\n")

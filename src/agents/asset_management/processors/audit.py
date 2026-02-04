@@ -143,7 +143,8 @@ async def audit_image_async(
     try:
         response = await client.generate_async(
             parts=parts,
-            system_instruction="You are a visual content auditor. Output JSON only."
+            system_instruction="You are a visual content auditor. Output JSON only.",
+            stream=True
         )
         if not response.success:
             return None
@@ -167,7 +168,8 @@ async def audit_svg_async(
     try:
         response = await client.generate_async(
             prompt=prompt,
-            system_instruction="You are an SVG auditor. Output JSON only."
+            system_instruction="You are an SVG auditor. Output JSON only.",
+            stream=True
         )
         if not response.success:
             return None
@@ -349,7 +351,8 @@ async def audit_svg_visual_async(
     try:
         response = await client.generate_async(
             parts=parts,
-            system_instruction="You are an SVG auditor. Analyze both code and rendered image. Output JSON only."
+            system_instruction="You are an SVG auditor. Analyze both code and rendered image. Output JSON only.",
+            stream=True
         )
         if not response.success:
             return None

@@ -10,7 +10,7 @@ from PIL import Image
 from ...core.gemini_client import GeminiClient
 from ...core.types import AgentState
 from .prompts import CRITIC_SYSTEM_PROMPT
-from .utils import parse_json_response, add_line_numbers
+from .utils import parse_json_response
 
 def run_critic(
     client: GeminiClient,

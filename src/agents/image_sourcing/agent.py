@@ -8,7 +8,7 @@ import shutil
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional
 
 from ...core.gemini_client import GeminiClient
 from ...core.types import AgentState
@@ -36,7 +36,7 @@ class ImageSourcingAgent:
         """Process all HTML sections and replace image placeholders with real sourced images."""
         if self.debug:
             preserve_candidates = True
-            print(f"  [ImageSourcing] DEBUG MODE ENABLED. Parallel processing with 8 workers.")
+            print("  [ImageSourcing] DEBUG MODE ENABLED. Parallel processing with 8 workers.")
 
         if not state.completed_html_sections:
             return state

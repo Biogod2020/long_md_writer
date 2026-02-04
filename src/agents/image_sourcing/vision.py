@@ -8,7 +8,7 @@ import re
 import time
 import io
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Tuple, Any
 from PIL import Image
 from ...core.gemini_client import GeminiClient
 
@@ -36,7 +36,7 @@ class VisionSelector:
             print(f"    - Vision ranking {len(images)} images (Batch Size: {self.default_batch_size})...")
 
         # Sort images by number (img_1, img_2...)
-        sorted_images = sorted(images, key=lambda p: int(re.search(r'\d+', p.stem).group()) if re.search(r'\d+', p.stem) else 999)
+        sorted(images, key=lambda p: int(re.search(r'\d+', p.stem).group()) if re.search(r'\d+', p.stem) else 999)
         
         # Process in batches and collect all winners
         winners = []

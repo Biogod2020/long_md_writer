@@ -5,7 +5,6 @@ with interrupt points for user approval.
 """
 
 from typing import Optional, Literal
-from pathlib import Path
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver

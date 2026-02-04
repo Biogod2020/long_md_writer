@@ -7,7 +7,6 @@ and replaces placeholders with validated SVGs.
 from pathlib import Path
 import re
 import base64
-import tempfile
 from typing import Optional
 
 from ..core.gemini_client import GeminiClient
@@ -224,7 +223,7 @@ class SVGCreatorAgent:
             
             return False, feedback
             
-        except Exception as e:
+        except Exception:
             # If validation fails, assume SVG is valid
             return True, ""
     

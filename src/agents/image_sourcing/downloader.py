@@ -1,6 +1,5 @@
 "ImageDownloader: Robust multi-layer download strategy for image candidates."
 
-import os
 import requests
 import random
 import time
@@ -89,7 +88,7 @@ class ImageDownloader:
                         
                         # Wait briefly for challenges
                         if "cloudflare" in downloader_tab.title.lower() or "just a moment" in downloader_tab.title.lower():
-                            if self.debug: print(f"        [!] Anti-bot challenge detected, waiting...")
+                            if self.debug: print("        [!] Anti-bot challenge detected, waiting...")
                             time.sleep(3)
                             downloader_tab.wait.doc_loaded(timeout=5)
 
@@ -165,7 +164,7 @@ class ImageDownloader:
                                     local_paths[i] = downloaded_path
                                     download_success = True
                                 else:
-                                    if self.debug: print(f"        [-] Fast session integrity check failed.")
+                                    if self.debug: print("        [-] Fast session integrity check failed.")
                                     if final_path.exists(): final_path.unlink()
                             else:
                                 if self.debug: print(f"        [-] Fast session download failed: {resp.status_code}")

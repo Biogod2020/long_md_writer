@@ -4,9 +4,7 @@ Redesigned to handle large documents and robust feedback loops.
 """
 
 from pathlib import Path
-from typing import Optional, List, Dict
-import json
-import re
+from typing import Optional
 
 from src.core.gemini_client import GeminiClient
 from src.core.types import AgentState
@@ -62,12 +60,12 @@ class MarkdownQAAgent:
         # SOTA: Patch-First Strategy
         # Even if Critic asks for REWRITE, we try to fix it via patches first
         if verdict == "REWRITE" and state.md_qa_iterations > 2:
-            print(f"  [MarkdownQA] 🔄 Patching failed to resolve fundamental issues. Triggering Writer Rewrite...")
+            print("  [MarkdownQA] 🔄 Patching failed to resolve fundamental issues. Triggering Writer Rewrite...")
             state.rewrite_needed = True
             state.rewrite_feedback = feedback
             return state
             
-        print(f"  [MarkdownQA] 🛠️ Proceeding to Modification (Patching) Phase...")
+        print("  [MarkdownQA] 🛠️ Proceeding to Modification (Patching) Phase...")
         
         # 4. ADVICER Phase (Now correctly indented)
         file_list = [Path(p).name for p in state.completed_md_sections]

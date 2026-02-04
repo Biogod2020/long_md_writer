@@ -6,7 +6,7 @@ Node 6: HTML Transformer Agent (全量上下文转换器)
 from pathlib import Path
 from typing import Optional
 
-from ..core.gemini_client import GeminiClient, GeminiResponse
+from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState, SectionInfo
 
 

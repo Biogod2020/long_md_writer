@@ -1,7 +1,6 @@
 import re
 import asyncio
 import base64
-import json
 import tempfile
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -202,7 +201,8 @@ async def audit_mermaid_async(
         response = await client.generate_async(
             parts=parts,
             system_instruction="You are a Mermaid technical auditor. Output JSON only.",
-            temperature=0.0
+            temperature=0.0,
+            stream=True
         )
         
         if not response.success:
@@ -295,7 +295,8 @@ async def generate_mermaid_async(
         response = await client.generate_async(
             prompt=prompt,
             system_instruction="You are a Mermaid.js diagram expert. Generate clear and well-structured diagram code.",
-            temperature=0.5
+            temperature=0.5,
+            stream=True
         )
 
         if not response.success:

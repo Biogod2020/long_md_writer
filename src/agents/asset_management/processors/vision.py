@@ -8,7 +8,6 @@ import re
 import json
 import base64
 from pathlib import Path
-from typing import Optional
 
 from ....core.gemini_client import GeminiClient
 from ....core.types import AssetQualityLevel
@@ -184,7 +183,8 @@ async def analyze_image_async(client: GeminiClient, image_path: Path) -> dict:
     try:
         response = await client.generate_async(
             parts=parts,
-            system_instruction="You are a professional visual content analyst and quality evaluator. Please output in JSON format strictly."
+            system_instruction="You are a professional visual content analyst and quality evaluator. Please output in JSON format strictly.",
+            stream=True
         )
         return _parse_vision_response(response.text, default_result)
 

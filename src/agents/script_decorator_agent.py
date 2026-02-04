@@ -272,7 +272,7 @@ class ScriptDecoratorAgent:
         """同步版本"""
         import asyncio
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # 已在异步上下文中
             return state, section_content  # 简单返回原内容
         except RuntimeError:

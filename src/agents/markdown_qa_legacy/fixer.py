@@ -3,7 +3,7 @@ Markdown Fixer: Applies targeted fixes to Markdown files using Search/Replace pa
 """
 
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 import json
 import re
 

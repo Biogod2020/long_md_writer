@@ -5,9 +5,7 @@ Handles SVG generation and extraction.
 """
 
 import re
-import asyncio
 from typing import Optional
-from pathlib import Path
 
 from ....core.gemini_client import GeminiClient
 from ....core.types import AgentState
@@ -65,7 +63,8 @@ async def generate_svg_async(
         response = await client.generate_async(
             prompt=prompt,
             system_instruction="You are a professional SVG designer. Create accurate, readable, and aesthetically pleasing vector graphics.",
-            temperature=0.5
+            temperature=0.5,
+            stream=True
         )
 
         if not response.success:
@@ -224,7 +223,7 @@ async def repair_svg_async(
                 return current_content
             
             if attempt < max_retries:
-                print(f"    [SVG Repair] No patches applied successfully, retrying...")
+                print("    [SVG Repair] No patches applied successfully, retrying...")
                 continue
             
         except Exception as e:

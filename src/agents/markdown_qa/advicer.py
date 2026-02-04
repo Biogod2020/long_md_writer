@@ -4,9 +4,8 @@ Translates high-level critique into specific, actionable instructions for each f
 """
 
 import json
-import re
-from typing import Dict, List, Optional
-from src.core.gemini_client import GeminiClient, GeminiResponse
+from typing import Dict, List
+from src.core.gemini_client import GeminiClient
 from src.core.json_utils import parse_json_dict_robust
 
 # Using a generic prompt to get specific advice per file
@@ -77,5 +76,5 @@ Return ONLY valid JSON.
     if advice_map:
         return advice_map
     else:
-        print(f"    [Advicer] ⚠️ JSON Parse Error from robust parser.")
+        print("    [Advicer] ⚠️ JSON Parse Error from robust parser.")
         return {}

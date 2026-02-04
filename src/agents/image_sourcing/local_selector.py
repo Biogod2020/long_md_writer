@@ -4,7 +4,7 @@ LocalSelector: Handles selection of best matching assets from UAR using LLM.
 
 import json
 import re
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple
 from ...core.gemini_client import GeminiClient
 from ...core.types import AssetEntry, AssetQualityLevel
 
@@ -65,7 +65,8 @@ class LocalSelector:
             response = await self.client.generate_async(
                 prompt=prompt,
                 system_instruction="You are a professional asset curator. Select the best matching local asset or null if no perfect match exists.",
-                temperature=0.1
+                temperature=0.1,
+                stream=True
             )
             
             if response.success:

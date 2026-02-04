@@ -4,7 +4,6 @@
 
 from .agent import VisualQAAgent
 
-from .agent import VisualQAAgent
 from .fixer import prepare_fixer_task
 from .utils import parse_json_response
 

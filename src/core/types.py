@@ -607,7 +607,8 @@ class UniversalAssetRegistry(BaseModel):
             response = await client.generate_async(
                 prompt=prompt,
                 system_instruction="你是一位专业的资产检索助手。请快速准确地筛选相关资产。",
-                temperature=0.0
+                temperature=0.0,
+                stream=True
             )
             
             if response.success:

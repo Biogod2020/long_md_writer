@@ -3,8 +3,8 @@ import json
 import httpx
 import asyncio
 import re
-from typing import Optional, Dict, List, Any, Union
-from dataclasses import dataclass, field
+from typing import Optional, Dict, List
+from dataclasses import dataclass
 
 @dataclass
 class GeminiResponse:

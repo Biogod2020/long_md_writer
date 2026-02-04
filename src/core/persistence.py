@@ -17,11 +17,11 @@ import hashlib
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
-from .types import AgentState, Manifest, AssetEntry, AssetSource
+from .types import AgentState, Manifest
 
 
 # ============================================================================

@@ -5,11 +5,10 @@ Node 7: Assembler & QA Agent (合体质检员)
 
 from pathlib import Path
 from typing import Optional
-import json
 
 from bs4 import BeautifulSoup
 
-from ..core.gemini_client import GeminiClient, GeminiResponse
+from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState
 from ..core.patcher import StuckDetector
 
@@ -140,7 +139,7 @@ class AssemblerAgent:
             # 🛠️ Stuck Detection & Backoff
             advice = "|".join(errors)
             if not self.stuck_detector.check_progress(advice, combined_content):
-                print(f"  [Assembler] ⚠️ HTML 修复循环卡住，尝试增强提示词...")
+                print("  [Assembler] ⚠️ HTML 修复循环卡住，尝试增强提示词...")
                 errors.append("PREVIOUS REPAIR FAILED. You MUST ensure all tags are balanced and nested correctly. Check for unclosed <div> or <section> tags.")
 
             repaired_content = self._repair_html(combined_content, errors)
@@ -196,7 +195,7 @@ class AssemblerAgent:
                         pass
             
             # 使用 html5lib 进行更严格的验证
-            soup_strict = BeautifulSoup(html_content, "html5lib")
+            BeautifulSoup(html_content, "html5lib")
             
             return True, []
             

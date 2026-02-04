@@ -1,6 +1,5 @@
 """Screenshot capture logic for Visual QA."""
 
-import io
 from pathlib import Path
 from typing import List, Optional
 from DrissionPage import ChromiumOptions, ChromiumPage

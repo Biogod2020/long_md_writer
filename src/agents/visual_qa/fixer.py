@@ -199,7 +199,7 @@ def apply_fix(fix_result: Dict, workspace_path: str) -> bool:
             print(f"    [Fixer] ⚠️ Smart patch failed for {target_file_rel}. Error: {new_content[:100]}...")
             # Fallback to simple replace if search is exactly present
             if target in content:
-                print(f"    [Fixer] 🔄 Falling back to exact replace.")
+                print("    [Fixer] 🔄 Falling back to exact replace.")
                 target_file.write_text(content.replace(target, replacement, 1), encoding="utf-8")
                 return True
             return False

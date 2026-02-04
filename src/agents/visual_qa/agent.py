@@ -7,10 +7,8 @@ Architecture:
 - Loop until all sections PASS or no more fixes can be applied
 """
 
-import re
-import json
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional
 
 from ...core.gemini_client import GeminiClient
 from ...core.types import AgentState
@@ -40,7 +38,7 @@ class VisualQAAgent:
             print("  [VisualQA] No HTML sections to check.")
             return state
 
-        print(f"  [VisualQA] Starting Critic-Fixer Loop...")
+        print("  [VisualQA] Starting Critic-Fixer Loop...")
 
         any_modified = False
         workspace = Path(state.workspace_path)
@@ -107,11 +105,11 @@ class VisualQAAgent:
                 combined_advice = "|".join([i.get("problem", "") for i in issues])
                 
                 if not stuck_detector.check_progress(combined_advice, current_content):
-                    print(f"    [VisualQA] ⚠️ 检测到重复修复建议且内容未变化，触发 Backoff 策略...")
+                    print("    [VisualQA] ⚠️ 检测到重复修复建议且内容未变化，触发 Backoff 策略...")
                     
                     retry_key = f"vqa_retry_{section_name}"
                     if state.loop_metadata.get(retry_key, False):
-                        print(f"    [VisualQA] ❌ 第二次尝试仍卡住，停止该章节迭代。")
+                        print("    [VisualQA] ❌ 第二次尝试仍卡住，停止该章节迭代。")
                         break
                     
                     state.loop_metadata[retry_key] = True
