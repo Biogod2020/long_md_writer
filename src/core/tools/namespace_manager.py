@@ -39,24 +39,28 @@ class NamespaceManager:
 
     def assign_namespaces(self, manifest: Manifest) -> Manifest:
         """
-        为 Manifest 中的所有章节分配命名空间
-
-        Args:
-            manifest: 项目清单
-
-        Returns:
-            更新后的 Manifest (原地修改并返回)
+        为 Manifest 中的所有章节分配命名空间，并物理修改 ID 以确保全局唯一性。
         """
+        new_knowledge_map = {}
+        
         for i, section in enumerate(manifest.sections):
             namespace = self.format.format(index=i + 1)
             section.metadata["namespace"] = namespace
-
-            # 如果章节 ID 尚未包含命名空间前缀，则添加
-            if not section.id.startswith(f"{namespace}-"):
-                # 保留原始 ID 作为参考
-                section.metadata["original_id"] = section.id
-                # 注意：不修改 section.id，因为它可能被其他地方引用
-                # 命名空间仅通过 metadata 传递
+            
+            old_id = section.id
+            # 如果章节 ID 尚未包含命名空间前缀，则物理修改它
+            if not old_id.startswith(f"{namespace}-"):
+                section.metadata["original_id"] = old_id
+                section.id = f"{namespace}-{old_id}"
+                print(f"  [Namespace] ID Refactored: {old_id} -> {section.id}")
+            
+            # 同步更新知识图谱的 Key
+            if old_id in manifest.knowledge_map:
+                new_knowledge_map[section.id] = manifest.knowledge_map[old_id]
+        
+        # 替换为更新后的知识图谱
+        if new_knowledge_map:
+            manifest.knowledge_map = new_knowledge_map
 
         return manifest
 

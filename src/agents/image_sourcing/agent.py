@@ -208,8 +208,8 @@ class ImageSourcingAgent:
                             # Create a temporary AssetEntry to leverage robust path logic
                             from ...core.types import AssetSource, AssetEntry
                             # local_path should be relative to workspace or project root
-                            # final_path is in workspace/assets/images/
-                            # so relative to project root it is workspace/job_id/assets/images/xxx
+                            # final_path is in workspaces/workspace/assets/images/
+                            # so relative to project root it is workspaces/workspace/job_id/assets/images/xxx
                             # but we usually store it relative to workspace
                             rel_local = str(final_path.relative_to(workspace_path)) if workspace_path else str(final_path)
                             

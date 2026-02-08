@@ -1,9 +1,0 @@
-{
-  "rules": [
-    {
-      "markdown_pattern": "mappings",
-      "css_selector": "heading heading--primary heading heading--secondary text--body nomenclature-tag callout callout--glass math-block",
-      "description": null
-    }
-  ]
-}

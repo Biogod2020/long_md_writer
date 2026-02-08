@@ -74,12 +74,12 @@ class TestAssetPathResolution(unittest.TestCase):
             local_path="agent_generated/fig1.svg"
         )
         
-        # Target file: workspace/job1/md/sec-01.md
+        # Target file: workspaces/workspace/job1/md/sec-01.md
         target_md = workspace / "md" / "sec-01.md"
         target_md.parent.mkdir()
         
         img_tag = entry.to_img_tag(target_file=target_md, workspace_path=workspace)
-        # Expected relative path from workspace/job1/md/ to workspace/job1/agent_generated/fig1.svg
+        # Expected relative path from workspaces/workspace/job1/md/ to workspaces/workspace/job1/agent_generated/fig1.svg
         # is ../agent_generated/fig1.svg
         self.assertIn('src="../agent_generated/fig1.svg"', img_tag)
 
@@ -105,7 +105,7 @@ class TestAssetPathResolution(unittest.TestCase):
         # For now let's just implement the logic to handle it if we pass it
         img_tag = entry.to_img_tag(target_file=target_md, workspace_path=workspace)
         
-        # From workspace/job1/md/ to assets/images/heart.png
+        # From workspaces/workspace/job1/md/ to assets/images/heart.png
         # Path: ../../../assets/images/heart.png
         self.assertIn('src="../../../assets/images/heart.png"', img_tag)
 

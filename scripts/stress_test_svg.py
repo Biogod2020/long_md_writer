@@ -35,7 +35,7 @@ async def stress_test_svg():
                 size_kb = len(svg_code) / 1024
                 print(f"  ✅ [Task:{task['id']}] 成功! 大小: {size_kb:.1f} KB, 耗时: {t_end - t_start:.1f}s")
                 # 保存结果供视觉检查
-                out_path = Path("workspace/stress_test_svg") / f"{task['id']}.svg"
+                out_path = Path("workspaces/workspace/stress_test_svg") / f"{task['id']}.svg"
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(svg_code, encoding="utf-8")
                 return True

@@ -195,9 +195,9 @@ class ProfileManager:
         初始化 Profile 管理器
 
         Args:
-            profiles_dir: Profiles 存储目录，默认为 workspace/profiles
+            profiles_dir: Profiles 存储目录，默认为 workspaces/workspace/profiles
         """
-        self.profiles_dir = profiles_dir or Path("workspace/profiles")
+        self.profiles_dir = profiles_dir or Path("workspaces/workspace/profiles")
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
         self._current_profile: Optional[ProjectProfile] = None
 

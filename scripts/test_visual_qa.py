@@ -11,7 +11,7 @@ from src.agents.visual_qa import VisualQAAgent
 
 def test_visual_qa():
     # Use the debug workspace from the last run
-    workspace_path = Path("workspace_debug/debug_201956")
+    workspace_path = Path("workspaces/workspace_debug/debug_201956")
     
     if not workspace_path.exists():
         print(f"❌ Workspace not found: {workspace_path}")

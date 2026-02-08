@@ -18,7 +18,7 @@ async def debug_qa_from_checkpoint():
     print("="*60)
 
     # 1. Load the checkpoint from disk
-    checkpoint_path = Path("workspace/e2e_test_scratch/8bbdfd91/debug_logs/step_033.json")
+    checkpoint_path = Path("workspaces/workspace/e2e_test_scratch/8bbdfd91/debug_logs/step_033.json")
     if not checkpoint_path.exists():
         print(f"❌ Error: Checkpoint not found at {checkpoint_path}")
         return

@@ -36,7 +36,7 @@ def main():
         epilog="""
 示例：
   # 从文件生成
-  python main.py --input project_brief.md --output workspace/my_project/
+  python main.py --input project_brief.md --output workspaces/workspace/my_project/
   
   # 使用自定义 API 地址
   python main.py --input brief.md --api-url http://localhost:7860 --auth-token your_token

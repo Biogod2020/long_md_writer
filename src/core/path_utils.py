@@ -30,3 +30,25 @@ def get_project_root(start_path: Optional[Path] = None) -> Path:
         
     # Default to current working directory if no root found
     return Path(os.getcwd()).resolve()
+
+WORKSPACE_ROOT = Path("workspaces")
+
+def get_workspace_dir(name: str) -> Path:
+    """
+    Get the path to a workspace directory, ensuring it is under the WORKSPACE_ROOT.
+    
+    Args:
+        name: The name of the workspace (e.g., 'workspace', 'workspace_debug', 'workspace_test').
+        
+    Returns:
+        Path object pointing to the standardized workspace directory.
+    """
+    # Special case for legacy 'workspace' which should be 'workspaces/workspace'
+    if name == "workspace":
+        return WORKSPACE_ROOT / "workspace"
+    
+    # If the name already contains the root, don't double up
+    if name.startswith("workspaces/"):
+        return Path(name)
+        
+    return WORKSPACE_ROOT / name

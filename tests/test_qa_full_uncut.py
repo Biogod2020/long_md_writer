@@ -14,7 +14,7 @@ from src.core.gemini_client import GeminiClient
 async def run_uncut_qa_test(stream: bool):
     print(f"\n{'='*20} Testing with STREAM={stream} {'='*20}")
     workspace_id = "d2d3d333"
-    workspace_path = Path(f"workspace/{workspace_id}")
+    workspace_path = Path(f"workspaces/workspace/{workspace_id}")
     
     # 1. Load Manifest
     manifest_path = workspace_path / "manifest.json"

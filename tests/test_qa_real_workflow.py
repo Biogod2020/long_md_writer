@@ -20,8 +20,8 @@ async def run_real_qa_verification():
     print("="*50)
 
     workspace_id = "d2d3d333"
-    orig_workspace = Path(f"workspace/{workspace_id}")
-    test_workspace = Path(f"workspace/{workspace_id}_test_qa")
+    orig_workspace = Path(f"workspaces/workspace/{workspace_id}")
+    test_workspace = Path(f"workspaces/workspace/{workspace_id}_test_qa")
     
     # 1. Create a temporary copy of the workspace so we don't mess up original data
     if test_workspace.exists():

@@ -69,7 +69,7 @@ def test_qa_flow():
     )
     
     # Create fake files
-    test_file = Path("test_workspace/md/file1.md")
+    test_file = Path("test_workspaces/workspace/md/file1.md")
     test_file.parent.mkdir(parents=True, exist_ok=True)
     test_file.write_text("# section 1\nContent.", encoding="utf-8")
     

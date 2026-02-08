@@ -20,7 +20,7 @@ async def run_complex_loop_test():
 
     workspace_id = "complex_loop_test"
     # Use the existing d2d3d333 workspace as a base (it was generated for the 12-lead chapter)
-    base_ws = Path("workspace/e2e_test_scratch/8bbdfd91")
+    base_ws = Path("workspaces/workspace/e2e_test_scratch/8bbdfd91")
     if not base_ws.exists():
         # Fallback to a wider search if the ID changed
         base_ws = next(Path("workspace").glob("8*"), None)
@@ -29,7 +29,7 @@ async def run_complex_loop_test():
         print("❌ Error: Could not find a base workspace to test on.")
         return
 
-    test_ws = Path(f"workspace/{workspace_id}")
+    test_ws = Path(f"workspaces/workspace/{workspace_id}")
     if test_ws.exists():
         shutil.rmtree(test_ws)
     shutil.copytree(base_ws, test_ws)

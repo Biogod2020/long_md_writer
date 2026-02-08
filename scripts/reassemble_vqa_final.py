@@ -10,7 +10,7 @@ from src.agents.assembler_agent import AssemblerAgent
 import json
 
 def reassemble():
-    workspace_path = "/Users/jay/LocalProjects/long_html_writing_agent/workspace_debug/debug_201956"
+    workspace_path = "/Users/jay/LocalProjects/long_html_writing_agent/workspaces/workspace_debug/debug_201956"
     workspace = Path(workspace_path)
     
     # Load manifest

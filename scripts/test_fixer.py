@@ -14,7 +14,7 @@ def test_fixer():
     auth_token = os.getenv("GEMINI_AUTH_PASSWORD", "123456")
     client = GeminiClient(api_base_url=api_base_url, auth_token=auth_token)
     
-    workspace_path = "workspace_debug/debug_201956"
+    workspace_path = "workspaces/workspace_debug/debug_201956"
     section_path = f"{workspace_path}/html/sec-1.html"
     
     # Create a test issue (simulating what Critic would return)

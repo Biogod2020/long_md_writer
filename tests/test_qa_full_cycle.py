@@ -19,7 +19,7 @@ async def run_full_cycle_test():
     print("="*60)
 
     workspace_id = "d2d3d333"
-    orig_workspace = Path(f"workspace/{workspace_id}")
+    orig_workspace = Path(f"workspaces/workspace/{workspace_id}")
     
     # We will use distinct workspaces for each scenario to keep them clean
     
@@ -29,7 +29,7 @@ async def run_full_cycle_test():
     # print("\n\n" + "-"*40)
     # print("🧪 SCENARIO A: Baseline Check (Happy Path)")
     # print("-"*40)
-    # path_a = Path(f"workspace/{workspace_id}_cycle_A")
+    # path_a = Path(f"workspaces/workspace/{workspace_id}_cycle_A")
     # setup_workspace(orig_workspace, path_a)
     
     # state_a = load_state(path_a, f"cycle_A_{workspace_id}")
@@ -53,7 +53,7 @@ async def run_full_cycle_test():
     client = GeminiClient(timeout=300)
     qa_agent = MarkdownQAAgent(client=client)
 
-    path_b = Path(f"workspace/{workspace_id}_cycle_B")
+    path_b = Path(f"workspaces/workspace/{workspace_id}_cycle_B")
     setup_workspace(orig_workspace, path_b)
     
     # Inject Typo

@@ -8,7 +8,7 @@ from pathlib import Path
 import markdown
 
 # 配置
-WORKSPACE = Path("workspace/ecg_lecture/ecg_v3")
+WORKSPACE = Path("workspaces/workspace/ecg_lecture/ecg_v3")
 MD_DIR = WORKSPACE / "md"
 ASSETS_DIR = WORKSPACE / "assets"
 OUTPUT_FILE = WORKSPACE / "final.html"

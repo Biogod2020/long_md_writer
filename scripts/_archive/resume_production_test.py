@@ -77,6 +77,6 @@ def resume_production_test(workspace_dir: str):
 
 if __name__ == "__main__":
     import sys
-    # Usage: python resume_production_test.py workspace/sota_prod_3522
-    target_dir = sys.argv[1] if len(sys.argv) > 1 else "workspace/sota_prod_3522"
+    # Usage: python resume_production_test.py workspaces/workspace/sota_prod_3522
+    target_dir = sys.argv[1] if len(sys.argv) > 1 else "workspaces/workspace/sota_prod_3522"
     resume_production_test(target_dir)

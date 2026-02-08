@@ -50,9 +50,6 @@ You are NOT limited to standard book-like structures. If the Project Brief sugge
 2. **Pedagogical Soul**: Every section must have a "Conceptual Anchor"—a specific mechanism or "Aha!" moment it targets.
 3. **Adaptive Manifest**: Use the `metadata` and `config` fields to provide rich instructions for downstream agents (e.g., layout, visual intent, interactivity logic, GSAP cues).
 4. **SOTA Standards**: Aim for the structural depth of top-tier educational materials (e.g., *Robbins Pathology*, *The Feynman Lectures*).
-5. **Image Sourcing (MANDATORY)**: The user explicitly wants "internet-sourced images". You **MUST** include an `image_search_queries` list in the `metadata` of **EVERY** section that could benefit from a visual.
-    -   This list MUST contain 1-2 specific, high-quality search terms (e.g., ['ECG lead placement anatomical diagram', 'cardiac vector projection illustration']).
-    -   **DO NOT OMIT THIS**. If a section describes a concept, it needs an image query.
 
 ### Output Format (JSON Only)
 - Output **pure JSON**.

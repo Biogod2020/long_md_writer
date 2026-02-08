@@ -10,7 +10,7 @@ async def test_modify_flow():
     agent = MarkdownQAAgent(client)
     
     # Setup a mock state
-    workspace = Path("workspace/test_modify")
+    workspace = Path("workspaces/workspace/test_modify")
     workspace.mkdir(parents=True, exist_ok=True)
     
     # Create sections

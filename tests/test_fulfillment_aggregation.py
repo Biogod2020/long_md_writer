@@ -54,7 +54,7 @@ class TestFulfillmentAggregation(unittest.TestCase):
         with mock.patch.object(agent, '_fulfill_svg_step', return_value=(d, mock_asset)):
             trace = {"steps": []}
             res_d, res_asset = await agent._fulfill_directive_async(
-                d, uar, self.workspace/"gen", self.workspace/"src", "s1", self.workspace, state, trace
+                d, uar, self.workspaces/workspace/"gen", self.workspaces/workspace/"src", "s1", self.workspace, state, trace
             )
             
             self.assertEqual(res_d.id, "test-1")

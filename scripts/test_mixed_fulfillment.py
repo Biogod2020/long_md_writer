@@ -5,7 +5,7 @@ from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
 from src.core.gemini_client import GeminiClient
 
 async def test_mixed_fulfillment():
-    workspace = Path("workspace/mix_fulfillment_test")
+    workspace = Path("workspaces/workspace/mix_fulfillment_test")
     client = GeminiClient()
     
     state = AgentState(

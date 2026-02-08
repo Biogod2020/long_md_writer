@@ -20,8 +20,8 @@ async def run_rewrite_flow_test():
     print("="*50)
 
     workspace_id = "d2d3d333"
-    orig_workspace = Path(f"workspace/{workspace_id}")
-    test_workspace = Path(f"workspace/{workspace_id}_rewrite_flow")
+    orig_workspace = Path(f"workspaces/workspace/{workspace_id}")
+    test_workspace = Path(f"workspaces/workspace/{workspace_id}_rewrite_flow")
     
     # 1. Setup Workspace
     if test_workspace.exists():

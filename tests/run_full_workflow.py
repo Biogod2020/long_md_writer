@@ -72,7 +72,7 @@ async def main():
     job_id = f"full_{timestamp}"
 
     print(f"\n📋 Job ID: {job_id}")
-    print(f"📁 工作目录: ./workspace/{job_id}")
+    print(f"📁 工作目录: ./workspaces/workspace/{job_id}")
 
     # 加载输入
     print("\n--- 加载输入 ---")

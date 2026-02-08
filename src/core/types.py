@@ -170,7 +170,7 @@ class AssetEntry(BaseModel):
             full = ws_path / local_path
             if full.exists():
                 return full
-            # Try in parent of workspace (common for jobs in workspace/)
+            # Try in parent of workspace (common for jobs in workspaces/workspace/)
             full = ws_path.parent / local_path
             if full.exists():
                 return full
@@ -229,7 +229,7 @@ class AssetEntry(BaseModel):
                 # workspace 内的生成资产: ../generated_assets/xxx
                 src_path = f"../{src_path}"
             elif src_path.startswith("assets/"):
-                # 项目根目录的资产: ../../../assets/xxx (workspace/job_id/md → project_root)
+                # 项目根目录的资产: ../../../assets/xxx (workspaces/workspace/job_id/md → project_root)
                 src_path = f"../../../{src_path}"
             elif not src_path.startswith("../"):
                 # 其他 workspace 内的相对路径
@@ -411,7 +411,7 @@ class UniversalAssetRegistry(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     def set_persist_path(self, path: str) -> None:
-        """设置持久化路径 (通常是当前 workspace/assets.json)"""
+        """设置持久化路径 (通常是当前 workspaces/workspace/assets.json)"""
         self.persist_path = path
 
     def mount_workspace(self, name: str, assets_json_path: str) -> bool:
