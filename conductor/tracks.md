@@ -38,8 +38,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: design and do the breakpoint test (you may utilize the langgraph utilities)**
 *Link: [./tracks/breakpoint_harness_20260204/](./tracks/breakpoint_harness_20260204/)*
-
----
-
-- [x] **Track: cleanup the workspac dir in the root directory**
-*Link: [./conductor/tracks/workspace_cleanup_20260208/](./conductor/tracks/workspace_cleanup_20260208/)*
