@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 streamlit run app.py
 
 # CLI (headless automated production)
-python main.py --input inputs/prompt.txt --output workspace/project_name/
+python main.py --input inputs/prompt.txt --output workspaces/workspace/project_name/
 
 # With custom API endpoint
 python main.py --input inputs/prompt.txt --api-url http://localhost:8888/v1 --auth-token your_token
@@ -188,7 +188,7 @@ The workflow uses `app.astream()` for async node support:
 Each workflow run creates a job-specific workspace:
 
 ```
-workspace/{job_id}/
+workspaces/workspace/{job_id}/
 ├── md/                    # Markdown sections (sec-1.md, sec-2.md, ...)
 ├── html/                  # HTML fragments (sec-1.html, sec-2.html, ...)
 ├── assets/
@@ -268,7 +268,7 @@ Tests are organized by feature area in `tests/`:
 - `test_parallel_*.py` - Concurrent operations
 - `test_image_sourcing_*.py` - Image search and selection
 
-Tests create isolated workspaces in `workspace_test/` and `workspace_debug/`.
+Tests create isolated workspaces in `workspaces/workspace_test/` and `workspaces/workspace_debug/`.
 
 ---
 
