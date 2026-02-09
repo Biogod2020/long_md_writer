@@ -3,6 +3,7 @@
 ## Core Engine
 - **Language**: Python 3.x
 - **Orchestration**: LangGraph (for multi-agent state management and complex workflows).
+- **Persistence**: Native SQLite-based checkpointing (AsyncSqliteSaver) for robust state recovery and thread-safe multi-session management.
 - **Data Validation**: Pydantic (for strictly typed inter-agent communication and configuration).
 
 ## Agent Architecture
