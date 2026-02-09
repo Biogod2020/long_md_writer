@@ -33,8 +33,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Organize the project root directory by relocating scripts, tests, and documentation to appropriate subdirectories while preserving original functionality and task-tracking files.**
 *Link: [./tracks/repo_tidy_up_20260129/](./tracks/repo_tidy_up_20260129/)*
-
----
-
-- [x] **Track: design and do the breakpoint test (you may utilize the langgraph utilities)**
-*Link: [./tracks/breakpoint_harness_20260204/](./tracks/breakpoint_harness_20260204/)*
