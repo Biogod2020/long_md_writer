@@ -323,44 +323,50 @@ class LaTeXBalanceValidator:
         return result
 
     def _check_dollar_signs(self, content: str, result: ValidationResult) -> None:
-        """检查 $ 和 $$ 符号平衡"""
-        lines = content.split("\n")
+        """
+        科学校验 $ 和 $$ 符号平衡 (SOTA 2.0 全量扫描法)
+        """
+        # 1. 移除代码块干扰
+        clean_content = re.sub(r'```[\s\S]*?```', '', content)
+        
+        # 2. 移除转义的美元符号 (\$)
+        clean_content = clean_content.replace(r'\$', '')
 
-        in_code_block = False
-
-        for line_num, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            # 跳过代码块
-            if stripped.startswith("```"):
-                in_code_block = not in_code_block
-                continue
-            if in_code_block:
-                continue
-
-            # 统计 $$ (display math)
-            display_count = line.count("$$")
-            if display_count % 2 != 0:
+        # 3. 提取所有块级公式 ($$ ... $$)
+        # 使用非贪婪匹配
+        display_math = re.findall(r'\$\$[\s\S]*?\$\$', clean_content)
+        for dm in display_math:
+            # 内部检查：公式内部不应含有三连美元符号
+            if "$$$" in dm:
                 result.add_error(
-                    "display math 符号 `$$` 数量不匹配",
-                    line_number=line_num,
-                    context=line[:60],
-                    suggestion="确保 `$$` 成对出现"
+                    f"块级公式内部检测到非法符号堆叠: {dm[:30]}...",
+                    context=dm,
+                    suggestion="请检查是否多写了美元符号。"
                 )
+        
+        # 4. 从内容中移除已匹配的块级公式，防止干扰行内匹配
+        remaining = re.sub(r'\$\$[\s\S]*?\$\$', ' [BLOCK_MATH] ', clean_content)
 
-            # 统计 $ (inline math) - 排除 $$
-            temp_line = line.replace("$$", "")
-            inline_count = temp_line.count("$")
-            # 排除转义的 \$
-            escaped_count = temp_line.count("\\$")
-            actual_inline = inline_count - escaped_count
-
-            if actual_inline % 2 != 0:
-                result.add_error(
-                    "inline math 符号 `$` 数量不匹配",
-                    line_number=line_num,
-                    context=line[:60],
-                    suggestion="确保 `$` 成对出现，转义使用 `\\$`"
-                )
+        # 5. 提取所有行内公式 ($ ... $)
+        # 注意：这里要处理一行内有多个 $ 的情况，且不能跨段落
+        inline_math = re.findall(r'\$[^\$\n]+?\$', remaining)
+        
+        # 6. 最后检查：剩下的文本中是否还有残留的孤立 $
+        final_remnant = re.sub(r'\$[^\$\n]+?\$', ' [INLINE_MATH] ', remaining)
+        
+        if "$" in final_remnant:
+            # 找到具体的行号
+            lines = content.split("\n")
+            for i, line in enumerate(lines, 1):
+                # 排除已经被占位符替换的部分
+                # 简单检查该行是否含有奇数个 $
+                if line.count("$") % 2 != 0 and "\\$" not in line:
+                    result.add_error(
+                        f"检测到未闭合的 LaTeX 符号 '$' 或非法堆叠",
+                        line_number=i,
+                        context=line.strip()[:60],
+                        suggestion="确保所有 $ 或 $$ 成对出现，且没有 $$$ 这种三连符号。"
+                    )
 
     def _check_environments(self, content: str, result: ValidationResult) -> None:
         """检查 LaTeX 环境配对"""

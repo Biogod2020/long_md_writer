@@ -1,6 +1,8 @@
 /**
- * Native Patcher Bridge
- * Directly ported from Google's gemini-cli (edit.ts and textUtils.ts)
+ * Native Patcher Bridge (Scientific Alignment with gemini-cli)
+ * 
+ * Ported from: ref_repo/gemini-cli/packages/core/src/tools/edit.ts
+ * and ref_repo/gemini-cli/packages/core/src/utils/textUtils.ts
  */
 
 function safeLiteralReplace(str, oldString, newString) {
@@ -10,8 +12,10 @@ function safeLiteralReplace(str, oldString, newString) {
   if (!newString.includes('$')) {
     return str.split(oldString).join(newString);
   }
-  const escapedNewString = newString.split('$').join('$$$$');
-  return str.split(oldString).join(escapedNewString);
+  // The correct way to handle $ in JavaScript string replacement when using split/join
+  // is actually just split/join! $ has no special meaning there.
+  // The only place $ matters is in .replace(regex, string) or .replace(string, string)
+  return str.split(oldString).join(newString);
 }
 
 function restoreTrailingNewline(originalContent, modifiedContent) {
@@ -25,12 +29,17 @@ function restoreTrailingNewline(originalContent, modifiedContent) {
 }
 
 function calculateExactReplacement(currentContent, old_string, new_string) {
+  const normalizedCode = currentContent;
   const normalizedSearch = old_string.replace(/\r\n/g, '\n');
   const normalizedReplace = new_string.replace(/\r\n/g, '\n');
 
-  const exactOccurrences = currentContent.split(normalizedSearch).length - 1;
-  if (exactOccurrences === 1) {
-    let modifiedCode = safeLiteralReplace(currentContent, normalizedSearch, normalizedReplace);
+  const exactOccurrences = normalizedCode.split(normalizedSearch).length - 1;
+  if (exactOccurrences > 0) {
+    let modifiedCode = safeLiteralReplace(
+      normalizedCode,
+      normalizedSearch,
+      normalizedReplace,
+    );
     modifiedCode = restoreTrailingNewline(currentContent, modifiedCode);
     return modifiedCode;
   }
@@ -38,45 +47,64 @@ function calculateExactReplacement(currentContent, old_string, new_string) {
 }
 
 function calculateFlexibleReplacement(currentContent, old_string, new_string) {
+  const normalizedCode = currentContent;
   const normalizedSearch = old_string.replace(/\r\n/g, '\n');
   const normalizedReplace = new_string.replace(/\r\n/g, '\n');
 
-  const sourceLines = currentContent.match(/.*(?:\n|$)/g)?.slice(0, -1) || [];
-  const searchLinesStripped = normalizedSearch.split('\n').map(l => l.trim());
+  const sourceLines = normalizedCode.match(/.*(?:\n|$)/g)?.slice(0, -1) ?? [];
+  const searchLinesStripped = normalizedSearch
+    .split('\n')
+    .map((line) => line.trim());
   const replaceLines = normalizedReplace.split('\n');
 
   let flexibleOccurrences = 0;
-  let matchIdx = -1;
-  
-  for (let i = 0; i <= sourceLines.length - searchLinesStripped.length; i++) {
+  let i = 0;
+  while (i <= sourceLines.length - searchLinesStripped.length) {
     const window = sourceLines.slice(i, i + searchLinesStripped.length);
-    const windowStripped = window.map(l => l.trim());
-    const isMatch = windowStripped.every((line, index) => line === searchLinesStripped[index]);
+    const windowStripped = window.map((line) => line.trim());
+    const isMatch = windowStripped.every(
+      (line, index) => line === searchLinesStripped[index],
+    );
 
     if (isMatch) {
       flexibleOccurrences++;
-      matchIdx = i;
+      const firstLineInMatch = window[0];
+      const indentationMatch = firstLineInMatch.match(/^(\s*)/);
+      const indentation = indentationMatch ? indentationMatch[1] : '';
+      const newBlockWithIndent = replaceLines.map(
+        (line) => `${indentation}${line}`,
+      );
+      sourceLines.splice(
+        i,
+        searchLinesStripped.length,
+        newBlockWithIndent.join('\n') + (newBlockWithIndent.length > 0 ? '' : ''),
+      );
+      // Skip the newly inserted lines
+      i += replaceLines.length;
+    } else {
+      i++;
     }
   }
 
-  if (flexibleOccurrences === 1) {
-    const firstLineInMatch = sourceLines[matchIdx];
-    const indentation = firstLineInMatch.match(/^(\s*)/)[1] || '';
-    const newBlockWithIndent = replaceLines.map(line => `${indentation}${line}`).join('\n');
-    
-    sourceLines.splice(matchIdx, searchLinesStripped.length, newBlockWithIndent + (newBlockWithIndent.endsWith('\n') ? '' : '\n'));
+  if (flexibleOccurrences > 0) {
     let modifiedCode = sourceLines.join('');
+    // Fix join artifact: match() above keeps newlines, so we might need adjustment
+    // Actually, join("") is correct if sourceLines already have \n
     modifiedCode = restoreTrailingNewline(currentContent, modifiedCode);
     return modifiedCode;
   }
   return null;
 }
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function calculateRegexReplacement(currentContent, old_string, new_string) {
   const normalizedSearch = old_string.replace(/\r\n/g, '\n');
   const normalizedReplace = new_string.replace(/\r\n/g, '\n');
-  const delimiters = ['(', ')', ':', '[', ']', '{', '}', '>', '<', '='];
 
+  const delimiters = ['(', ')', ':', '[', ']', '{', '}', '>', '<', '='];
   let processedString = normalizedSearch;
   for (const delim of delimiters) {
     processedString = processedString.split(delim).join(` ${delim} `);
@@ -85,35 +113,42 @@ function calculateRegexReplacement(currentContent, old_string, new_string) {
   const tokens = processedString.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
 
-  const pattern = tokens.map(t => t.replace(/[.*+?^${}()|[\\]/g, '\\$&')).join('\\s*');
-  const flexibleRegex = new RegExp(`^(\s*)${pattern}`, 'm');
+  const escapedTokens = tokens.map(escapeRegex);
+  const pattern = escapedTokens.join('\\s*');
+  const finalPattern = `^(\\s*)${pattern}`;
+  const flexibleRegex = new RegExp(finalPattern, 'm');
 
   const match = flexibleRegex.exec(currentContent);
   if (!match) return null;
 
-  // Check for ambiguity
-  const globalRegex = new RegExp(`^(\s*)${pattern}`, 'mg');
-  const matches = currentContent.match(globalRegex);
-  if (matches && matches.length > 1) return null;
-
   const indentation = match[1] || '';
-  const newBlockWithIndent = normalizedReplace.split('\n').map(l => `${indentation}${l}`).join('\n');
-  
-  const modifiedCode = currentContent.replace(flexibleRegex, newBlockWithIndent);
+  const newLines = normalizedReplace.split('\n');
+  const newBlockWithIndent = newLines
+    .map((line) => `${indentation}${line}`)
+    .join('\n');
+
+  // CRITICAL: Escape $ in replacement string for .replace()
+  const escapedReplace = newBlockWithIndent.replace(/\$/g, '$$$$');
+  const modifiedCode = currentContent.replace(flexibleRegex, escapedReplace);
+
   return restoreTrailingNewline(currentContent, modifiedCode);
 }
 
 // CLI Entry Point
 const fs = require('fs');
-const input = JSON.parse(fs.readFileSync(0, 'utf-8'));
-const { content, search, replace } = input;
+try {
+  const input = JSON.parse(fs.readFileSync(0, 'utf-8'));
+  const { content, search, replace } = input;
 
-let result = calculateExactReplacement(content, search, replace);
-if (result === null) result = calculateFlexibleReplacement(content, search, replace);
-if (result === null) result = calculateRegexReplacement(content, search, replace);
+  let result = calculateExactReplacement(content, search, replace);
+  if (result === null) result = calculateFlexibleReplacement(content, search, replace);
+  if (result === null) result = calculateRegexReplacement(content, search, replace);
 
-if (result !== null) {
-  process.stdout.write(JSON.stringify({ success: true, result }));
-} else {
-  process.stdout.write(JSON.stringify({ success: false, error: 'No unique match found.' }));
+  if (result !== null) {
+    process.stdout.write(JSON.stringify({ success: true, result }));
+  } else {
+    process.stdout.write(JSON.stringify({ success: false, error: 'No unique match found.' }));
+  }
+} catch (e) {
+  process.stdout.write(JSON.stringify({ success: false, error: e.message }));
 }

@@ -71,11 +71,23 @@ async def run_markdown_critic(
     
     file_list = [Path(p).name for p in state.completed_md_sections]
 
+    # SOTA: Inject feedback from rejected patches if any
+    rejected_feedback = ""
+    for filename in file_list:
+        error = state.loop_metadata.get(f"rejected_fix_{filename}")
+        if error:
+            rejected_feedback += f"- **{filename}**: Previous patch REJECTED by system validator. Reason: {error}. Please provide a standard LaTeX/Markdown alternative.\n"
+    
+    if rejected_feedback:
+        rejected_feedback = f"\n# ⚠️ System Warnings (Rejected Previous Fixes)\n{rejected_feedback}\n"
+
     prompt = f"""# Manifest
 {json.dumps(manifest_info, indent=2, ensure_ascii=False)}
 
 # Project Brief
 {state.project_brief}
+
+{rejected_feedback}
 
 # 🎯 User Intent
 {state.user_intent}

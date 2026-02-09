@@ -152,16 +152,45 @@ def apply_fuzzy_fallback(content: str, search_block: str, replace_block: str) ->
         return content[:loc] + replace_block + content[actual_match_end:]
 
 def apply_smart_patch(content: str, search_block: str, replace_block: str) -> Tuple[str, bool]:
-    """Tiered patching strategy."""
+
+    """Tiered patching strategy with literal safety focus."""
+
     if not search_block:
+
         return "Search block is empty.", False
 
+
+
+    # 1. 尝试原生 (Literal/Flexible) 替换
+
     res = apply_native_patch(content, search_block, replace_block)
+
     if res is not None:
-        return res, True
+
+        # SOTA Safety Check: 防止美元符号爆炸
+
+        # 如果新内容中出现了 $$ 但原搜索块没有且原内容也没有对应位置的 $$，则判定为 AI 幻觉
+
+        if "$$" in res and "$$" not in content and "$$" not in replace_block:
+
+             # 这说明 patch 逻辑在合并时出错了，回退到 fuzzy 尝试
+
+             pass
+
+        else:
+
+            return res, True
+
         
+
+    # 2. 尝试模糊对齐回退
+
     res = apply_fuzzy_fallback(content, search_block, replace_block)
+
     if res is not None:
+
         return res, True
+
         
+
     return "No unique match found using any patching strategy.", False

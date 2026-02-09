@@ -3,6 +3,7 @@ import json
 import httpx
 import asyncio
 import re
+import random
 from typing import Optional, Dict, List
 from dataclasses import dataclass
 
@@ -128,7 +129,7 @@ class GeminiClient:
         if "generation_config" in kwargs:
             payload["generationConfig"].update(kwargs["generation_config"])
 
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             try:
                 client = await self._get_client()
@@ -137,20 +138,19 @@ class GeminiClient:
                 else:
                     resp = await client.post(url, json=payload, headers=self._get_headers())
                     if resp.status_code != 200:
-                        if attempt < max_retries - 1 and resp.status_code in [500, 502, 503, 504]:
-                            await asyncio.sleep(1 * (attempt + 1))
+                        if attempt < max_retries - 1 and resp.status_code in [400, 429, 500, 502, 503, 504]:
+                            wait_time = (2 ** attempt) + random.random()
+                            print(f"  [GeminiClient] ⚠️ API Error {resp.status_code}. Retrying in {wait_time:.2f}s...")
+                            await asyncio.sleep(wait_time)
                             continue
                         return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {resp.text}")
                     
-                    # Capture full details for debugging
-                    result = self._parse_native_response(resp.json())
-                    
-                    return result
-            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError) as e:
+                    return self._parse_native_response(resp.json())
+            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError, httpx.ConnectError) as e:
                 if attempt < max_retries - 1:
                     print(f"  [GeminiClient] ⚠️ Connection error ({type(e).__name__}). Resetting pool and retrying...")
                     await self.reset_client()
-                    await asyncio.sleep(0.5 * (attempt + 1))
+                    await asyncio.sleep(1 * (attempt + 1))
                     continue
                 return GeminiResponse(success=False, error=str(e))
             except httpx.ReadTimeout as e:
@@ -304,7 +304,7 @@ class GeminiClient:
 
     async def generate_parallel_async(self, tasks: List[Dict], debug: bool = False) -> List[GeminiResponse]:
         """Execute multiple native tasks in parallel."""
-        max_concurrent = 4 
+        max_concurrent = 3 
         semaphore = asyncio.Semaphore(max_concurrent)
         
         async def worker(task):

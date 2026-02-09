@@ -49,7 +49,8 @@ class SOTA2NodeFactory:
         self.architect = ArchitectAgent(self.client)
         self.techspec = TechSpecAgent(self.client)
         self.writer = WriterAgent(self.client)
-        self.fulfillment = AssetFulfillmentAgent(client=self.client, skip_generation=False, skip_search=True)
+        # SOTA: 开启搜图功能 (skip_search=False)
+        self.fulfillment = AssetFulfillmentAgent(client=self.client, skip_generation=False, skip_search=False)
         self.markdown_qa = MarkdownQAAgent(self.client)
 
     async def asset_indexer_node(self, state: AgentState) -> AgentState:
@@ -65,9 +66,13 @@ class SOTA2NodeFactory:
         print("\n[SOTA2] 📝 Phase 1.2: Refiner")
         state.project_brief = self.refiner.run(state, clarification_answers=state.clarifier_answers, feedback=state.user_brief_feedback)
         state.user_brief_feedback = None
+        
+        from .breakpoint_manager import SnapshotManager
+        SnapshotManager(state).capture("BP-2_Refined", auto_continue=True)
         return state
 
-    def review_brief_node(self, state: AgentState) -> AgentState: return state
+    def review_brief_node(self, state: AgentState) -> AgentState: 
+        return state
 
     def architect_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 🏗️ Phase 1.3: Architect")
@@ -81,13 +86,21 @@ class SOTA2NodeFactory:
             print(f"  [Architect] Physical Namespace locked for {len(state.manifest.sections)} sections.")
             
         state.user_outline_feedback = None
+        
+        from .breakpoint_manager import SnapshotManager
+        SnapshotManager(state).capture("BP-3_Structured", auto_continue=True)
         return state
 
-    def review_outline_node(self, state: AgentState) -> AgentState: return state
+    def review_outline_node(self, state: AgentState) -> AgentState: 
+        return state
 
     def techspec_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 🔧 Phase 2: TechSpec")
-        return self.techspec.run(state)
+        state = self.techspec.run(state)
+        
+        from .breakpoint_manager import SnapshotManager
+        SnapshotManager(state).capture("BP-4_Specs", auto_continue=True)
+        return state
 
     async def writer_node(self, state: AgentState) -> AgentState:
         section_idx = state.current_section_index
@@ -97,19 +110,30 @@ class SOTA2NodeFactory:
             
         state.md_qa_iterations = 0
         state.md_qa_needs_revision = False
-        return await self.writer.run(state)
+        state = await self.writer.run(state)
+        return state
 
     async def markdown_qa_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 📋 Phase 3.2: Markdown QA (AI Internal Review)")
-        return await self.markdown_qa.run(state)
+        state = await self.markdown_qa.run(state)
+        
+        from .breakpoint_manager import SnapshotManager
+        SnapshotManager(state).capture("BP-6_QA_Done", auto_continue=True)
+        return state
 
-    def markdown_review_node(self, state: AgentState) -> AgentState: return state
+    def markdown_review_node(self, state: AgentState) -> AgentState: 
+        return state
 
     async def batch_fulfillment_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 🎨 Phase 4.1: Parallel Asset Fulfillment")
-        return await self.fulfillment.run_parallel_async(state)
+        state = await self.fulfillment.run_parallel_async(state)
+        
+        from .breakpoint_manager import SnapshotManager
+        SnapshotManager(state).capture("BP-8_Assets_Done", auto_continue=True)
+        return state
 
-    def batch_asset_review_node(self, state: AgentState) -> AgentState: return state
+    def batch_asset_review_node(self, state: AgentState) -> AgentState: 
+        return state
 
 
 def create_sota2_workflow(
@@ -145,7 +169,7 @@ def create_sota2_workflow(
     workflow.add_node("batch_fulfillment", nodes.batch_fulfillment_node)
     workflow.add_node("batch_asset_review", nodes.batch_asset_review_node)
 
-    # Routing Functions
+    # --- Routing Functions ---
     def should_review_brief(state: AgentState) -> Literal["architect", "refiner"]:
         return "architect" if getattr(state, "brief_approved", False) else "refiner"
 
@@ -166,7 +190,11 @@ def create_sota2_workflow(
         return "writer"
 
     def should_finish_fulfillment(state: AgentState) -> Literal["batch_asset_review", "end"]:
-        if state.asset_revision_needed: return "batch_asset_review"
+        # 如果已经手动批准，或者没有需要修复的资产，则结束
+        if state.asset_approved:
+            return "end"
+        if state.asset_revision_needed:
+            return "batch_asset_review"
         return "end"
 
     # Define Edges
@@ -263,6 +291,7 @@ async def run_sota2_workflow(
                     if next_node == "review_brief": update = {"brief_approved": True}
                     elif next_node == "review_outline": update = {"outline_approved": True}
                     elif next_node == "markdown_review": update = {"markdown_approved": True}
+                    elif next_node == "batch_asset_review": update = {"asset_approved": True}
                     
                     if update:
                         await app.aupdate_state(config, update)

@@ -34,7 +34,8 @@ class SnapshotManager:
         print(f"\n📸 [SNAPSHOT] Solidifying scene at {bp_id}...")
         
         timestamp = datetime.now().strftime("%H%M%S")
-        snapshot_path = self.snapshots_dir / f"{bp_id}_{timestamp}"
+        snapshot_name = f"{bp_id}_{timestamp}"
+        snapshot_path = self.snapshots_dir / snapshot_name
         snapshot_path.mkdir(parents=True, exist_ok=True)
         
         artifacts_path = snapshot_path / "artifacts"
@@ -53,14 +54,14 @@ class SnapshotManager:
         # 4. Integrate with ProfileManager
         self.pm.create_profile(
             project_title=self.state.manifest.project_title if self.state.manifest else "Breakpoint Test",
-            profile_id=f"snap_{bp_id}_{timestamp}"
+            profile_id=f"snap_{snapshot_name}"
         )
         self.pm.record_uar_checkpoint(self.state)
         if self.state.manifest:
             self.pm.record_manifest(self.state.manifest)
         self.pm.save_profile()
         
-        print(f"✅ Scene solidified at: {snapshot_path.name}")
+        print(f"✅ Scene solidified at: {snapshot_name}")
         
         if not auto_continue:
             print(f"\n🩺 [SURGERY MODE] Flow interrupted at {bp_id}.")
@@ -69,9 +70,67 @@ class SnapshotManager:
                 input("   Press Enter when verification is complete to resume flow...")
                 print("🚀 Resuming execution...")
 
+    def list_snapshots(self) -> list[dict]:
+        """Lists all available snapshots with metadata."""
+        snapshots = []
+        if not self.snapshots_dir.exists():
+            return []
+            
+        for d in sorted(self.snapshots_dir.iterdir(), key=os.path.getmtime, reverse=True):
+            if d.is_dir() and (d / "state.json").exists():
+                manifest_path = d / "audit_manifest.json"
+                metadata = {}
+                if manifest_path.exists():
+                    metadata = json.loads(manifest_path.read_text(encoding="utf-8"))
+                
+                snapshots.append({
+                    "id": d.name,
+                    "path": str(d),
+                    "timestamp": metadata.get("timestamp"),
+                    "bp_id": d.name.split("_")[0],
+                    "assets": metadata.get("assets_in_uar", 0),
+                    "sections": metadata.get("sections_completed", 0)
+                })
+        return snapshots
+
+    def load_snapshot_state(self, snapshot_id: str) -> AgentState:
+        """Loads a logical AgentState from a snapshot folder."""
+        state_path = self.snapshots_dir / snapshot_id / "state.json"
+        if not state_path.exists():
+            raise FileNotFoundError(f"Snapshot state not found: {state_path}")
+            
+        print(f"📖 [SNAPSHOT] Loading state from {snapshot_id}...")
+        state_data = json.loads(state_path.read_text(encoding="utf-8"))
+        return AgentState(**state_data)
+
+    def restore_artifacts(self, snapshot_id: str):
+        """Physically restores artifacts from a snapshot back to the active workspace."""
+        source_dir = self.snapshots_dir / snapshot_id / "artifacts"
+        if not source_dir.exists():
+            print(f"⚠️ No artifacts found in snapshot {snapshot_id}")
+            return
+            
+        print(f"🔄 [SNAPSHOT] Restoring physical artifacts from {snapshot_id} to workspace...")
+        
+        # We selectively restore common dirs to avoid nuking everything
+        for dirname in ["md", "html", "agent_generated", "agent_sourced", "assets"]:
+            src = source_dir / dirname
+            dst = self.workspace / dirname
+            if src.exists():
+                if dst.exists():
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+        
+        for filename in ["manifest.json", "assets.json", "design_tokens.json", "style_mapping.json"]:
+            src = source_dir / filename
+            dst = self.workspace / filename
+            if src.exists():
+                shutil.copy2(src, dst)
+        print("✅ Physical scene restored.")
+
     def _collect_artifacts(self, target_dir: Path):
         """Physically copies workspace files to snapshot."""
-        source_dirs = ["md", "html", "agent_generated", "agent_sourced", "assets"]
+        source_dirs = ["md", "html", "agent_generated", "agent_sourced", "assets", "qa_logs"]
         for dirname in source_dirs:
             src_path = self.workspace / dirname
             if src_path.exists() and src_path.is_dir():

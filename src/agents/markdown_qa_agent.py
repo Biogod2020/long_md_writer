@@ -8,6 +8,7 @@ from typing import Optional
 
 from src.core.gemini_client import GeminiClient
 from src.core.types import AgentState
+from src.core.validators import MarkdownValidator
 from src.agents.markdown_qa.critic import run_markdown_critic
 from src.agents.markdown_qa.advicer import run_markdown_advicer
 from src.agents.markdown_qa.fixer import run_markdown_fixer, apply_patches
@@ -25,6 +26,7 @@ class MarkdownQAAgent:
     def __init__(self, client: Optional[GeminiClient] = None, max_iterations: int = 3):
         self.client = client or GeminiClient()
         self.max_iterations = max_iterations
+        self.validator = MarkdownValidator()
 
     async def run(self, state: AgentState) -> AgentState:
         if not state.completed_md_sections:
@@ -46,6 +48,15 @@ class MarkdownQAAgent:
         
         # 3. CRITIC Phase
         critique = await run_markdown_critic(self.client, state, merged_content, debug=state.debug_mode)
+        
+        # SOTA: 将审计报告保存至物理文件，增加透明度
+        qa_log_dir = Path(state.workspace_path) / "qa_logs"
+        qa_log_dir.mkdir(exist_ok=True)
+        import json
+        (qa_log_dir / f"critique_it{state.md_qa_iterations}.json").write_text(
+            json.dumps(critique, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+
         verdict = critique.get("verdict", "MODIFY") # Default to modify if undefined
         feedback = critique.get("feedback", "")
         
@@ -96,10 +107,10 @@ class MarkdownQAAgent:
             
         print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
         
-        # 5. FIXER Phase (Parallel with max 4 concurrent tasks)
+        # 5. FIXER Phase (Parallel with max 3 concurrent tasks)
         import asyncio
         
-        semaphore = asyncio.Semaphore(4)
+        semaphore = asyncio.Semaphore(3)
         fixes_applied = 0
         fix_results = []
         
@@ -143,9 +154,19 @@ class MarkdownQAAgent:
                 new_content = apply_patches(res["current_content"], fix_result)
                 
                 if new_content != res["current_content"]:
+                    # SOTA: 执行校验仅用于日志和审计，不再阻断写入
+                    validation = self.validator.validate_all(new_content)
+                    
+                    # 无论校验是否通过，都物理写入文件 (信任 AI 的渐进式改进)
                     Path(res["target_path"]).write_text(new_content, encoding="utf-8")
                     fixes_applied += 1
-                    print(f"      ✅ Applied fixes to {res['filename']}")
+                    
+                    if validation.is_valid:
+                        print(f"      ✅ Applied fixes to {res['filename']}")
+                    else:
+                        print(f"      ⚠️ Applied fixes to {res['filename']} with remaining issues:")
+                        for issue in validation.issues:
+                            print(f"         - [{issue.severity}] {issue.message}")
                 else:
                     print(f"      ⚠️ Patches didn't change content for {res['filename']}")
             else:

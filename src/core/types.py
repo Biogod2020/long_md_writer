@@ -847,6 +847,7 @@ class AgentState(BaseModel):
     user_outline_feedback: Optional[str] = Field(default=None, description="用户对大纲的修改意见")
     brief_approved: bool = Field(default=False, description="Brief 是否通过审核")
     outline_approved: bool = Field(default=False, description="大纲是否通过审核")
+    asset_approved: bool = Field(default=False, description="资产履约是否通过审核")
     vqa_iterations: int = Field(default=0, description="Visual QA 迭代次数")
     vqa_needs_reassembly: bool = Field(default=False, description="是否需要重新拼装")
     md_qa_iterations: int = Field(default=0, description="Markdown QA 迭代次数")

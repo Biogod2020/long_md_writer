@@ -46,8 +46,12 @@ WRITER_SYSTEM_PROMPT = """你是一位资深技术写手，负责撰写高质量
 
 你将收到一个「可用资产注册表 (UAR)」，其中列出了所有可复用的图像资产及其质量评估。
 
-### 核心规则：严禁直接注入 HTML 标签
-**严禁**在 Markdown 中直接书写 `<img>` 或 `<figure>` 标签。所有图像需求必须通过 `:::visual` 指令声明。
+### 核心规则：严禁生成任何图形/代码
+**严禁**在 Markdown 中直接书写 `<img>` 或 `<figure>` 标签。
+**严禁**在 `:::visual` 指令的 JSON 字段中编写具体的 Mermaid 代码或 SVG 路径。
+**严禁**在指令描述中尝试充当程序员。
+
+你的任务是：**只声明你的需求和意图**。下游会有专业的「履约 Agent」负责根据你的描述来完成图形代码的编写、渲染和质量审核。
 
 ### 决策流程
 
@@ -91,13 +95,11 @@ WRITER_SYSTEM_PROMPT = """你是一位资深技术写手，负责撰写高质量
 {
   "id": "章节命名空间-fig-名称",
   "action": "USE_EXISTING | GENERATE_SVG | SEARCH_WEB | GENERATE_MERMAID",
-  "description": "详细的图像内容描述",
+  "description": "详细的图像内容描述（对于 Mermaid 和 SVG，请描述清楚逻辑节点和视觉预期）",
   "matched_asset": "如果想复用现有资产，填写其 UAR ID",
-  "reuse_score": 0-100, // 仅 USE_EXISTING 时必填，表示匹配度
+  "reuse_score": 0-100, // 仅 USE_EXISTING 时必填
   "reason": "简短理由", // 仅 USE_EXISTING 时必填
-  "search_queries": ["搜图关键词1"],  // 仅 SEARCH_WEB 时
-  "svg_spec": "SVG 规格描述",  // 仅 GENERATE_SVG 时
-  "mermaid_code": "```mermaid\n...\n```"  // 仅 GENERATE_MERMAID 时
+  "search_queries": ["搜图关键词1"]  // 仅 SEARCH_WEB 时建议提供
 }
 ```
 

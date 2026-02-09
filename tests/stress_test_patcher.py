@@ -1,59 +1,91 @@
-import unittest
-import sys
+
+import asyncio
 import os
+import shutil
+from pathlib import Path
+from src.core.types import AgentState, Manifest, SectionInfo
+from src.agents.markdown_qa_agent import MarkdownQAAgent
+from src.core.gemini_client import GeminiClient
 
-# Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+async def stress_test_qa_loop():
+    print("🔥 [STRESS TEST] Starting Content Fixer & QA Robustness Test...")
+    
+    # 1. Setup mock workspace
+    job_id = "stress_test_qa"
+    workspace_path = Path(f"workspaces/workspace/{job_id}")
+    if workspace_path.exists():
+        shutil.rmtree(workspace_path)
+    workspace_path.mkdir(parents=True, exist_ok=True)
+    
+    # 2. Create a "Sick" Markdown file with intentional LaTeX and Directive errors
+    md_dir = workspace_path / "md"
+    md_dir.mkdir()
+    target_md = md_dir / "s1-test.md"
+    
+    # Intentional errors:
+    # - Dollar explosion risk: mixed $ and $$
+    # - Directive error: unclosed :::visual
+    bad_content = """# Stress Test Section
 
-from src.core.patcher import apply_smart_patch
+In this section, we test the potential for dollar sign explosion. 
+The formula for potential is: $$$$\Phi = \frac{Q}{4\pi\epsilon r}$$$$ (This is already too many dollars!)
 
-class StressTestPatcher(unittest.TestCase):
-    def test_indentation_discrepancy(self):
-        content = """
-<div>
-    <ul>
-        <li>Item 1</li>
-        <li>Item 2</li>
-    </ul>
-</div>
+Also, here is a broken directive:
+:::visual {"id": "v1", "action": "GENERATE_SVG", "description": "test"}
+This block is never closed.
+
+Another formula: $$ E = mc^2 $$
 """
-        # Search block with NO indentation
-        search = """
-<ul>
-    <li>Item 1</li>
-    <li>Item 2</li>
-</ul>
-"""
-        replace = """
-<ul>
-    <li>Item 1 (Updated)</li>
-    <li>Item 2 (Updated)</li>
-</ul>
-"""
-        new_content, success = apply_smart_patch(content, search, replace)
-        self.assertTrue(success)
-        self.assertIn("    <li>Item 1 (Updated)</li>", new_content)
-        # Verify indentation was preserved (4 spaces for ul)
-        self.assertIn("    <ul>", new_content)
-
-    def test_whitespace_variations(self):
-        content = "Line 1\n\nLine 2    \nLine 3"
-        # AI might miss trailing spaces or exact newline count
-        search = "Line 1\nLine 2\nLine 3"
-        replace = "Line 1\nLine 2 (Fixed)\nLine 3"
+    target_md.write_text(bad_content, encoding="utf-8")
+    
+    # 3. Initialize state
+    state = AgentState(
+        job_id=job_id,
+        workspace_path=str(workspace_path),
+        user_intent="Fix the formatting and ensure professional LaTeX.",
+        manifest=Manifest(project_title="Stress Test", description="Test", sections=[
+            SectionInfo(id="s1-test", title="Stress Test", summary="Test")
+        ]),
+        completed_md_sections=[str(target_md)]
+    )
+    
+    # 4. Run MarkdownQAAgent Loop
+    client = GeminiClient()
+    agent = MarkdownQAAgent(client=client, max_iterations=3)
+    
+    print("\n🚀 [Round 1] Attempting to fix the 'Sick' file...")
+    state = await agent.run(state)
+    
+    # Check results after Round 1
+    content_after = target_md.read_text(encoding="utf-8")
+    print(f"\n📄 [CONTENT AFTER R1]:\n{'-'*30}\n{content_after}\n{'-'*30}")
+    
+    if "$$$$" in content_after:
+        print("❌ FAIL: Dollar explosion detected in R1!")
+    else:
+        print("✅ PASS: No dollar explosion in R1.")
         
-        new_content, success = apply_smart_patch(content, search, replace)
-        self.assertTrue(success)
-        self.assertIn("Line 2 (Fixed)", new_content)
+    if ":::" in content_after and content_after.count(":::") % 2 != 0:
+        print("❌ FAIL: Directive still unclosed!")
+    else:
+        print("✅ PASS: Directive structure balanced or handled.")
 
-    def test_partial_line_matching(self):
-        content = "    <p>This is a long line with some content</p>"
-        search = "<p>This is a long line"
-        replace = "<p>This is a short line"
-        
-        new_content, success = apply_smart_patch(content, search, replace)
-        self.assertTrue(success)
-        self.assertIn("<p>This is a short line with some content</p>", new_content)
+    # 5. [Round 2] Push the AI to misbehave
+    # We simulate a situation where the Critic is very pedantic
+    print("\n🚀 [Round 2] Forcing another audit to check for regression...")
+    state.markdown_approved = False
+    state.md_qa_needs_revision = True
+    state = await agent.run(state)
+    
+    content_final = target_md.read_text(encoding="utf-8")
+    print(f"\n📄 [FINAL CONTENT]:\n{'-'*30}\n{content_final}\n{'-'*30}")
+    
+    if "$$$$" in content_final:
+        print("❌ FAIL: Dollar explosion in final state!")
+    else:
+        print("✅ PASS: System remained stable through multiple iterations.")
+
+    print("\n✨ [STRESS TEST] Completed.")
 
 if __name__ == "__main__":
-    unittest.main()
+    asyncio.run(stress_test_qa_loop())

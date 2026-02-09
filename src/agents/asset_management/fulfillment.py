@@ -46,7 +46,7 @@ class AssetFulfillmentAgent:
     """
 
     MAX_REPAIR_ATTEMPTS = 3
-    DEFAULT_MAX_CONCURRENCY = 5
+    DEFAULT_MAX_CONCURRENCY = 3
 
     def __init__(
         self,
@@ -70,6 +70,10 @@ class AssetFulfillmentAgent:
     async def run_parallel_async(self, state: AgentState) -> AgentState:
         """并行执行全书资产履约 (解耦版)"""
         print(f"\n[AssetFulfillment] 🚀 启动并行生成 (并发: {self.DEFAULT_MAX_CONCURRENCY})")
+
+        # SOTA: 每次运行前重置失败状态，防止死循环
+        state.failed_directives = []
+        state.asset_revision_needed = False
 
         uar = state.get_uar()
         workspace_path = Path(state.workspace_path)
@@ -286,10 +290,56 @@ class AssetFulfillmentAgent:
         return d, None
 
     async def _fulfill_mermaid_step(self, d, ns, state, trace):
-        code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
-        trace["steps"].append({"type": "init", "code": code})
-        if code:
-            d.fulfilled, d.result_html = True, generate_mermaid_html(code, d.description)
+        """
+        SOTA 2.0: 增强型 Mermaid 履约逻辑。
+        包含：异步生成 -> Playwright 渲染 -> VLM 视觉审计 -> 自动修复。
+        """
+        trace["steps"].append({"type": "init", "intent": d.description})
+        
+        # 1. 初始生成
+        mermaid_code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
+        if not mermaid_code:
+            d.error = "Initial Mermaid generation failed"
+            return d
+
+        # 2. 审计与修复循环
+        from .processors.mermaid import audit_mermaid_async, repair_mermaid_async
+        attempt = 0
+        is_valid = False
+        
+        while attempt < self.MAX_REPAIR_ATTEMPTS:
+            attempt += 1
+            print(f"    [Fulfillment] 📋 审计 Mermaid (尝试 {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
+            
+            # 执行物理渲染与视觉审计
+            audit = await audit_mermaid_async(self.client, mermaid_code, d.description, state=state)
+            trace["steps"].append({"attempt": attempt, "audit": audit, "code_len": len(mermaid_code)})
+
+            if audit and audit.get("result") == "pass":
+                is_valid = True
+                print("    [Fulfillment] ✅ Mermaid 审计通过")
+                break
+            
+            # 如果不通过，执行修复
+            if attempt < self.MAX_REPAIR_ATTEMPTS:
+                issues = audit.get("issues", ["Mermaid diagram has syntax or logical errors"])
+                print(f"    [Fulfillment] 🛠️ 正在修复 Mermaid 问题: {issues[0][:50]}...")
+                
+                repaired_code = await repair_mermaid_async(
+                    self.client, d.description, mermaid_code, 
+                    issues, audit.get("suggestions", []), 
+                    state=state
+                )
+                
+                if repaired_code:
+                    mermaid_code = repaired_code
+                else:
+                    print("    [Fulfillment] ⚠️ Mermaid 修复失败，尝试重新生成...")
+                    mermaid_code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
+
+        # 3. 最终结果固化
+        if mermaid_code:
+            d.fulfilled, d.result_html = True, generate_mermaid_html(mermaid_code, d.description)
         return d
 
     async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:

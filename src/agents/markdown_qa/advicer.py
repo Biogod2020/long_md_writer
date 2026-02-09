@@ -26,6 +26,7 @@ Format:
 
 Rules:
 - THE INSTRUCTIONS MUST BE ACTIONABLE. Don't say "fix the tone", say "change 'you' to 'the user'".
+- For complex formatting issues (like math-hell), break down the instructions into small, granular steps (e.g. "Step 1: Fix formula on line 5. Step 2: Fix formula on line 12.").
 - Look at the 'section_feedback' from the Critic to know what to fix in each file.
 - Only include files that actually need changes.
 """
