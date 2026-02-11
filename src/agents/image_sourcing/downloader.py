@@ -74,39 +74,36 @@ class ImageDownloader:
             # Use the shared browser instance
             page = self.browser_manager.page
 
-            try:
-                downloader_tab = page.new_tab()
-                for i in failed_indices:
-                    url = candidates[i]['url']
-                    desc = candidates[i]['desc']
+            def _download_via_browser(idx):
+                url = candidates[idx]['url']
+                desc = candidates[idx]['desc']
+                try:
+                    if self.debug:
+                        print(f"      - Fallback trying {idx+1} via Browser...")
+                    
+                    # Create a new tab for this specific download
+                    tab = page.new_tab()
                     try:
-                        if self.debug:
-                            print(f"      - Fallback trying {i+1} via Browser...")
-                        
                         # A. Navigate to bypass checks (Cloudflare/hotlink protection)
-                        downloader_tab.get(url, timeout=12)
+                        tab.get(url, timeout=12)
                         
                         # Wait briefly for challenges
-                        if "cloudflare" in downloader_tab.title.lower() or "just a moment" in downloader_tab.title.lower():
-                            if self.debug: print("        [!] Anti-bot challenge detected, waiting...")
+                        if "cloudflare" in tab.title.lower() or "just a moment" in tab.title.lower():
+                            if self.debug: print(f"        [!] Anti-bot challenge detected for {idx+1}, waiting...")
                             time.sleep(3)
-                            downloader_tab.wait.doc_loaded(timeout=5)
+                            tab.wait.doc_loaded(timeout=5)
 
                         # B. INJECT COOKIES into a fast requests Session
+                        raw_cookies = {}
                         try:
-                            # Use dict format for easier session update
-                            raw_cookies = {}
-                            try:
-                                c_list = downloader_tab.cookies()
-                                for c in c_list:
-                                    if isinstance(c, dict):
-                                        raw_cookies[c.get('name')] = c.get('value')
-                            except:
-                                pass
+                            c_list = tab.cookies()
+                            for c in c_list:
+                                if isinstance(c, dict):
+                                    raw_cookies[c.get('name')] = c.get('value')
                         except:
-                            raw_cookies = {}
+                            pass
                         
-                        ua = downloader_tab.user_agent
+                        ua = tab.user_agent
                         from urllib.parse import urlparse
                         parsed_url = urlparse(url)
                         domain_referer = f"{parsed_url.scheme}://{parsed_url.netloc}/"
@@ -130,7 +127,7 @@ class ImageDownloader:
                         fast_session.cookies.update(raw_cookies)
                         
                         # C. Fast Download
-                        target_path = target_dir / f"img_{i+1}"
+                        target_path = target_dir / f"img_{idx+1}"
                         download_success = False
                         
                         try:
@@ -139,7 +136,7 @@ class ImageDownloader:
                             
                             # SOTA: If 403 or 567, try one last time with stripped headers
                             if resp.status_code in [403, 567]:
-                                if self.debug: print(f"        [!] Status {resp.status_code} detected, trying Clean Header Fallback...")
+                                if self.debug: print(f"        [!] Status {resp.status_code} detected for {idx+1}, trying Clean Header Fallback...")
                                 clean_headers = {
                                     'User-Agent': ua,
                                     'Accept': 'image/*',
@@ -158,45 +155,48 @@ class ImageDownloader:
                                         
                                 self._resize_image(final_path)
                                 if self._is_valid_image(final_path):
-                                    downloaded_path = final_path
-                                    if self.debug: print(f"        [+] Fast session download success: {downloaded_path.name}")
-                                    if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
-                                    local_paths[i] = downloaded_path
-                                    download_success = True
+                                    if self.debug: print(f"        [+] Fast session download success: {final_path.name}")
+                                    if desc: (target_dir / f"{final_path.stem}.txt").write_text(desc, encoding='utf-8')
+                                    return final_path
                                 else:
-                                    if self.debug: print("        [-] Fast session integrity check failed.")
+                                    if self.debug: print(f"        [-] Fast session integrity check failed for {idx+1}.")
                                     if final_path.exists(): final_path.unlink()
                             else:
-                                if self.debug: print(f"        [-] Fast session download failed: {resp.status_code}")
+                                if self.debug: print(f"        [-] Fast session download failed for {idx+1}: {resp.status_code}")
                         except Exception as e:
-                            if self.debug: print(f"        [-] Fast session error: {e}")
+                            if self.debug: print(f"        [-] Fast session error for {idx+1}: {e}")
 
                         # D. Slow Browser Download (Last Resort)
                         if not download_success:
-                            if self.debug: print(f"        [!] Reverting to slow browser download for {i+1}...")
-                            res = downloader_tab.download(url, str(target_dir.resolve()), f"img_{i+1}")
+                            if self.debug: print(f"        [!] Reverting to slow browser download for {idx+1}...")
+                            res = tab.download(url, str(target_dir.resolve()), f"img_{idx+1}")
                             if res and res[0]:
                                 downloaded_path = Path(res[1])
                                 self._resize_image(downloaded_path)
                                 if self._is_valid_image(downloaded_path):
                                     if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
-                                    local_paths[i] = downloaded_path
+                                    return downloaded_path
                                 else:
                                     if downloaded_path.exists(): downloaded_path.unlink()
+                    finally:
+                        try:
+                            tab.close()
+                        except:
+                            pass
+                except Exception as e:
+                    if self.debug:
+                        print(f"      - Fallback {idx+1} failed: {e}")
+                return None
 
-                    except Exception as e:
-                        if self.debug:
-                            print(f"      - Fallback {i+1} failed: {e}")
-                
-                # Close the fallback tab
-                try:
-                    downloader_tab.close()
-                except:
-                    pass
-
-            except Exception as e:
-                if self.debug:
-                    print(f"    - Browser fallback error: {e}")
+            with ThreadPoolExecutor(max_workers=min(len(failed_indices), 5)) as fallback_executor:
+                future_to_idx = {fallback_executor.submit(_download_via_browser, i): i for i in failed_indices}
+                for future in concurrent.futures.as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    path = future.result()
+                    if path:
+                        local_paths[idx] = path
+            
+        return [p for p in local_paths if p is not None]
             
         return [p for p in local_paths if p is not None]
 
