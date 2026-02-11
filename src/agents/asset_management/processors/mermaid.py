@@ -100,7 +100,10 @@ def extract_mermaid(text: str) -> Optional[str]:
 
 
 async def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> bool:
-    """Render Mermaid code to a PNG image using Playwright."""
+    """
+    SOTA Mermaid Renderer for VLM Auditing.
+    Uses high-resolution Headless Chromium to capture crystal-clear snapshots.
+    """
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -108,12 +111,24 @@ async def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> bool:
         <meta charset="UTF-8">
         <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
         <script>
-            mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
+            mermaid.initialize({{ 
+                startOnLoad: true, 
+                theme: 'default',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: 16,
+                flowchart: {{ useMaxWidth: false, htmlLabels: true }},
+                sequence: {{ useMaxWidth: false, showSequenceNumbers: true }}
+            }});
         </script>
         <style>
             html, body {{ margin: 0; padding: 0; background: white; }}
-            body {{ display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }}
-            .mermaid {{ min-width: 400px; min-height: 200px; }}
+            body {{ display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 40px; }}
+            .mermaid {{ 
+                min-width: 600px; 
+                display: inline-block;
+            }}
+            /* Ensure high-contrast for VLM */
+            svg {{ filter: contrast(1.1) brightness(1.05); }}
         </style>
     </head>
     <body>
@@ -130,28 +145,38 @@ async def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> bool:
     try:
         from playwright.async_api import async_playwright
         async with async_playwright() as p:
+            # SOTA: 使用高分辨率 Viewport 和设备缩放
             browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(viewport={"width": 1000, "height": 800})
+            context = await browser.new_context(
+                viewport={"width": 1280, "height": 1280},
+                device_scale_factor=2 # 2x 缩放确保文字极其清晰
+            )
             page = await context.new_page()
             await page.goto(f"file://{temp_html.absolute()}", wait_until="networkidle")
             
             try:
-                await page.wait_for_selector(".mermaid svg", timeout=10000)
-                await asyncio.sleep(0.5)
-                await page.screenshot(path=str(output_path), full_page=False)
+                # 智能等待 Mermaid 渲染完成
+                await page.wait_for_selector(".mermaid svg", timeout=15000)
+                # 给予额外的微小延迟以确保布局抖动结束
+                await asyncio.sleep(0.8)
                 
+                # 仅对 Mermaid 容器截图，保持紧凑
+                element = await page.query_selector(".mermaid")
+                if element:
+                    await element.screenshot(path=str(output_path))
+                else:
+                    await page.screenshot(path=str(output_path), full_page=True)
+                
+                # 压缩为高质量 JPEG 以减少 API 负载
                 from PIL import Image
                 with Image.open(output_path) as img:
                     if img.mode in ('RGBA', 'P'):
                         img = img.convert('RGB')
-                    if img.width > 1024:
-                        ratio = 1024 / img.width
-                        img = img.resize((1024, int(img.height * ratio)), Image.Resampling.LANCZOS)
-                    img.save(output_path, format="JPEG", quality=80, optimize=True)
+                    img.save(output_path, format="JPEG", quality=90, optimize=True)
                     
                 return True
             except Exception as e:
-                print(f"[Mermaid Render] Wait failed or timeout: {e}")
+                print(f"[Mermaid Render] ⚠️ Snapshot failed: {e}")
             finally:
                 await browser.close()
     except Exception as e:

@@ -268,7 +268,21 @@ async def run_sota2_workflow(
         )
 
         config = {"configurable": {"thread_id": job_id}}
-        current_state = initial_state
+        
+        # SOTA Resume Logic: 检查该线程是否已有运行记录
+        state_info = await app.aget_state(config)
+        # 只要 values 不为空，说明该 thread_id 已经有历史状态，应尝试从断点恢复
+        if state_info.values:
+            # 如果还有下一步（说明是 planned interrupt）
+            if state_info.next:
+                print(f"\n[Workflow] 🔄 检测到任务暂停，正在从断点恢复 (节点: {state_info.next[0]})")
+            else:
+                # 这种情况通常是进程崩溃或超时，LangGraph 会自动重试上一个未完成的节点
+                print(f"\n[Workflow] 🔄 检测到已有历史记录，尝试从最近成功的状态恢复...")
+            current_state = None  # 传 None 表示从 Checkpoint 恢复
+        else:
+            print(f"\n[Workflow] 🚀 启动全新任务流水线")
+            current_state = initial_state
         
         while True:
             try:

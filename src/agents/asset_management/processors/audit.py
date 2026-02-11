@@ -184,40 +184,33 @@ async def audit_svg_async(
 # SVG 渲染与视觉审计 (SOTA 2.0 双路交叉验证)
 # ============================================================================
 
-SVG_VISUAL_AUDIT_PROMPT = """You are a senior supervisor of visual quality and technical accuracy. Audit this SVG asset based on its source code AND rendered output. 
+SVG_VISUAL_AUDIT_PROMPT = """You are a Senior Executive Editor and Visual Quality Lead. Your mission is to evaluate if this SVG asset achieves the SOTA standard for professional scientific documentation.
 
-## Intent Description
-{intent_description}
+## Audit Philosophy: Functional Clarity over Mechanical Perfection
+Do not act as a simple collision detector. Instead, use your expert judgment to answer: "Does this diagram effectively and professionally communicate the intended concept to a medical student based on the surrounding article context?"
 
-## CRITICAL: Zero Tolerance Collision Policy
-- **NO OVERLAPS**: If any text label touches or overlaps with a path, shape, or arrow, you MUST penalize the "Legibility & Clarity" score to ZERO.
-- **Breathing Room**: Labels must have at least 10px of negative space around them.
-- **Visual Artifacts**: Any messy lines or clashing elements should be strictly flagged.
+## Evaluation Rubric (0-100)
 
-## Scoring Rubric (0-100)
+1. **Analytical Accuracy (40%)**: Does the diagram correctly represent the scientific or anatomical mechanism described in the [ARTICLE CONTEXT]? Check labels, vector directions, and logical connections against the text.
+2. **Pedagogical Effectiveness (30%)**: Is the information clear? Are labels positioned intuitively? A minor overlap is acceptable IF the text remains 100% legible and the meaning is unambiguous.
+3. **Executive Aesthetic (30%)**: Does it look like a custom illustration from a premium journal (Nature, NEJM)? Evaluate the use of color harmony, line weights, and spatial balance.
 
-1. **Analytical Accuracy (40%)**: Correctness of the technical/anatomical information.
-2. **Visual Design & Elegance (30%)**: Composition, line weights, color harmony, and professional finish.
-3. **Legibility & Clarity (30%)**: ABSOLUTE isolation of text labels. **If overlaps exist, this score is 0.**
-
-## Performance Mapping
-- 90-100: pass | Perfect, publication-ready.
-- 85-89: pass | High quality, but very minor aesthetic suggestions possible.
-- 70-84: needs_revision | Functional but has visual flaws like tight spacing or poor hierarchy.
-- <70: fail | Contains collisions, inaccuracies, or poor design.
+## Decision Guidelines
+- **PASS**: The diagram is professional, accurate, and perfectly aligned with the article's narrative. Minor spacing issues that don't hinder comprehension are ignored.
+- **NEEDS_REVISION**: There are errors in scientific logic relative to the text, or severe clutter that makes the information difficult to parse.
+- **FAIL**: Factual inaccuracies, broken rendering, or completely unprofessional layout.
 
 ## Output (JSON only)
 ```json
 {{
-  "collision_detected": true/false,
+  "thought": "Briefly explain your expert reasoning, focusing on consistency with the text context.",
   "accuracy_score": 0,
-  "design_score": 0,
-  "clarity_score": 0,
+  "pedagogical_score": 0,
+  "aesthetic_score": 0,
   "overall_score": 0,
   "result": "pass|fail|needs_revision",
-  "issues": [],
-  "suggestions": [],
-  "quality_assessment": "Summary of findings."
+  "issues": ["List only major problems"],
+  "suggestions": ["Strategic advice for the illustrator"]
 }}
 ```
 """

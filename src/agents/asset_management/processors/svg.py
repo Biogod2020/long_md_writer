@@ -10,24 +10,29 @@ from typing import Optional
 from ....core.gemini_client import GeminiClient
 from ....core.types import AgentState
 
-SVG_GENERATION_PROMPT = """You are a professional SVG designer and illustrator. Create high-quality vector graphics that are clear, accurate, and aesthetically pleasing.
+SVG_GENERATION_PROMPT = """You are a Senior Information Architect and Scientific Illustrator. Your goal is to create State-of-the-Art (SOTA) vector graphics that translate complex concepts into intuitive visual metaphors.
 
-## Content Description
+## 🎯 YOUR TASK
+Create a professional SVG illustration based on the following specific requirements and chapter context:
+
 {description}
-
-## Design Principles
-1. **Legibility & Clarity**: Ensure all text and elements are easily readable. Use adequate contrast and prevent overlaps between text and paths.
-2. **Visual Balance**: Maintain a balanced composition with consistent alignment and professional spacing.
-3. **Detail & Hierarchy**: Use appropriate line weights and color gradients to establish a clear visual hierarchy.
-4. **Professional Aesthetics**: Aim for a modern, clean look. Avoid overly simplistic or "childish" shapes unless specified.
 
 {style_hints}
 
-## Technical Requirements
-- Output ONLY valid SVG code.
-- Ensure the SVG is responsive (use viewBox).
-- Avoid external assets or fonts.
-- **CRITICAL: Font Support**: For all text elements, use `font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'"` to ensure CJK (Chinese/Japanese/Korean) characters render correctly across different operating systems.
+## 🎨 DESIGN PHILOSOPHY (The SOTA Standard)
+1. **Visual Hierarchy**: Use line weight, color saturation, and scale to guide the reader's eye. The most critical information must be immediately prominent.
+2. **Cognitive Load Management**: Avoid clutter. Use negative space (whitespace) as a functional element to separate concepts.
+3. **Professional Finish**: Aim for a modern, clinical, and high-quality aesthetic (e.g., subtle gradients, rounded geometric shapes, balanced composition).
+4. **Contextual Awareness**: Ensure the diagram feels like an organic part of the overall document.
+
+## 🛠️ TECHNICAL EXECUTION
+- Generate strictly valid, self-contained SVG code.
+- Use `viewBox` for fluid responsiveness. Set `width="100%"` and `height="auto"`.
+- **Avoid Overlapping**: Prevent labels or lines from crossing each other messily.
+- **Labeling Strategy**: Place labels where they are most readable. Use leader lines (arrows/paths) to pull text away from high-density areas if needed. 
+- **Font Support**: Use system-standard font stacks.
+
+Your output should not just be a 'drawing', but a high-fidelity 'Knowledge Interface'.
 """
 
 
@@ -110,24 +115,26 @@ def generate_svg(
 # SVG Repair (High-Precision Patching with Visual Context)
 # ============================================================================
 
-SVG_REPAIR_PROMPT = """You are a senior SVG technical specialist. Your task is to generate precise JSON patches to fix visual or technical issues in an SVG file based on audit feedback.
+SVG_REPAIR_PROMPT = """You are a senior SVG technical specialist. Your task is to generate precise JSON patches to fix visual, technical, or logical issues in an SVG file based on audit feedback and article context.
 
 ### Input Data:
-1. **Original Intent**: {original_intent}
+1. **Original Intent & Context**: {original_intent}
 2. **Audit Feedback**: 
    - Issues: {issues}
    - Suggestions: {suggestions}
 3. **Current SVG Code**: (See below)
 
 ### Instructions:
-- **Locate**: Identify the exact lines in the SVG code that need fixing (e.g., overlapping coordinates, missing attributes, incorrect colors).
+- **Logical Alignment**: First, verify if the current SVG's content actually matches the [ARTICLE CONTEXT]. If the diagram is fundamentally representing the wrong subject, prioritize structural changes to match the intended logic.
+- **Locate**: Identify the exact lines in the SVG code that need fixing.
 - **Transform**: Create a "search" block that matches the existing code EXACTLY and a "replace" block with your fix.
-- **Minimal Changes**: Only modify what is broken. Do not rewrite the entire file.
-- **Precision**: Ensure the `search` text is unique enough to find the correct spot.
+- **Minimal Changes**: Only modify what is necessary.
+- **Precision**: Ensure the `search` text is unique enough.
+- **Global Awareness**: Ensure adjustments don't trigger new collisions or push elements outside the `viewBox`.
 
 ### Output Format (JSON Only):
 {{
-  "thought": "Analysis of why these specific coordinates/attributes need to be changed.",
+  "thought": "Analysis of how this fix aligns the diagram with the specific article context provided.",
   "patches": [
     {{
       "search": "exact text to find",

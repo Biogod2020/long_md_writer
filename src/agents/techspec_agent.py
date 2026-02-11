@@ -10,27 +10,25 @@ from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState
 
 
-TECHSPEC_SYSTEM_PROMPT = """You are a senior technical architect. Your task is to generate a comprehensive **Technical Specification (SOTA Description)** that will guide all downstream production agents.
+TECHSPEC_SYSTEM_PROMPT = """You are a senior technical architect and visual systems designer. Your mission is to generate a high-fidelity **Technical Specification (SOTA Description)** that serves as the bridge between logic and visual systems.
 
-### Adaptation Strategy
-Ground your instructions in the specific context provided. If the project is a slide deck, focus on slide transition logic and visual rhythm. If it's a deep-dive textbook, focus on mathematical rigor and SVG clarity.
+### Visual Translation (SOTA)
+Your instruction must translate the high-level "Visual Identity" from the Brief into concrete execution tokens:
+1. **Visual System**: Define the exact color palettes (with symbolic meaning), typography hierarchy, and "Materiality Strategy" (e.g., matte finish, high-contrast, clean professional).
+2. **Visual Directives**: Instruct the Writer on how to maintain visual clarity and focus. Define the "Information Density" (e.g., "Simplified diagrams for overview, detailed callouts for complex mechanisms").
+3. **DSL Strategy**: Specify when to use SVG for precision, MERMAID for flow, or SEARCH for realism to maximize pedagogical impact.
 
-### Your Objectives
-1. **Instruction Alignment**: Ensure all instructions follow the intellectual philosophy outlined in the Manifest's description.
-2. **Technical Execution**: Specify reasoning styles, visual design systems (colors, typography, component behaviors), and interactive requirements (SVG, JS, CSS effects).
-3. **SOTA Quality**: Act as the "glue" that ensures the Writer and Designer are perfectly aligned.
+### Objectives
+1. **Consistency**: Ensure all production agents follow the intellectual and artistic soul of the manifest.
+2. **Precision**: Provide clear rules for reasoning styles, component behaviors, and interactive cues.
+3. **Industrial Quality**: Your spec must enable the creation of a document that looks like a premium, custom-designed interactive experience.
 
 ### Structure
-Provide a well-organized document covering:
-- **Executive Summary**: The technical "vibe" and key execution targets.
-- **Content & Writing Directives**: How the Writer should handle complexity and context.
-- **Visual Design System**: Detailed palette, typography, and component-level tokens.
-- **Interactivity & Multi-modal Specs**: Logic for animations, sliders, or specific HTML/JS features.
-- **Accessibility & Compliance**: Sighted and non-sighted user requirements.
-
-### Rules
-1. Ground everything in the provided context.
-2. Output ONLY the description text in Markdown format.
+Provide a well-organized specification covering:
+- **Executive Vision**: The technical and professional "vibe".
+- **Visual Design Tokens**: Detailed palette, typography, and materiality cues.
+- **Interactivity & Component Specs**: Rules for transitions, animations, and interactive components.
+- **Content Engineering**: How the Writer should handle technical depth vs narrative flow.
 """
 
 
@@ -55,7 +53,7 @@ class TechSpecAgent:
         context_parts.append(f"## 🎯 USER INTENT\n{state.user_intent}\n")
         
         if state.project_brief:
-            context_parts.append(f"## PROJECT BRIEF\n{state.project_brief}\n")
+            context_parts.append(f"## PROJECT BRIEF (The Aesthetic & Logical Soul)\n{state.project_brief}\n")
             
         if state.clarifier_answers:
             context_parts.append("## CLARIFICATION ANSWERS\n")
@@ -66,7 +64,7 @@ class TechSpecAgent:
         
         # 2. Approved Manifest (Outline + Philosophy)
         manifest_json = state.manifest.model_dump_json(indent=2)
-        parts.append({"text": f"# APPROVED MANIFEST\n```json\n{manifest_json}\n```\n"})
+        parts.append({"text": f"# APPROVED MANIFEST (The Architectural Blueprint)\n```json\n{manifest_json}\n```\n"})
         
         # 3. Reference materials (full text)
         if state.reference_materials:
@@ -83,7 +81,7 @@ class TechSpecAgent:
                     pass
             parts.append({"text": "".join(ref_texts)})
 
-        parts.append({"text": "\nGenerate a SOTA Technical Specification based on all provided context.\n"})
+        parts.append({"text": "\nGenerate an elevated, cinematic SOTA Technical Specification that defines the document's visual DNA and production logic.\n"})
         
         response = self.client.generate(
             parts=parts,

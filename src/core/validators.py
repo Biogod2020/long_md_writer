@@ -243,25 +243,12 @@ class EmbeddedHTMLValidator:
         return result
 
     def _validate_img_tag(self, result: ValidationResult, line_num: int, attrs: dict) -> None:
-        """验证单个 img 标签"""
-        # 检查必要属性
-        if "src" not in attrs:
-            result.add_error(
-                "img 标签缺少 src 属性",
-                line_number=line_num,
-                suggestion="添加 src 属性指向图片路径"
-            )
-
-        if "alt" not in attrs:
-            result.add_warning(
-                "img 标签缺少 alt 属性 (影响无障碍访问)",
-                line_number=line_num,
-                suggestion="添加 alt 属性描述图片内容"
-            )
-
-        # 验证 style 属性
-        if "style" in attrs:
-            self._validate_style_attribute(result, line_num, attrs["style"])
+        """验证单个 img 标签 (SOTA 2.0: 严禁直接使用)"""
+        result.add_error(
+            "严禁在 Markdown 中直接使用 <img> 标签。所有图像需求必须使用 :::visual 指令声明。",
+            line_number=line_num,
+            suggestion="将此标签转换为 :::visual 指令，并在 description 中描述所需图片内容。"
+        )
 
     def _validate_style_attribute(self, result: ValidationResult, line_num: int, style: str) -> None:
         """验证 style 属性中的 CSS"""

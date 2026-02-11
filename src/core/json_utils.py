@@ -15,6 +15,54 @@ _LEADING_TEXT_PATTERN = re.compile(r"^[^{\[]*", re.DOTALL)
 _TRAILING_TEXT_PATTERN = re.compile(r"[}\]](?:[^}\]]*$)", re.DOTALL)
 
 
+def extract_json_balanced(text: str) -> Optional[str]:
+    """
+    SOTA 2.0 Balanced Bracket Extractor.
+    Extracts the first complete JSON object/array by tracking bracket balance
+    and ignoring content within string literals.
+    """
+    if not text:
+        return None
+    
+    start_idx = -1
+    for i, char in enumerate(text):
+        if char in '{[':
+            start_idx = i
+            break
+            
+    if start_idx == -1:
+        return None
+        
+    stack = []
+    in_string = False
+    escape = False
+    
+    for i in range(start_idx, len(text)):
+        char = text[i]
+        
+        if char == '"' and not escape:
+            in_string = not in_string
+            
+        if not in_string:
+            if char in '{[':
+                stack.append(char)
+            elif char in '}]':
+                if not stack: return None # Unbalanced
+                opening = stack.pop()
+                if (opening == '{' and char != '}') or (opening == '[' and char != ']'):
+                    return None # Mismatched
+                
+                if not stack:
+                    return text[start_idx:i+1]
+        
+        if char == '\\' and not escape:
+            escape = True
+        else:
+            escape = False
+            
+    return None
+
+
 def extract_json_from_text(text: str) -> Optional[str]:
     """
     Extracts JSON content from text that may contain Markdown code fences, 
@@ -26,37 +74,24 @@ def extract_json_from_text(text: str) -> Optional[str]:
     # 1. Clean up <thought> blocks first to prevent interference
     text = re.sub(r'<thought>[\s\S]*?</thought>', '', text).strip()
     
-    # 2. Strategy 1: Find ALL Markdown code fences and try the last one first (usually the final answer)
+    # 2. Strategy 1: Find ALL Markdown code fences and try the last one first
     matches = list(_JSON_FENCES_PATTERN.finditer(text))
     if matches:
-        # Try from last to first
         for match in reversed(matches):
             content = match.group(1).strip()
-            if content: return content
+            if content: 
+                # Check if it's a complete JSON within the fence
+                balanced = extract_json_balanced(content)
+                if balanced: return balanced
     
-    # 3. Strategy 2: Find the largest possible balanced bracket structure
-    # This is more robust for cases where code fences are missing or malformed
-    start_obj = text.find('{')
-    start_arr = text.find('[')
-    
-    if start_obj == -1 and start_arr == -1:
-        return None
-    
-    start = min(start_obj, start_arr) if (start_obj != -1 and start_arr != -1) else (start_obj if start_obj != -1 else start_arr)
-    
-    end_obj = text.rfind('}')
-    end_arr = text.rfind(']')
-    end = max(end_obj, end_arr)
-    
-    if end == -1 or end < start:
-        return None
-    
-    return text[start:end+1]
+    # 3. Strategy 2: Use balanced extraction on the whole text
+    return extract_json_balanced(text)
 
 
 def fix_common_json_errors(json_str: str) -> str:
     """
     Attempts to fix common JSON formatting errors produced by LLMs.
+    Specifically targets trailing commas, unescaped newlines, and raw LaTeX backslashes.
     """
     if not json_str:
         return json_str
@@ -70,36 +105,19 @@ def fix_common_json_errors(json_str: str) -> str:
     
     json_str = re.sub(r'"([^"\\]|\\.)*"', replace_newlines, json_str)
     
-    # C. SOTA: Handle unescaped backslashes (extremely common in LaTeX/MathJax output)
-    # We look for a backslash that is NOT followed by a valid JSON escape char (", \, /, b, f, n, r, t, u)
-    # and escape it by doubling it.
-    def escape_lone_backslashes(match):
+    # C. SOTA: Advanced LaTeX Backslash Cleaner
+    # Matches a backslash that is NOT part of a standard JSON escape sequence
+    # Standard: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    def safe_backslash_replace(match):
         s = match.group(0)
-        # Regex to find backslashes not followed by valid escape chars
-        # We process the inside of the string
         inner = s[1:-1]
-        # Replace \ that is NOT followed by [\"\/bfnrtu] with \\
-        # Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
-        fixed_inner = ""
-        i = 0
-        while i < len(inner):
-            if inner[i] == '\\':
-                # Check if it's already a valid escape
-                if i + 1 < len(inner):
-                    next_char = inner[i+1]
-                    if next_char in '"\\/bfnrtu':
-                        fixed_inner += '\\' + next_char
-                        i += 2
-                        continue
-                # It's an invalid escape or lone backslash at the end
-                fixed_inner += '\\\\'
-                i += 1
-            else:
-                fixed_inner += inner[i]
-                i += 1
+        # We need to escape every \ that is not followed by a valid escape char
+        # This regex looks for backslashes and checks what follows
+        fixed_inner = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', inner)
         return f'"{fixed_inner}"'
 
-    json_str = re.sub(r'"([^"\\]|\\.)*"', escape_lone_backslashes, json_str)
+    # Only apply to content inside double quotes
+    json_str = re.sub(r'"[\s\S]*?"', safe_backslash_replace, json_str)
 
     # D. Fix missing quotes around boolean values or nulls if they are capitalized
     json_str = re.sub(r':\s*True\b', ': true', json_str)
@@ -108,6 +126,40 @@ def fix_common_json_errors(json_str: str) -> str:
     
     return json_str
 
+def attempt_salvage_json(json_str: str) -> Optional[str]:
+    """
+    SOTA 2.0 Aggressive Salvage logic.
+    Closes all unclosed structures and handles mid-string truncation.
+    """
+    if not json_str:
+        return None
+    
+    json_str = json_str.strip()
+    
+    # Handle mid-string truncation (e.g., "feedback": "The text is...)
+    # If the last character is not a structural marker or digit/bool, 
+    # and we have an odd number of quotes, close the quote.
+    quote_count = json_str.count('"') - json_str.count('\\"')
+    if quote_count % 2 == 1:
+        json_str += '"'
+    
+    # Count open braces/brackets
+    open_braces = json_str.count('{') - json_str.count('}')
+    open_brackets = json_str.count('[') - json_str.count(']')
+    
+    if open_braces <= 0 and open_brackets <= 0:
+        return json_str  # Already balanced
+    
+    # Append closing characters in reverse order of typical nesting
+    # This is a heuristic but highly effective for LLM outputs
+    closing = ""
+    if open_brackets > 0:
+        closing += ']' * open_brackets
+    if open_braces > 0:
+        closing += '}' * open_braces
+        
+    return json_str + closing
+
 
 def parse_json_robust(text: str, default: Any = None) -> Any:
     """
@@ -115,17 +167,10 @@ def parse_json_robust(text: str, default: Any = None) -> Any:
     
     Steps:
     1. Extract JSON from code fences or raw text.
-    2. Apply common error fixes.
+    2. Apply common error fixes (trailing commas, LaTeX backslashes).
     3. Attempt parsing.
-    4. Attempt to salvage truncated JSON.
+    4. Attempt to salvage truncated JSON (closing brackets).
     5. Return parsed object or default on failure.
-    
-    Args:
-        text: The raw text that may contain JSON.
-        default: The value to return if parsing fails.
-        
-    Returns:
-        Parsed JSON object, or `default` if parsing fails.
     """
     if not text:
         return default
@@ -140,14 +185,14 @@ def parse_json_robust(text: str, default: Any = None) -> Any:
     except json.JSONDecodeError:
         pass
     
-    # Second attempt: fix and parse
+    # Second attempt: fix common formatting errors and parse
     fixed = fix_common_json_errors(extracted)
     try:
         return json.loads(fixed)
     except json.JSONDecodeError:
         pass
     
-    # Third attempt: salvage truncated JSON by aggressively closing brackets
+    # Third attempt: salvage truncated JSON by aggressively closing structures
     salvaged = attempt_salvage_json(fixed)
     if salvaged:
         try:
@@ -156,41 +201,6 @@ def parse_json_robust(text: str, default: Any = None) -> Any:
             pass
     
     return default
-
-
-def attempt_salvage_json(json_str: str) -> Optional[str]:
-    """
-    Attempts to salvage a truncated JSON string by closing open braces/brackets.
-    This is a best-effort approach for when the API output is cut off.
-    """
-    if not json_str:
-        return None
-    
-    # Count open braces/brackets
-    open_braces = json_str.count('{') - json_str.count('}')
-    open_brackets = json_str.count('[') - json_str.count(']')
-    
-    if open_braces <= 0 and open_brackets <= 0:
-        return json_str  # Already balanced, nothing to salvage
-    
-    # Check if the string is obviously cut off (e.g., ends mid-string)
-    # Heuristic: if ends with a letter, quote, or digit, try to close it
-    stripped = json_str.rstrip()
-    
-    # Remove trailing incomplete key or value (heuristic for "..., \"key\": \"value..." patterns)
-    # This is very simple: just find last complete key-value pair
-    # For simplicity, we just close all open braces
-    
-    closing = '}' * open_braces + ']' * open_brackets
-    
-    # But we might be inside a string literal; try to close that first
-    # Simple heuristic: if odd number of unescaped quotes, add one
-    quote_count = json_str.count('"') - json_str.count('\\"')
-    if quote_count % 2 == 1:
-        stripped += '"'
-        
-    return stripped + closing
-
 
 def parse_json_list_robust(text: str) -> List[Dict]:
     """

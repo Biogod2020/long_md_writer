@@ -120,6 +120,10 @@ def main():
     else:
         print("📚 参考资料: (无)")
     
+    mounted_workspaces = {}
+    if args.global_uar:
+        mounted_workspaces["global"] = args.global_uar
+
     try:
         asyncio.run(run_sota2_workflow(
             user_intent=user_intent,
@@ -130,7 +134,8 @@ def main():
             skip_vision=args.skip_vision,
             skip_asset_audit=args.skip_audit,
             debug_mode=args.debug,
-            global_uar_path=args.global_uar,
+            mounted_workspaces=mounted_workspaces,
+            auto_mode=True
         ))
 
     except KeyboardInterrupt:

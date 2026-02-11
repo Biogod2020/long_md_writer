@@ -107,10 +107,10 @@ class MarkdownQAAgent:
             
         print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
         
-        # 5. FIXER Phase (Parallel with max 3 concurrent tasks)
+        # 5. FIXER Phase (Parallel with max 1 concurrent tasks for stability)
         import asyncio
         
-        semaphore = asyncio.Semaphore(3)
+        semaphore = asyncio.Semaphore(1)
         fixes_applied = 0
         fix_results = []
         

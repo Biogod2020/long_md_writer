@@ -31,6 +31,7 @@ from .models import VisualDirective
 from .processors.svg import generate_svg_async, repair_svg_async
 from .processors.mermaid import (
     generate_mermaid_async,
+    render_mermaid_to_png,
 )
 from .processors.audit import audit_svg_visual_async, render_svg_to_png_base64
 from ..image_sourcing.agent import ImageSourcingAgent
@@ -45,7 +46,7 @@ class AssetFulfillmentAgent:
     资产履约 Agent (SOTA 2.0 并行增强版)
     """
 
-    MAX_REPAIR_ATTEMPTS = 3
+    MAX_REPAIR_ATTEMPTS = 5
     DEFAULT_MAX_CONCURRENCY = 3
 
     def __init__(
@@ -70,6 +71,13 @@ class AssetFulfillmentAgent:
     async def run_parallel_async(self, state: AgentState) -> AgentState:
         """并行执行全书资产履约 (解耦版)"""
         print(f"\n[AssetFulfillment] 🚀 启动并行生成 (并发: {self.DEFAULT_MAX_CONCURRENCY})")
+
+        # SOTA: 物理同步。强制从磁盘 assets.json 加载，防止逻辑状态 (Checkpoint) 落后于物理状态
+        uar_path = Path(state.workspace_path) / "assets.json"
+        if uar_path.exists():
+            print(f"  [Fulfillment] 🔄 正在从物理磁盘同步资产注册表: {uar_path.name}")
+            from ...core.types import UniversalAssetRegistry
+            state.asset_registry = UniversalAssetRegistry.load_from_file(str(uar_path))
 
         # SOTA: 每次运行前重置失败状态，防止死循环
         state.failed_directives = []
@@ -156,25 +164,42 @@ class AssetFulfillmentAgent:
             current_content = manager.working_path.read_text(encoding="utf-8")
             
             for d in directives:
-                if d.fulfilled:
-                    if d.result_asset_id: new_assets_count += 1
-                    else: reused_count += 1
+                if d.fulfilled and d.result_html:
+                    # SOTA: 增强型物理回写。尝试三种匹配策略：Smart, Exact, 和 Fuzzy (无视空白)
+                    new_content, success = apply_smart_patch(current_content, d.raw_block, d.result_html)
                     
-                    if d.result_html:
-                        # SOTA: 利用 Universal Smart Patcher 自动处理物理偏移
-                        new_content, success = apply_smart_patch(current_content, d.raw_block, d.result_html)
-                        if success:
-                            current_content = new_content
-                        else:
-                            # 最终保底：精确替换
-                            if d.raw_block in current_content:
-                                current_content = current_content.replace(d.raw_block, d.result_html, 1)
-                            else:
-                                print(f"    [Fulfillment] ❌ 回写失败: {d.id}")
-                                state.failed_directives.append({"id": d.id, "file": md_path.name, "error": "Anchor lost"})
+                    if not success and d.raw_block in current_content:
+                        current_content = current_content.replace(d.raw_block, d.result_html, 1)
+                        success = True
+                    
+                    if not success:
+                        # 最终保底：无视多余换行和空格的子串匹配 (通过 ID 锚定)
+                        import re
+                        id_pattern = rf':::visual\s*\{{[^}}]*?"id":\s*"{re.escape(d.id)}"[^}}]*?\}}[\s\S]*?:::'
+                        if re.search(id_pattern, current_content):
+                            current_content = re.sub(id_pattern, d.result_html, current_content, count=1)
+                            success = True
+                            print(f"    [Fulfillment] 🪄 通过正则模糊匹配成功修复锚点: {d.id}")
+
+                    if success:
+                        if d.result_asset_id: new_assets_count += 1
+                        else: reused_count += 1
+                    else:
+                        print(f"    [Fulfillment] ❌ 严重错误：指令锚点完全丢失 (ID: {d.id})")
+                        state.failed_directives.append({"id": d.id, "file": md_path.name, "error": "Anchor lost"})
                 else:
-                    state.failed_directives.append({"id": d.id, "file": md_path.name, "error": d.error})
-                    state.asset_revision_needed = True
+                    if not d.fulfilled:
+                        state.failed_directives.append({"id": d.id, "file": md_path.name, "error": d.error})
+                        state.asset_revision_needed = True
+
+            # SOTA: 最终物理清理（强制擦除残留指令）
+            for d in directives:
+                if d.fulfilled and d.id and d.result_html:
+                    import re
+                    cleanup_pattern = rf':::visual\s*\{{[^}}]*?"id":\s*"{re.escape(d.id)}"[^}}]*?\}}[\s\S]*?:::'
+                    if re.search(cleanup_pattern, current_content):
+                        current_content = re.sub(cleanup_pattern, d.result_html, current_content)
+                        print(f"    [Fulfillment] 🛡️ 最终防线触发：强制擦除残留指令 (ID: {d.id})")
 
             # 写入并提交该文件的最终修改
             manager.working_path.write_text(current_content, encoding="utf-8")
@@ -184,41 +209,14 @@ class AssetFulfillmentAgent:
         state.batch_fulfillment_complete = True
         return state
 
-    def apply_fulfillment_to_file(self, file_path: Path, directives: List[VisualDirective]):
-        """
-        SOTA 4.0 动态回写逻辑：使用 Universal Patcher 执行物理固化。
-        """
-        content = file_path.read_text(encoding="utf-8")
-        modified_content = content
-        
-        for d in directives:
-            if d.fulfilled and d.result_html:
-                new_content, success = apply_smart_patch(modified_content, d.raw_block, d.result_html)
-                if success:
-                    modified_content = new_content
-                    print(f"    [Fulfillment] 🚀 物理注入成功 (Smart): {d.id}")
-                else:
-                    # Final fallback to regex if smart patch rejected it
-                    print(f"    [Fulfillment] ⚠️ Smart patch rejected {d.id}. Trying exact sub.")
-                    if d.raw_block in modified_content:
-                        modified_content = modified_content.replace(d.raw_block, d.result_html)
-        
-        if modified_content != content:
-            file_path.write_text(modified_content, encoding="utf-8")
-            print(f"  [Fulfillment] ✅ {file_path.name}: 已成功完成物理固化。")
-        else:
-            print(f"  [Fulfillment] ❌ {file_path.name}: 未检测到可替换内容。")
-
     async def _check_asset_exists(self, d: VisualDirective, uar, ws_path: Path) -> bool:
         """
         检查资产是否已经存在且有效。
-        如果存在，则直接标记为 fulfilled 并返回 True。
         """
         asset = uar.get_asset(d.id)
         if not asset:
             return False
             
-        # 验证物理文件是否存在
         abs_path = asset.get_absolute_path(workspace_path=ws_path)
         if abs_path and abs_path.exists():
             print(f"  [Fulfillment] ⚡ 资产已存在，跳过生成: {d.id} ({abs_path.name})")
@@ -237,8 +235,7 @@ class AssetFulfillmentAgent:
         if d.action == AssetFulfillmentAction.GENERATE_SVG:
             return await self._fulfill_svg_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.GENERATE_MERMAID:
-            res_d = await self._fulfill_mermaid_step(d, ns, state, trace)
-            return res_d, None
+            return await self._fulfill_mermaid_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.SEARCH_WEB:
             return await self._fulfill_search_step(d, uar, src_path, ns, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.USE_EXISTING:
@@ -251,218 +248,249 @@ class AssetFulfillmentAgent:
 
     async def _fulfill_svg_step(self, d, uar, out_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         trace["steps"].append({"type": "init", "intent": d.description})
+        print(f"    [Fulfillment] 🚀 开始初始 SVG 生成 (ID: {d.id})...")
         svg_code = await generate_svg_async(self.client, d.get_full_context(), state=state, style_hints=d.style_hints or "")
         
         if not svg_code:
+            print(f"    [Fulfillment] ❌ 初始生成失败 (ID: {d.id})")
             d.error = "Initial SVG generation failed"
             return d, None
 
+        print(f"    [Fulfillment] ✨ 初始生成成功 (长度: {len(svg_code)} 字符)")
         attempt, is_valid = 0, False
         file_path = out_path / f"{d.id}.svg"
 
         while attempt < self.MAX_REPAIR_ATTEMPTS:
             attempt += 1
+            print(f"    [Fulfillment] 📋 正在进行 VLM 审计 (尝试 {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
             file_path.write_text(svg_code, encoding="utf-8")
-            audit = await audit_svg_visual_async(self.client, svg_code, d.description, state=state, svg_path=file_path)
+            
+            # SOTA: 审计时也必须提供全量上下文，否则审计员无法判断图表是否真正符合正文逻辑
+            full_context = d.get_full_context()
+            audit = await audit_svg_visual_async(self.client, svg_code, full_context, state=state, svg_path=file_path)
             trace["steps"].append({"attempt": attempt, "audit": audit, "code_len": len(svg_code)})
 
             if audit and audit.get("result") == "pass":
-                is_valid = True; break
+                is_valid = True
+                print(f"    [Fulfillment] ✅ 审计通过 (ID: {d.id})")
+                break
+            
+            issues = audit.get("issues", ["Audit failed"]) if audit else ["API Timeout/Error"]
+            print(f"    [Fulfillment] ⚠️ 审计未通过: {issues[0][:50]}...")
             
             if attempt < self.MAX_REPAIR_ATTEMPTS:
-                issues = audit.get("issues", ["Audit failed"])
+                print(f"    [Fulfillment] 🛠️ 正在尝试修复...")
                 png_b64 = render_svg_to_png_base64(svg_code)
-                svg_code = await repair_svg_async(self.client, d.description, svg_code, issues, audit.get("suggestions", []), state=state, rendered_image_b64=png_b64)
-                if not svg_code: break
+                # SOTA: 修复时也必须提供全量上下文，防止修复逻辑发生领域漂移
+                full_context = d.get_full_context()
+                new_svg = await repair_svg_async(self.client, full_context, svg_code, issues, audit.get("suggestions", []) if audit else [], state=state, rendered_image_b64=png_b64)
+                if not new_svg: 
+                    print(f"    [Fulfillment] ⚠️ 修复 Agent 未返回有效代码，保持当前版本...")
+                else:
+                    svg_code = new_svg
+                    print(f"    [Fulfillment] 🛠️ 修复完成 (新长度: {len(svg_code)})")
+
+        if not is_valid:
+            print(f"\n⚠️ [WARNING] 已耗尽 {self.MAX_REPAIR_ATTEMPTS} 次修复尝试，资产 '{d.id}' 仍未通过 VLM 审计。")
 
         if is_valid or svg_code:
-            # SOTA: Return AssetEntry for aggregated registration
             asset = AssetEntry(
                 id=d.id, source=AssetSource.AI, local_path=str(file_path.relative_to(ws_path)),
                 semantic_label=d.description[:100], content_hash=hashlib.md5(svg_code.encode()).hexdigest(),
                 alt_text=d.description, tags=["svg", ns], vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
             )
-            # uar.register_immediate(asset) # DEPRECATED: Don't call inside worker
             d.fulfilled, d.result_html = True, generate_figure_html(
                 asset, d.description, target_file=target_file, workspace_path=ws_path
             )
+            # SOTA: 必须记录结果 ID 供统计使用
+            d.result_asset_id = asset.id
             return d, asset
         return d, None
 
-    async def _fulfill_mermaid_step(self, d, ns, state, trace):
-        """
-        SOTA 2.0: 增强型 Mermaid 履约逻辑。
-        包含：异步生成 -> Playwright 渲染 -> VLM 视觉审计 -> 自动修复。
-        """
+    async def _fulfill_mermaid_step(self, d, uar, out_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         trace["steps"].append({"type": "init", "intent": d.description})
+        print(f"    [Fulfillment] 🚀 开始初始 Mermaid 生成 (ID: {d.id})...")
+        # SOTA: 传入全量上下文以提升 Mermaid 逻辑准确度
+        full_context = d.get_full_context()
+        mermaid_code = await generate_mermaid_async(self.client, full_context, state=state)
         
-        # 1. 初始生成
-        mermaid_code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
         if not mermaid_code:
             d.error = "Initial Mermaid generation failed"
-            return d
+            return d, None
 
-        # 2. 审计与修复循环
         from .processors.mermaid import audit_mermaid_async, repair_mermaid_async
         attempt = 0
         is_valid = False
-        
         while attempt < self.MAX_REPAIR_ATTEMPTS:
             attempt += 1
-            print(f"    [Fulfillment] 📋 审计 Mermaid (尝试 {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
+            print(f"    [Fulfillment] 📋 正在进行 Mermaid 审计 (尝试 {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
+            # SOTA: 审计时也必须提供全量上下文
+            audit = await audit_mermaid_async(self.client, mermaid_code, full_context, state=state)
             
-            # 执行物理渲染与视觉审计
-            audit = await audit_mermaid_async(self.client, mermaid_code, d.description, state=state)
-            trace["steps"].append({"attempt": attempt, "audit": audit, "code_len": len(mermaid_code)})
-
             if audit and audit.get("result") == "pass":
                 is_valid = True
-                print("    [Fulfillment] ✅ Mermaid 审计通过")
+                print(f"    [Fulfillment] ✅ Mermaid 审计通过 (ID: {d.id})")
                 break
             
-            # 如果不通过，执行修复
             if attempt < self.MAX_REPAIR_ATTEMPTS:
-                issues = audit.get("issues", ["Mermaid diagram has syntax or logical errors"])
-                print(f"    [Fulfillment] 🛠️ 正在修复 Mermaid 问题: {issues[0][:50]}...")
-                
-                repaired_code = await repair_mermaid_async(
-                    self.client, d.description, mermaid_code, 
-                    issues, audit.get("suggestions", []), 
-                    state=state
-                )
-                
-                if repaired_code:
-                    mermaid_code = repaired_code
-                else:
-                    print("    [Fulfillment] ⚠️ Mermaid 修复失败，尝试重新生成...")
-                    mermaid_code = await generate_mermaid_async(self.client, d.get_full_context(), state=state)
+                issues = audit.get("issues", ["Mermaid syntax error"])
+                print(f"    [Fulfillment] ⚠️ Mermaid 审计未通过，正在尝试修复...")
+                mermaid_code = await repair_mermaid_async(self.client, full_context, mermaid_code, issues, audit.get("suggestions", []), state=state)
+            else:
+                print(f"\n⚠️ [WARNING] 已耗尽 {self.MAX_REPAIR_ATTEMPTS} 次修复尝试，Mermaid 资产 '{d.id}' 仍未通过 VLM 审计。")
 
-        # 3. 最终结果固化
         if mermaid_code:
-            d.fulfilled, d.result_html = True, generate_mermaid_html(mermaid_code, d.description)
-        return d
+            # SOTA: 即使审计不通过，只要有代码也创建一个资产对象，确保不丢失
+            asset = AssetEntry(
+                id=d.id, 
+                source=AssetSource.AI, 
+                local_path=None, # 原生 Mermaid 没有物理文件
+                semantic_label=d.description[:100], 
+                content_hash=hashlib.md5(mermaid_code.encode()).hexdigest(),
+                alt_text=d.description, 
+                tags=["mermaid", ns], 
+                vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
+            )
+            
+            # SOTA: 改为标准 Markdown 栅栏代码块格式，消除渲染后的代码残留
+            native_mermaid_block = f"\n```mermaid\n{mermaid_code}\n```\n"
+            
+            # 使用 <figure> 包装以保持样式一致性
+            d.result_html = f"<figure>\n{native_mermaid_block}\n<figcaption>{d.description}</figcaption>\n</figure>"
+            d.fulfilled = True
+            d.result_asset_id = asset.id
+            
+            return d, asset
+            
+        return d, None
 
     async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
         import asyncio
         from functools import partial
         loop = asyncio.get_event_loop()
-        f = partial(
-            self.sourcing_agent._source_single_image, 
-            img_id=d.id, 
-            description=d.description, 
-            assets_dir=src_path,
-            html_context=d.get_full_context(), 
-            uar=uar, 
-            preserve_candidates=True
-        )
+        f = partial(self.sourcing_agent._source_single_image, img_id=d.id, description=d.description, assets_dir=src_path, html_context=d.get_full_context(), uar=uar, preserve_candidates=True)
         html = await loop.run_in_executor(None, f)
-        trace["steps"].append({"type": "search", "success": bool(html)})
         
         if html:
-            # SOTA: Try to find the actual physical file to create a proper AssetEntry
             found_files = list(src_path.glob(f"{d.id}.*"))
             if found_files:
                 img_file = found_files[0]
                 ws_path = Path(state.workspace_path)
                 asset = AssetEntry(
-                    id=d.id, 
-                    source=AssetSource.WEB, 
-                    local_path=str(img_file.relative_to(ws_path)),
-                    semantic_label=d.description[:100], 
-                    content_hash=hashlib.md5(img_file.read_bytes()).hexdigest(),
-                    alt_text=d.description, 
-                    tags=["sourced", ns], 
-                    vqa_status=AssetVQAStatus.PENDING
+                    id=d.id, source=AssetSource.WEB, local_path=str(img_file.relative_to(ws_path)),
+                    semantic_label=d.description[:100], content_hash=hashlib.md5(img_file.read_bytes()).hexdigest(),
+                    alt_text=d.description, tags=["sourced", ns], vqa_status=AssetVQAStatus.PENDING
                 )
-                # Regenerate HTML with robust paths
-                html = generate_figure_html(
-                    asset, d.description, target_file=target_file, workspace_path=ws_path
-                )
+                html = generate_figure_html(asset, d.description, target_file=target_file, workspace_path=ws_path)
                 d.fulfilled, d.result_html = True, html
                 return d, asset
-            
-            # Fallback if file matching logic failed but HTML was returned
             d.fulfilled, d.result_html = True, html
         return d, None
 
     async def _fulfill_use_existing_step(self, d, uar, ns, ws_path, state, trace, target_file: Optional[Path] = None):
         asset = uar.get_asset(d.matched_asset_id)
-        trace["steps"].append({"type": "reuse", "asset_id": d.matched_asset_id, "found": bool(asset)})
         if asset:
-            d.fulfilled, d.result_html = True, generate_figure_html(
-                asset, d.description, target_file=target_file, workspace_path=ws_path
-            )
+            d.fulfilled, d.result_html = True, generate_figure_html(asset, d.description, target_file=target_file, workspace_path=ws_path)
         return d
 
     def _parse_visual_directives(self, content: str) -> list[VisualDirective]:
         """
-        SOTA 4.0 增强型解析器：支持跨行 JSON、支持字段内换行、捕获位置偏移。
+        SOTA 2.0 Line-Based State Machine Parser.
+        Robustly extracts :::visual ... ::: blocks and captures surrounding context.
         """
         directives = []
-        # 模式：:::visual [空白] {JSON内容} [任意直到下一个 :::]
-        pattern = re.compile(r':::visual\s*(\{[\s\S]*?\})([\s\S]*?):::', re.DOTALL)
+        lines = content.splitlines(keepends=True)
         
-        for match in pattern.finditer(content):
-            raw = match.group(0)
-            json_str = match.group(1).strip()
+        in_block = False
+        current_block_lines = []
+        start_pos = 0
+        current_global_pos = 0
+        
+        # 定义上下文抓取范围 (字符数)
+        CONTEXT_WINDOW = 800
+        
+        for line in lines:
+            stripped = line.strip()
             
-            d = VisualDirective(
-                raw_block=raw, 
-                start_pos=match.start(), 
-                end_pos=match.end()
-            )
-            try:
-                # 预处理 JSON：移除真实换行符，防止 json.loads 崩溃
-                sanitized_json = json_str.replace('\n', ' ').replace('\r', '')
-                clean_json = extract_json_from_text(sanitized_json) or sanitized_json
-                cfg = json.loads(clean_json)
-                
-                d.id = cfg.get("id", f"v-{len(directives)}")
-                d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())
-                d.description = cfg.get("description", "").strip()
-                d.matched_asset_id = cfg.get("matched_asset")
-                d.reuse_score = int(cfg.get("reuse_score", 0))
-            except Exception as e:
-                d.error = f"JSON Error: {str(e)}"
+            if not in_block:
+                if stripped.startswith(':::visual'):
+                    in_block = True
+                    current_block_lines = [line]
+                    start_pos = current_global_pos
+            else:
+                current_block_lines.append(line)
+                if stripped == ':::':
+                    raw_block = "".join(current_block_lines)
+                    end_pos = current_global_pos + len(line)
+                    
+                    from ...core.json_utils import extract_json_from_text
+                    raw_json = extract_json_from_text(raw_block)
+                    
+                    if raw_json:
+                        d = VisualDirective(raw_block=raw_block, start_pos=start_pos, end_pos=end_pos)
+                        try:
+                            cfg = json.loads(raw_json)
+                            extracted_id = str(cfg.get("id", "")).strip()
+                            d.id = extracted_id if extracted_id else f"v-{len(directives)}"
+                            d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())
+                            d.description = cfg.get("description", "").strip()
+                            d.matched_asset_id = cfg.get("matched_asset")
+                            d.reuse_score = int(cfg.get("reuse_score", 0))
+                            
+                            # SOTA: 物理抓取前后文，解决“图不对文”的根本问题
+                            d.context_before = content[max(0, start_pos - CONTEXT_WINDOW):start_pos].strip()
+                            d.context_after = content[end_pos:min(len(content), end_pos + CONTEXT_WINDOW)].strip()
+                            
+                            directives.append(d)
+                        except Exception as e:
+                            print(f"    [Fulfillment] ⚠️ JSON 解析失败: {str(e)} | ID: {d.id}")
+                    
+                    in_block = False
+                    current_block_lines = []
             
-            directives.append(d)
+            current_global_pos += len(line)
+            
         return directives
 
     async def _decide_fulfillment_strategy(self, d, uar, state) -> VisualDirective:
         """
-        SOTA 2.0 策略决策引擎
-        
-        原则：
-        1. 尊重 Writer 的明确复用意图 (如果评分够高 >= 85)
-        2. 如果 Writer 要求生成 (GENERATE_SVG) 或 搜索 (SEARCH_WEB)，
-           除非本地有匹配得分极高 (>= 90) 的完美资产，否则严禁劫持 Writer 意图。
+        SOTA 2.0 智能履约决策器
+        平衡“资产一致性”与“创作意图准确性”
         """
-        # 场景 A: Writer 已经决定要复用
         if d.action == AssetFulfillmentAction.USE_EXISTING and d.matched_asset_id:
-            if d.reuse_score >= 85:
-                return d
+            if d.reuse_score >= 85: return d
             
-        # 场景 B: 寻找本地匹配 (作为第二意见)
-        # SOTA: limit=1 提高效率，我们只需要最好的
+        # 1. 语义搜索潜在候选资产
         candidates = await uar.intent_match_candidates_async(d.description, client=self.client, limit=1)
-        
-        if candidates:
-            best_asset = candidates[0]
-            
-            # 如果 Writer 要求生成 SVG 或 搜网图，我们非常谨慎
-            if d.action in [AssetFulfillmentAction.GENERATE_SVG, AssetFulfillmentAction.SEARCH_WEB]:
-                # 只有在本地发现得分极高的条目时才考虑“劫持”以节省资源
-                # 目前由于 intent_match 没有返回具体分数，我们设定一个保守策略：
-                # 仅当 best_asset 的 ID 与指令 ID 语义高度相关，或它是 MANDATORY 资产时才考虑。
-                if best_asset.priority == AssetPriority.MANDATORY:
-                    print(f"  [Fulfillment] 发现强制性匹配，执行动作劫持: {d.id} -> USE_EXISTING ({best_asset.id})")
-                    d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
-                    return d
-                
-                print(f"  [Fulfillment] 尊重 Writer 决定: 保持 {d.action.value} 动作 ({d.id})")
-                return d
+        if not candidates:
+            return d
 
-            # 只有在 Writer 没把握 (USE_EXISTING 但分数低) 时，我们才尝试换成更好的本地资产
-            d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+        best_asset = candidates[0]
+        
+        # 2. 严格意图保护逻辑
+        # 保护名单：GENERATE_SVG, GENERATE_MERMAID, SEARCH_WEB
+        # 只有在库中存在 MANDATORY (用户强制) 资产或类型完全一致的高分资产时，才允许复用
+        if d.action in [AssetFulfillmentAction.GENERATE_SVG, AssetFulfillmentAction.GENERATE_MERMAID, AssetFulfillmentAction.SEARCH_WEB]:
+            # 情况 A: 用户强制要求使用的资产，必须服从
+            if best_asset.priority == AssetPriority.MANDATORY:
+                d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
+                return d
             
+            # 情况 B: 检查类型一致性。严禁将 Mermaid 意图替换为 SVG 资产
+            is_same_type = False
+            if d.action == AssetFulfillmentAction.GENERATE_MERMAID and "mermaid" in best_asset.tags:
+                is_same_type = True
+            elif d.action == AssetFulfillmentAction.GENERATE_SVG and "svg" in best_asset.tags:
+                is_same_type = True
+            
+            # 只有类型一致且匹配度极高时才在生成阶段拦截
+            if is_same_type:
+                # 这里我们假设语义搜索返回的结果如果排在第一且类型匹配，可以考虑复用
+                # 但为了保险，生成阶段我们通常倾向于重新生成以保证 context 的精准匹配
+                pass 
+
+            return d # 默认返回原始指令，继续生成/搜索流程
+
+        # 3. 兜底：如果指令本身没指定具体 Action，则尝试使用库资产
+        d.action, d.matched_asset_id = AssetFulfillmentAction.USE_EXISTING, best_asset.id
         return d

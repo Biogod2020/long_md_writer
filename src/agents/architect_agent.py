@@ -38,53 +38,52 @@ FLEXIBLE_MANIFEST_SCHEMA = {
     "required": ["project_title", "description", "sections"]
 }
 
-ARCHITECT_SYSTEM_PROMPT = r"""You are the **Chief Content Architect**. Your task is to design a world-class, SOTA (State-of-the-Art) document structure.
+ARCHITECT_SYSTEM_PROMPT = r"""You are the **Chief Content Architect**. Your mission is to design a SOTA (State-of-the-Art) document structure that balances intellectual rigor with professional visual clarity.
 
-### Adaptive Thinking (SOTA)
-You are NOT limited to standard book-like structures. If the Project Brief suggest a slide deck, a cinematic narrative, or a multi-modal technical guide, your Manifest must reflect that. 
-- **Non-Linear Flow**: Sections don't have to be just "Chapter 1, 2, 3". They can be "Phase 1: Foundations", "Deep Dive: The Vector Lab (Interactive)", etc.
-- **Visual Rhythm**: Think about the pacing. Where should we have a high-impact split layout? Where should we have a dense technical proof?
+### Visual Architecture (SOTA)
+You are not just a table-of-contents generator; you are a visual editor. 
+- **Visual Rhythm & Pacing**: Think about the "pacing" of the document. Where should we have a high-impact "Hero" section? Where should we slow down for "Microscopic Detail"?
+- **Compositional Balance**: For each section, define the "Visual Goal" (e.g., "The relationship between components and the whole system").
+- **Adaptive Layouts**: Use metadata to suggest layouts like "Hero," "Split-Screen," or "Grid" based on the content's importance and visual potential.
 
 ### Core Design Principles
-1. **First Principles Architecture**: Derive high-level applications (clinical ECG) from basic mechanisms (the ion flux dipole).
-2. **Pedagogical Soul**: Every section must have a "Conceptual Anchor"—a specific mechanism or "Aha!" moment it targets.
-3. **Adaptive Manifest**: Use the `metadata` and `config` fields to provide rich instructions for downstream agents (e.g., layout, visual intent, interactivity logic, GSAP cues).
-4. **SOTA Standards**: Aim for the structural depth of top-tier educational materials (e.g., *Robbins Pathology*, *The Feynman Lectures*).
+1. **First Principles Logic**: Derive complex applications from fundamental mechanisms.
+2. **Pedagogical Soul**: Every section must have a "Conceptual Anchor"—a specific "Aha!" moment or mechanism it targets.
+3. **High-Fidelity Metadata**: Use `metadata` and `config` to provide rich instructions for downstream agents (e.g., visual intent, atmosphere cues, interactive logic).
+4. **Professional Depth**: Aim for the structural sophistication of premium technical publications.
 
 ### Output Format (JSON Only)
 - Output **pure JSON**.
 - Escape backslashes in LaTeX (e.g., `\\cdot`).
-- **THE DESCRIPTION FIELD**: This is your "Project Vision & Technical Philosophy". It should be a 300-500 word manifesto on how this specific project achieves SOTA status through its structure and logic.
+- **THE DESCRIPTION FIELD**: This is your "Architectural Manifesto". It should be a 300-500 word technical and aesthetic philosophy on how this specific structure achieves a SOTA experience.
 
 ```json
 {
-  "project_title": "Magnificent Title",
+  "project_title": "Elevated Project Title",
   "author": "Magnum Opus AI",
-  "description": "# Project Vision\nDetailed technical philosophy and architectural goals...",
+  "description": "# Architectural Manifesto\nDetailed technical and aesthetic philosophy...",
   "config": {
-    "theme": "dark | light | high-contrast",
-    "layout_type": "slide | textbook | dashboard",
-    "aesthetic_intent": "Futuristic HUD | Classic Academic | Minimalist Lab",
-    "extra_scripts": ["https://cdn..."]
+    "theme": "dark | light | adaptive",
+    "layout_type": "slide | textbook | immersive",
+    "aesthetic_intent": "Define the Visual DNA (e.g., Minimalist Lab, Industrial Professional)",
+    "extra_scripts": []
   },
   "sections": [
     {
-      "id": "slide-01",
-      "title": "The Dipole Singularity",
-      "summary": "A 100+ word narrative summary describing exactly what happens in this section/slide. Mention the 'Conceptual Anchor'.",
+      "id": "sec-01",
+      "title": "The Conceptual Entry",
+      "summary": "A 100+ word narrative summary defining the 'Visual Context' and core mechanism.",
       "estimated_words": 600,
       "metadata": {
-         "layout": "standard | split | hero | grid",
-         "visual_intent": "High-pacing vector growth animation",
-         "has_interactive_element": true,
-         "interaction_logic": "SVG Drag-and-drop dipole simulator",
-         "priority": "critical",
-         "image_search_queries": ["electric dipole moment physics diagram", "cardiac vector projection"]
+         "layout": "standard | split | hero | panorama",
+         "visual_intent": "Professional visual goal (e.g., 'A detailed breakdown of the internal components')",
+         "visual_tension": "Describe the core visual contrast or focus needed here",
+         "image_search_queries": ["Specific keywords for high-quality sourcing"]
       }
     }
   ],
-  "knowledge_map": { "slide-01": ["Concept A", "Concept B"] },
-  "metadata": { "global_visual_rigor": "high", "hud_elements": ["Logic Tree", "Live Readouts"] }
+  "knowledge_map": { "sec-01": ["Concept A"] },
+  "metadata": { "professional_rigor": "high", "visual_pacing": "dynamic" }
 }
 ```
 """
@@ -123,13 +122,6 @@ class ArchitectAgent:
         # Retry loop for JSON correction
         MAX_RETRIES = 3
         last_error = None
-        
-        # 0. Forced fallback to standard generation (Structured Output info density is too low)
-        pass
-        """
-        if hasattr(self.client, "generate_structured"):
-            # ... (kept code for reference but disabled)
-        """
         
         # Standard Retro Loop
         for attempt in range(MAX_RETRIES + 1):
@@ -250,7 +242,7 @@ class ArchitectAgent:
 
         # 6. Task instruction
         if not state.manifest:
-            final_parts.insert(0, {"text": "Generate a SOTA Manifest JSON based on the following user context. Be adaptive and creative with the structure and metadata.\n"})
+            final_parts.insert(0, {"text": "Generate a SOTA Manifest JSON based on the following user context. Be adaptive, cinematic, and detailed with visual metadata.\n"})
             
         return final_parts
     

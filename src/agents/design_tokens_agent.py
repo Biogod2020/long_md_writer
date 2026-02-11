@@ -139,7 +139,7 @@ For SOTA technical documents, prefer:
 - Dark mode as default (easier on eyes for long reading)
 - Generous spacing for readability
 - Clear visual hierarchy through typography scale
-- Glassmorphism effects for modern aesthetic
+- Clean, modern professional effects
 - Accent colors that match the subject matter
 """
 

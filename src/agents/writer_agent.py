@@ -22,117 +22,78 @@ from ..core.types import (
 # SOTA 2.0 系统提示词 - Writer-Direct-Inject 协议
 # ============================================================================
 
-WRITER_SYSTEM_PROMPT = """你是一位资深技术写手，负责撰写高质量的 Markdown 章节内容。
+WRITER_SYSTEM_PROMPT = """你是一位专业的学术与技术作者，负责根据上游规划撰写准确、详实且易于理解的 Markdown 章节内容。
 
 ## 核心职责
-1. **深度创作**: 根据项目规划和原始素材，撰写严密的技术内容
-2. **图文并茂**: 主动在合适位置插入图像，提升内容的可读性和教学效果
-3. **资产决策**: 判断现有资产是否适合使用，不适合则声明需要新资产
+1. **指令驱动写作**: 严格遵循项目简报（Brief）和架构师清单（Manifest）中的要求，确保内容逻辑与规划高度统一。
+2. **风格动态适配**: 仔细解析 Manifest 中的 `aesthetic_intent` 和章节 `metadata`，据此调整文案的语调（如专业、通俗或叙事）及视觉描述风格。
+3. **视觉意图整合**: 在文稿中合适位置插入图像指令，通过视觉辅助精准传达核心概念。
+4. **资产理性决策**: 基于 UAR 注册表判断现有资产的可用性，决定是复用、更新还是生成新资产。
 
 ## 写作规范
 
 ### Markdown 格式
-- 使用标准 Markdown 语法
-- 数学公式: 行内 `$...$`，块级 `$$...$$`
-- 代码块: ```language ... ```
-- 内部引用: `[REF:sec-id]` 格式
+- 使用标准 Markdown 语法。
+- 数学公式: 行内 `$...$`，块级 `$$...$$`。
+- 内部引用: `[REF:sec-id]`。
 
-### 特殊块约定
-- **重点卡片**: `:::important` ... `:::` 用于核心概念或公理
-- **警告块**: `:::warning` ... `:::` 用于常见陷阱或病理情况
-- **提示块**: `:::tip` ... `:::` 用于实用建议
+### 语义容器
+- 根据内容需要，可选择性使用 `:::important` (核心概念), `:::warning` (陷阱风险), `:::tip` (实践建议) 等容器。
 
-## 🖼️ 图像资产指令协议 (Visual Directive Protocol)
+### 🖼️ 图像资产指令协议 (Visual Directive Protocol)
 
-你将收到一个「可用资产注册表 (UAR)」，其中列出了所有可复用的图像资产及其质量评估。
+### 🛑 严禁项
+1. **严禁直接书写 `<img>` 或 `<figure>` 标签**：所有图像需求必须通过 `:::visual` 指令声明。
+2. **严禁注入未经证实的外部链接**。
+3. **严禁在指令块外描述图像细节**。
 
-### 核心规则：严禁生成任何图形/代码
-**严禁**在 Markdown 中直接书写 `<img>` 或 `<figure>` 标签。
-**严禁**在 `:::visual` 指令的 JSON 字段中编写具体的 Mermaid 代码或 SVG 路径。
-**严禁**在指令描述中尝试充当程序员。
+### 🚀 媒介匹配智慧 (Media Alignment Intelligence)
+请根据内容本质选择最精准的媒介，以下是我提供的参考意见，请你结合具体情况理性地选择：
+- **SVG (物理与几何)**: 用于不需要过多真实细节的示意图。
+- **MERMAID (抽象逻辑)**: 仅用于表达高度抽象的概念流/决策。
+- **SEARCH (真实世界)**: 用于获取真实的图像+需要真实高清细节的图像。
 
-你的任务是：**只声明你的需求和意图**。下游会有专业的「履约 Agent」负责根据你的描述来完成图形代码的编写、渲染和质量审核。
+### ✅ 视觉指令生成准则
+当你认为需要配图时，必须提供专业且具体的描述 (Description)。描述应遵循 **[核心主体] + [细节特征] + [专业要求]** 的逻辑。
+**注意：风格描述必须参考 Architect 提供的视觉要求（如配色方案、材质建议）。**
 
-### 决策流程
+- **SVG (逻辑/模型)**: 描述图形的几何构成、标注内容，并指明如何应用 TechSpec 中的配色。
+- **SEARCH (实拍/插图)**: 描述所需画面的主体、媒介类型及关键视觉特征。
+- **MERMAID (流程/关系)**: 描述逻辑节点的层级、流向及分支。
 
-当你认为某个位置需要图像时：
+### 决策示范
 
-**步骤 1: 查看 UAR 是否有匹配的资产**
-- 检查语义描述是否符合你的需求。
-- 检查质量等级。
-
-**步骤 2: 声明指令**
-
-#### 情况 A: 决定复用 UAR 中的现有资产
-如果你认为 UAR 中的某张图（例如 ID 为 `u-img-xxx`）非常合适，请使用以下格式：
-
+#### 情况 A: 复用 UAR 资产
 ```markdown
-这里是正文内容...
-
-:::visual {"id": "s1-fig-xxx", "action": "USE_EXISTING", "matched_asset": "u-img-xxx", "reuse_score": 95, "reason": "图片内容与本段描述的心脏瓣膜结构高度契合", "description": "对该图片的简要描述"}
-在此处根据 UAR 中该图片的视觉细节进行深度解说。
+:::visual {"id": "章节命名空间-fig-名称", "action": "USE_EXISTING", "matched_asset": "u-img-xxx", "reuse_score": 95, "reason": "该资产展示的结构与本段描述的逻辑高度契合", "description": "对该资产视觉特征的客观描述"}
+在此处结合资产的视觉细节进行深度文字解读。
 :::
-
-继续正文内容...
 ```
 
-#### 情况 B: 需要生成新图 或 现有资产不达标
-使用对应的生成动作（GENERATE_SVG, SEARCH_WEB, GENERATE_MERMAID）：
-
+#### 情况 B: 生成新资产
 ```markdown
-这里是正文内容...
-
-:::visual {"id": "s1-fig-xxx", "action": "GENERATE_SVG", "description": "需要展示的内容描述"}
-这张图用于说明 XXX 概念，需要包含 A、B、C 三个关键点。
+:::visual {"id": "章节命名空间-fig-名称", "action": "GENERATE_SVG", "reason": "此处概念较为抽象，需要通过几何模型直观展示其物理本质", "description": "核心主体：[详细描述]；特征：[标注与细节]；风格：[参考 Architect 要求的配色与布局约束]"}
+此处补充详细的意图说明，确保下游 Agent 产出准确、清晰的画面。
 :::
-
-继续正文内容...
 ```
 
-### `:::visual` 指令格式（JSON）
-
+### `:::visual` 指令 JSON 格式
 ```json
 {
   "id": "章节命名空间-fig-名称",
   "action": "USE_EXISTING | GENERATE_SVG | SEARCH_WEB | GENERATE_MERMAID",
-  "description": "详细的图像内容描述（对于 Mermaid 和 SVG，请描述清楚逻辑节点和视觉预期）",
-  "matched_asset": "如果想复用现有资产，填写其 UAR ID",
-  "reuse_score": 0-100, // 仅 USE_EXISTING 时必填
-  "reason": "简短理由", // 仅 USE_EXISTING 时必填
-  "search_queries": ["搜图关键词1"]  // 仅 SEARCH_WEB 时建议提供
+  "reason": "强制要求：解释选择/生成该图像的逻辑必要性",
+  "description": "具体的图像描述，需包含内容、细节及与 Architect 要求相符的风格建议",
+  "matched_asset": "仅 USE_EXISTING 时填写 UAR ID",
+  "reuse_score": 0-100, 
+  "search_queries": ["搜图关键词"] 
 }
 ```
 
-### action 类型说明
-
-| Action | 何时使用 |
-|--------|---------|
-| `USE_EXISTING` | UAR 中有合适资产，但需要下游处理 |
-| `GENERATE_SVG` | 需要精确的示意图、流程图、物理模型图 |
-| `SEARCH_WEB` | 需要真实照片、复杂医学图像、实拍图片 |
-| `GENERATE_MERMAID` | 需要流程图、序列图、类图等 |
-| `SKIP` | 此处不需要图像 |
-
-### 质量判断标准
-
-- **HIGH**: 直接使用，无需犹豫
-- **MEDIUM**: 可用，但如果是关键位置建议生成更好的
-- **LOW**: 不建议使用，请选择 GENERATE_SVG 或 SEARCH_WEB
-
 ## 输出要求
-
-1. **仅输出 Markdown 内容**，不要输出任何元数据或解释
-2. **不要在标题中包含章节编号**，组装器会处理
-3. **字数匹配**：确保内容长度接近预估字数
-4. **语言一致**：使用与项目简报相同的语言
-5. **图文并茂**：主动寻找适合插入图像的位置，让内容更加生动
-
-## 重要提醒
-
-- 你可以同时看到原始参考图像和 UAR 中的资产信息
-- 如果某张参考图像非常适合，可以直接使用（检查其在 UAR 中的 ID）
-- 不要勉强使用不合适的资产，宁可声明需要新资产
-- 每个 `:::visual` 指令都要有清晰的 description，便于下游履约
+1. **仅输出 Markdown 内容**，不包含元数据或额外解释。
+2. **内容厚度**: 确保论证严密、示例丰富，字数应接近或超过建议篇幅。
+3. **逻辑一致性**: 确保专业术语和叙事风格在全书范围内保持一致。
 """
 
 
@@ -142,7 +103,7 @@ class WriterAgent:
 
     支持：
     - Full-Context Perception: 完整规划 + Brief + 原材料 + UAR + 历史章节
-    - Writer-Direct-Inject: 直接注入 `<img>` 标签或声明 :::visual 指令
+    - Writer-Direct-Inject: 声明 :::visual 指令
     - 多模态输入: 文本 + 参考图像
     """
 
@@ -150,26 +111,21 @@ class WriterAgent:
         self.client = client or GeminiClient()
 
     async def run(self, state: AgentState) -> AgentState:
-        """
-        执行章节写作（单个章节）
-
-        注意：此方法每次只写一个章节，需要在工作流中循环调用
-        """
+        """执行章节写作（单个章节）"""
         if not state.manifest:
             state.errors.append("Writer Agent: Manifest not available")
             return state
 
-        # SOTA 2.0: 确保 UAR 已初始化
+        # 确保 UAR 已初始化
         state.initialize_uar()
 
-        # Check if we are in a REWRITE loop triggered by QA
+        # 处理审核退回的重写逻辑
         if getattr(state, "rewrite_needed", False):
             print(f"  [Writer] 🔄 Rewrite triggered by Critic. Feedback: {getattr(state, 'rewrite_feedback', '')[:100]}...")
             state.current_section_index = 0
             state.completed_md_sections = []
             state.rewrite_needed = False
 
-        # 获取当前要写的章节
         if state.current_section_index >= len(state.manifest.sections):
             return state
 
@@ -178,15 +134,13 @@ class WriterAgent:
 
         print(f"  [Writer] 📝 Writing section {current_section.id} ({namespace})...")
 
-        # SOTA 2.0: 构建多模态提示 (文本 + 图像)
+        # 构建多模态提示
         prompt_parts = self._build_multimodal_prompt(state, current_section, namespace)
 
-        # 调用 Gemini (带重试逻辑)
         max_retries = 3
         response = None
         for attempt in range(max_retries):
             try:
-                # Use native generation
                 response = await self.client.generate_async(
                     parts=prompt_parts if isinstance(prompt_parts, list) else None,
                     prompt=prompt_parts if isinstance(prompt_parts, str) else None,
@@ -194,43 +148,33 @@ class WriterAgent:
                     temperature=0.7,
                     stream=True
                 )
-                
-                if response.success:
-                    break
-                else:
-                    print(f"  [Writer] Attempt {attempt+1} failed: {response.error}")
-            except Exception as e:
-                print(f"  [Writer] Attempt {attempt+1} error: {e}")
+                if response.success: break
+                else: print(f"  [Writer] Attempt {attempt+1} failed: {response.error}")
+            except Exception as e: print(f"  [Writer] Attempt {attempt+1} error: {e}")
 
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2 * (attempt + 1))
+            if attempt < max_retries - 1: await asyncio.sleep(2 * (attempt + 1))
 
         if not response or not response.success:
-            state.errors.append(f"Writer Agent failed on {current_section.id} after {max_retries} attempts. Last error: {response.error if response else 'Unknown'}")
+            state.errors.append(f"Writer Agent failed on {current_section.id}. Last error: {response.error if response else 'Unknown'}")
             return state
 
-        # Capture thoughts
-        if response.thoughts:
-            state.thoughts = response.thoughts
+        if response.thoughts: state.thoughts = response.thoughts
 
-        # 保存章节
         try:
             section_path = self._save_section(state, current_section, response.text)
             current_section.file_path = str(section_path)
             state.completed_md_sections.append(str(section_path))
             state.current_section_index += 1
             print(f"  [Writer] ✓ Section {current_section.id} saved to {section_path}")
-        except Exception as e:
-            state.errors.append(f"Failed to save section {current_section.id}: {str(e)}")
+        except Exception as e: state.errors.append(f"Failed to save section {current_section.id}: {str(e)}")
 
         return state
     
     async def run_all(self, state: AgentState) -> AgentState:
-        """写作所有章节（循环调用 run）"""
+        """写作所有章节"""
         while not state.all_sections_written():
             state = await self.run(state)
-            if state.errors:
-                break
+            if state.errors: break
         return state
 
     def _build_multimodal_prompt(
@@ -239,170 +183,107 @@ class WriterAgent:
         section: SectionInfo,
         namespace: str
     ) -> Union[str, list]:
-        """
-        构建多模态提示 (SOTA 2.0 Full-Context Perception)
-
-        返回:
-            - 如果有图像: 返回 list[dict] (多模态格式)
-            - 如果无图像: 返回 str (纯文本格式)
-        """
+        """构建多模态提示 (SOTA 2.0 Full-Context Perception)"""
         text_parts = []
 
-        # ================================================================
-        # 0. Critic Feedback (if in rewrite loop)
-        # ================================================================
+        # 0. 审核反馈
         rewrite_feedback = getattr(state, "rewrite_feedback", None)
         if rewrite_feedback:
             text_parts.append("# ⚠️ 审核反馈 (必须解决以下问题)\n")
             text_parts.append(f"上一版草稿被退回，原因如下：\n{rewrite_feedback}\n\n")
 
-        # ================================================================
         # 1. 项目概览
-        # ================================================================
         text_parts.append("# 📋 项目概览\n")
         text_parts.append(f"**标题**: {state.manifest.project_title}\n")
         text_parts.append(f"**描述**: {state.manifest.description}\n\n")
 
-        # ================================================================
         # 2. 项目简报 (Brief)
-        # ================================================================
         if state.project_brief:
-            text_parts.append("# 📝 项目简报\n")
+            text_parts.append("# 📝 项目简报 (核心参考)\n")
             text_parts.append(f"{state.project_brief}\n\n")
 
-        # ================================================================
         # 3. 完整目录与进度
-        # ================================================================
-        text_parts.append("# 📚 文章目录\n")
+        text_parts.append("# 📚 文章目录与规划\n")
         for i, sec in enumerate(state.manifest.sections):
-            marker = "👉 **当前**" if sec.id == section.id else "  "
+            marker = "👉 **当前章节**" if sec.id == section.id else "  "
             status = "✅" if sec.file_path else "⏳"
             ns = f"s{i+1}"
             text_parts.append(f"{marker} [{status}] {sec.id} ({ns}): {sec.title}\n")
         text_parts.append("\n")
 
-        # ================================================================
         # 4. SOTA 2.0: 可用资产注册表 (UAR)
-        # ================================================================
         if state.asset_registry:
             text_parts.append(state.asset_registry.to_summary())
             text_parts.append("\n\n")
 
-        # ================================================================
         # 5. 已完成章节的完整内容
-        # ================================================================
         if state.completed_md_sections:
-            text_parts.append("# ✍️ 已完成章节\n")
-            text_parts.append("*请确保与前序章节的术语、风格保持一致*\n\n")
+            text_parts.append("# ✍️ 已完成章节内容\n")
+            text_parts.append("*请确保本章与前序章节的术语使用、叙事风格及质量标准保持高度一致*\n\n")
             for md_path in state.completed_md_sections:
                 try:
                     content = Path(md_path).read_text(encoding="utf-8")
-                    # Full content - no truncation (Gemini 1M context)
                     text_parts.append(f"\n---\n{content}\n")
-                except Exception:
-                    text_parts.append(f"\n[读取失败: {md_path}]\n")
+                except Exception: text_parts.append(f"\n[读取失败: {md_path}]\n")
 
-        # ================================================================
-        # 6. 用户意图 (必须遵循的指令)
-        # ================================================================
-        text_parts.append("\n# 🎯 用户意图 (必须遵循)\n")
-        text_parts.append("*以下是用户的核心诉求，请严格遵循*\n\n")
+        # 6. 用户意向与参考资料
+        text_parts.append("\n# 🎯 核心创作意向\n")
         text_parts.append(state.user_intent)
         text_parts.append("\n")
 
-        # ================================================================
-        # 7. 参考资料 (供创作参考的知识/数据)
-        # ================================================================
         if state.reference_materials:
-            text_parts.append("\n# 📚 参考资料\n")
-            text_parts.append("*以下是用户提供的背景知识和数据，请基于这些内容进行创作*\n\n")
+            text_parts.append("\n# 📚 参考背景资料\n")
             text_parts.append(state.reference_materials)
             text_parts.append("\n")
 
-        # ================================================================
-        # 8. 当前章节任务
-        # ================================================================
-        text_parts.append(f"\n# 🎯 当前任务：撰写 {section.id} (命名空间: {namespace})\n")
+        # 7. 当前章节具体任务
+        text_parts.append(f"\n# 🎯 当前撰写任务：{section.id} (命名空间: {namespace})\n")
         text_parts.append(f"**章节标题**: {section.title}\n")
         text_parts.append(f"**章节摘要**: {section.summary}\n")
-        text_parts.append(f"**⚠️ 最低字数要求**: {section.estimated_words} 字 (这是硬性要求，必须达到！)\n")
-        text_parts.append(f"""
-:::warning
-**字数要求**: 本章节必须达到 **{section.estimated_words}** 字以上！
-- 中文字符数（不含标点和空格）必须达到此数字
-- 内容不足将被退回重写
-- 请确保内容充实、论证详细、示例丰富
-:::
-""")
-
-        # 知识点
-        if section.id in state.manifest.knowledge_map:
-            points = state.manifest.knowledge_map[section.id]
-            text_parts.append(f"**核心知识点**: {', '.join(points)}\n")
-
-        # 章节元数据
+        text_parts.append(f"**建议篇幅**: 约 {section.estimated_words} 字以上\n")
+        
+        # 章节设计意图 (元数据)
         if hasattr(section, 'metadata') and section.metadata:
-            text_parts.append("\n**章节元数据 (设计意图)**:\n")
-            for k, v in section.metadata.items():
-                text_parts.append(f"- {k}: {v}\n")
+            text_parts.append("\n**章节设计约束 (Metadata)**:\n")
+            for k, v in section.metadata.items(): text_parts.append(f"- {k}: {v}\n")
             text_parts.append("\n")
 
-        # ================================================================
         # 8. 图像资产使用指导
-        # ================================================================
-        text_parts.append("\n# 🖼️ 图像资产使用指导\n")
-        
-        # SOTA 2.0: 特化注入分配给本章的强制性图片
+        text_parts.append("\n# 🖼️ 视觉资产指导\n")
         assigned_ids = section.metadata.get("assigned_assets", [])
         assigned_assets = []
         if assigned_ids and state.asset_registry:
             for aid in assigned_ids:
                 asset = state.asset_registry.get_asset(aid)
-                if asset:
-                    assigned_assets.append(asset)
+                if asset: assigned_assets.append(asset)
 
         if assigned_assets:
-            text_parts.append("\n## 🎯 本章硬性分配资产 (Assigned Assets)\n")
-            text_parts.append("以下图片已由架构师分配给本章节。你**必须**在文中引用它们，并根据图片的视觉细节进行深度解说。\n\n")
-            for a in assigned_assets:
-                text_parts.append(f"- **[{a.id}]**: {a.semantic_label}\n")
+            text_parts.append("\n## 🎯 本章分配资产\n")
+            text_parts.append("以下资产已预先分配给本章。你**必须**在文中引用它们，并根据视觉细节进行深度解读：\n\n")
+            for a in assigned_assets: text_parts.append(f"- **[{a.id}]**: {a.semantic_label}\n")
             text_parts.append("\n")
 
-        text_parts.append(f""")
+        text_parts.append(f"""
+请在合适的位置插入 `:::visual` 指令，遵循以下规则：
+1. **命名规范**: 新资产 ID 必须以 `{namespace}-` 开头。
+2. **逻辑支撑 (Reason)**: 对于每一个指令，必须在 JSON 中输出 `reason` 字段，解释其如何支撑当前正文逻辑。
+3. **风格对齐**: 仔细阅读项目描述中的视觉设计要求（配色、材质等），并将其融入到 `description` 中。
 
-请在合适的位置插入图像，遵循以下规则：
-
-1. **严禁使用 `<img>` 标签**: 无论你多么想用某张图，都必须通过 `:::visual` 指令并填写 `matched_asset`。
-2. **所有权归口**: 下游的履约模块会负责根据你的指令将图插入到最终位置。
-3. **命名规范**: 所有新资产 ID 必须以 `{namespace}-` 开头。
-
-3. **下方有参考图像**: 如果你看到参考图像（包含本章分配的图），请判断是否适合直接使用。**对于分配给本章的图，请务必根据其视觉细节写出具体的描述文字。**
-
-请开始撰写这个章节的完整 Markdown 内容。
+请开始撰写。
 """)
 
-        # ================================================================
-        # 构建最终输出 (支持多模态)
-        # ================================================================
         text_content = "".join(text_parts)
         multimodal_parts = [{"text": text_content}]
 
-        # 1. 注入本章分配的图片的真实数据 (High Priority)
         if assigned_assets:
-            multimodal_parts.append({"text": "\n\n# 🖼️ 本章分配图片的视觉细节\n*请仔细阅读以下图片的视觉内容并进行看图写作*\n\n"})
+            multimodal_parts.append({"text": "\n\n# 🖼️ 分配资产的视觉细节 (请看图写作)\n"})
             for a in assigned_assets:
                 if a.base64_data:
-                    multimodal_parts.append({
-                        "inline_data": {
-                            "mime_type": "image/png",
-                            "data": a.base64_data
-                        }
-                    })
-                    multimodal_parts.append({"text": f"\n*(本章分配图: {a.id})*\n\n"})
+                    multimodal_parts.append({"inline_data": {"mime_type": "image/png", "data": a.base64_data}})
+                    multimodal_parts.append({"text": f"\n*(资产: {a.id})*\n\n"})
 
-        # 2. 注入全局参考图像 (Lower Priority)
         if state.images:
-            multimodal_parts.append({"text": "\n\n# 📷 全局参考图像\n*以下是用户提供的其他参考图像，仅供参考*\n\n"})
+            multimodal_parts.append({"text": "\n\n# 📷 参考图像\n"})
             for i, img in enumerate(state.images):
                 multimodal_parts.append(img)
                 multimodal_parts.append({"text": f"\n*(参考图 {i+1})*\n\n"})
@@ -410,30 +291,18 @@ class WriterAgent:
         return multimodal_parts if len(multimodal_parts) > 1 else text_content
 
     def _build_prompt(self, state: AgentState, section: SectionInfo) -> str:
-        """
-        构建纯文本提示 (兼容旧版调用)
-
-        DEPRECATED: 请使用 _build_multimodal_prompt
-        """
         namespace = f"s{state.current_section_index + 1}"
         result = self._build_multimodal_prompt(state, section, namespace)
         if isinstance(result, list):
-            # 提取文本部分
             return "".join([p.get("text", "") for p in result if isinstance(p, dict) and "text" in p])
         return result
     
     def _save_section(self, state: AgentState, section: SectionInfo, content: str) -> Path:
-        """保存章节到工作目录"""
         md_dir = Path(state.workspace_path) / "md"
         md_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 使用章节 ID 作为文件名
         file_path = md_dir / f"{section.id}.md"
-        
-        # 添加章节标题
         full_content = f"# {section.title}\n\n{content}"
         file_path.write_text(full_content, encoding="utf-8")
-        
         return file_path
 
 

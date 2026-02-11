@@ -148,9 +148,10 @@ class GeminiClient:
                     return self._parse_native_response(resp.json())
             except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError, httpx.ConnectError) as e:
                 if attempt < max_retries - 1:
-                    print(f"  [GeminiClient] ⚠️ Connection error ({type(e).__name__}). Resetting pool and retrying...")
+                    wait_time = (2 ** attempt) + random.random()
+                    print(f"  [GeminiClient] ⚠️ Protocol/Streaming Error ({type(e).__name__}): {str(e)}. Resetting client and retrying in {wait_time:.2f}s...")
                     await self.reset_client()
-                    await asyncio.sleep(1 * (attempt + 1))
+                    await asyncio.sleep(wait_time)
                     continue
                 return GeminiResponse(success=False, error=str(e))
             except httpx.ReadTimeout as e:
