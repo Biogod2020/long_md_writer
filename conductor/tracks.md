@@ -51,6 +51,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 
 
-- [ ] **Track: RCA & Quality Restoration**
+- [x] **Track: RCA & Quality Restoration**
 
-*Link: [./conductor/tracks/rca_quality_restoration_20260210/](./conductor/tracks/rca_quality_restoration_20260210/)*
+
+
+*Link: [./conductor/archive/rca_quality_restoration_20260210/](./conductor/archive/rca_quality_restoration_20260210/)*
+
+
+
+
