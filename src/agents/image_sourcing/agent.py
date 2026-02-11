@@ -92,9 +92,11 @@ class ImageSourcingAgent:
                     all_failed_queries.extend(queries)
                     continue
 
-                temp_dir = assets_dir / f"candidates_{img_id}_v{attempt+1}"
+                temp_dir = ws_path / "assets" / "images" / f"candidates_{img_id}_v{attempt+1}"
                 temp_dir.mkdir(parents=True, exist_ok=True)
-                local_images = downloader.download_candidates(image_candidates, temp_dir)
+                
+                # SOTA: Direct await on async downloader
+                local_images = await downloader.download_candidates_async(image_candidates, temp_dir)
                 
                 if not local_images:
                     all_failed_queries.extend(queries)

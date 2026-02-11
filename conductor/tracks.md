@@ -60,3 +60,79 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 
 
+
+
+
+---
+
+
+
+
+
+
+
+- [ ] **Track: Agentic ImageSourcing & VLM Concurrency Stress Test**
+
+
+
+
+
+
+
+*Link: [./conductor/tracks/agentic_sourcing_stress_20260211/](./conductor/tracks/agentic_sourcing_stress_20260211/)*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- [x] **Track: Image Sourcing Download Acceleration**
+
+
+
+
+
+
+
+*Link: [./conductor/tracks/sourcing_speed_optimization_20260211/](./conductor/tracks/sourcing_speed_optimization_20260211/)*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

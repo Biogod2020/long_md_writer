@@ -1,165 +1,143 @@
 """
-VisionSelector: Handles image selection via Gemini Vision API.
+VisionSelector: Optimized for High-Speed Audit using pre-resized VQA thumbnails.
+SOTA 2.0: Decouples VLM transfer from original file I/O.
 """
 
 import base64
 import json
 import re
-import time
-import io
+import asyncio
 from pathlib import Path
-from typing import List, Dict, Tuple, Any
-from PIL import Image
+from typing import List, Dict, Tuple, Any, Optional
 from ...core.gemini_client import GeminiClient
+from ...core.json_utils import parse_json_dict_robust
 
 
 class VisionSelector:
-    """Selects the best image from a list of candidates using Gemini Vision."""
+    """Selects the best image using Gemini Vision via pre-generated VQA thumbnails."""
 
     def __init__(self, client: GeminiClient, debug: bool = False):
         self.client = client
         self.debug = debug
-        # Default max image dimension for Vision API to keep payload small
-        self.max_vision_dim = 1024 
-        # Default batch size to avoid 400 Bad Request / Proxy timeouts
-        self.default_batch_size = 5
+        self.default_batch_size = 20
 
-    def select_best(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str] = {}) -> List[Tuple[Path, str, str]]:
+    async def select_best_async(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str] = {}) -> List[Dict[str, Any]]:
         """
-        Use Gemini Vision to evaluate and rank the candidates.
-        Returns a list of (Path, Reason, Description) tuples, ranked by quality.
+        Expects 'images' to be Paths to ORIGINAL files.
+        Automatically switches to corresponding '_vqa.jpg' for API transfer.
         """
-        if not images:
-            return []
+        if not images: return []
+        if self.debug: print(f"    - [Vision-Async] Auditing {len(images)} candidates using VQA thumbnails...")
 
-        if self.debug:
-            print(f"    - Vision ranking {len(images)} images (Batch Size: {self.default_batch_size})...")
-
-        # Sort images by number (img_1, img_2...)
-        sorted(images, key=lambda p: int(re.search(r'\d+', p.stem).group()) if re.search(r'\d+', p.stem) else 999)
+        sorted_images = sorted(images, key=lambda p: int(re.search(r'\d+', p.stem).group()) if re.search(r'\d+', p.stem) else 999)
         
-        # Process in batches and collect all winners
-        winners = []
-        batch_size = self.default_batch_size
-        for i in range(0, len(images), batch_size):
-            batch = images[i:i + batch_size]
-            res = self._call_vision_api_with_retry(batch, description, guidance, descriptions_map)
-            if res["success"] and res["path"]:
-                winners.append((res["path"], res["reason"], res["description"]))
+        tasks = []
+        for i in range(0, len(sorted_images), self.default_batch_size):
+            batch = sorted_images[i:i + self.default_batch_size]
+            tasks.append(self._call_vision_api_with_retry_async(batch, description, guidance, descriptions_map))
         
-        # Return all winners as a ranked list
-        return winners
+        results = await asyncio.gather(*tasks)
+        return [res for res in results if res is not None]
 
-    def _call_vision_api_with_retry(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
-        """Call Vision API with retry logic for network and 400/500 errors."""
-        last_error = "Unknown"
+    async def _call_vision_api_with_retry_async(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str], max_retries: int = 3) -> Dict[str, Any]:
+        last_error = ""
         for attempt in range(max_retries):
             try:
-                if attempt > 0:
-                    wait_time = 2 ** attempt
-                    if self.debug: print(f"        - Retry {attempt} after {wait_time}s due to: {last_error}")
-                    time.sleep(wait_time)
-                
-                result = self._call_vision_api(images, description, guidance, descriptions_map)
-                if result["success"]:
-                    return result
-                
+                if attempt > 0: await asyncio.sleep(2 ** attempt)
+                result = await self._call_vision_api_async(images, description, guidance, descriptions_map)
+                if result.get("success"): return result
                 last_error = result.get("error", "Unknown API error")
-                
-                # If 400 error occurs and batch is still large, we don't retry same batch here,
-                # but in production we'd ideally split it smaller. 
-                # For now, we retry because it might be a transient proxy 400/500 mismatch.
-                if "400" in last_error or "500" in last_error or "RemoteDisconnected" in last_error:
-                    continue
-                else:
-                    break # Stop on logic errors
-                    
+                if "400" in last_error or "500" in last_error or "429" in last_error: continue
+                break
             except Exception as e:
                 last_error = str(e)
                 continue
-                
-        return {"success": False, "error": last_error}
+        return {"success": False, "error": last_error, "path": None, "status": "FAILED"}
 
-    def _call_vision_api(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str]) -> Dict[str, Any]:
-        """Atomic call to Gemini Vision API with image compression."""
+    async def _call_vision_api_async(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str]) -> Dict[str, Any]:
+        """Atomic async call using pre-generated _vqa.jpg files."""
         
-        def encode_and_compress_image(path):
+        def get_vqa_b64(orig_path: Path) -> Optional[str]:
+            """Reads the pre-resized VQA thumbnail and encodes to B64."""
+            vqa_path = orig_path.parent / f"{orig_path.stem}_vqa.jpg"
+            # Fallback to original if thumbnail missing (shouldn't happen in SOTA 2.0)
+            target = vqa_path if vqa_path.exists() else orig_path
             try:
-                with Image.open(path) as img:
-                    # Convert to RGB if necessary (Alpha channel can cause issues or larger size)
-                    if img.mode in ("RGBA", "P"):
-                        img = img.convert("RGB")
-                    
-                    # Resize if too large
-                    if max(img.size) > self.max_vision_dim:
-                        img.thumbnail((self.max_vision_dim, self.max_vision_dim), Image.LANCZOS)
-                    
-                    # Save to buffer as JPEG with 85% quality
-                    buffer = io.BytesIO()
-                    img.save(buffer, format="JPEG", quality=85, optimize=True)
-                    return base64.b64encode(buffer.getvalue()).decode('utf-8')
-            except Exception as e:
-                if self.debug: print(f"      - Image encode error ({path.name}): {e}")
-                return None
+                return base64.b64encode(target.read_bytes()).decode('utf-8')
+            except Exception: return None
 
-        img_contexts_str = ""
-        for img in images:
-            desc_text = descriptions_map.get(img.name, "No description")
-            img_contexts_str += f"- Image {img.name}: {desc_text}\n"
+        # 1. Parallel B64 encoding from disk (Very fast for thumbnails)
+        encoding_tasks = [asyncio.to_thread(get_vqa_b64, p) for p in images]
+        encoded_results = await asyncio.gather(*encoding_tasks)
         
-        prompt = f"""You are an expert visual evaluator for academic and technical publications.
+        img_contexts_str = ""
+        parts = []
+        
+        prompt_header = f"""You are a Senior Visual Intelligence Expert. Your mission is to DEDUCE the most canonical and accurate image for: "{description}".
 
-**Your Task:** Carefully examine the candidate images below and select the ONE best image that satisfies the request and criteria.
+### EVALUATION STRATEGY:
+1. **Deductive Analysis**: Look at all candidates as a set to find consistent visual evidence.
+2. **Cross-Verification**: Match visual clues inside images against the "Source Context" text.
+3. **Truth over Aesthetics**: Prioritize authenticity over artistic variations.
 
-**Image Request:** "{description}"
-
-**Acceptance Guidance:**
-{guidance}
+**Target Subject**: "{description}"
+**Acceptance Guidance**: {guidance}
 
 **Candidate Images with Source Context:**
-{img_contexts_str}
-
-**Evaluation Protocol:**
-1. Observe all images, compare with the description and guidance.
-2. Select the ONE image that best aligns.
-3. Prefer professional, clear illustrations over watermarked or low-quality ones.
-
-**Output Format (JSON only):**
-```json
-{{
-  "selected_image": "img_X.jpg",
-  "reasoning": "Brief explanation.",
-  "description_of_selected": "Image description in SAME LANGUAGE as the context (Chinese if Chinese, English if English). CONCISE (1-2 sentences)."
-}}
-```
-If NO candidate is acceptable, set `selected_image` to null.
 """
-        parts = [{"text": prompt}]
-        for img_path in images:
-            b64 = encode_and_compress_image(img_path)
+        for i, img in enumerate(images):
+            desc_text = descriptions_map.get(img.name, "No description")
+            img_contexts_str += f"- Image {img.name}: {desc_text}\n"
+            b64 = encoded_results[i]
             if b64:
-                # We forced it to JPEG in encode_and_compress_image
-                parts.append({"inlineData": {"mimeType": "image/jpeg", "data": b64}})
+                parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
+        
+        parts.insert(0, {"text": prompt_header + img_contexts_str})
+        parts.append({"text": """
+**Output Format (JSON only)**:
+```json
+{
+  "thought": "Analysis of visual details and patterns.",
+  "selection_status": "CERTAIN | PROBABLE | REJECTED",
+  "selected_image": "img_X.jpg or null",
+  "confidence_score": 0-100,
+  "failure_analysis": "Detail why if rejected.",
+  "description_of_selected": "1-sentence factual description."
+}
+```
+"""})
 
         try:
-            response = self.client.generate(parts=parts, temperature=0.2)
-            if response.success:
-                text = response.text
-                if "```json" in text:
-                    text = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL).group(1)
-                elif "```" in text:
-                    text = re.search(r'```\s*(.*?)\s*```', text, re.DOTALL).group(1)
+            response = await self.client.generate_async(parts=parts, temperature=0.2, stream=True)
+            if not response.success: return {"success": False, "error": response.error}
+            
+            raw_text = response.text.strip() if response.text else ""
+            data = parse_json_dict_robust(raw_text)
+            sel_name = data.get("selected_image")
+            
+            if sel_name and data.get("selection_status") != "REJECTED":
+                # Map back to ORIGINAL path
+                # API might return img_X.jpg or img_X_vqa.jpg or just img_X
+                clean_name = Path(sel_name).stem.replace("_vqa", "")
+                matched_path = next((p for p in images if p.stem == clean_name), images[0])
                 
-                data = json.loads(text.strip())
-                sel_name = data.get("selected_image")
-                if sel_name:
-                    # Map back to original filename extension
-                    for img in images:
-                        if img.stem == Path(sel_name).stem:
-                            return {"success": True, "path": img, "reason": data.get("reasoning", ""), "description": data.get("description_of_selected", "")}
-                    # If model returned a name that doesn't exactly match but exists in pool
-                    return {"success": True, "path": images[0], "reason": data.get("reasoning", ""), "description": data.get("description_of_selected", "")}
-                return {"success": True, "path": None, "reason": data.get("reasoning", ""), "description": ""}
-            return {"success": False, "error": response.error}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+                return {
+                    "success": True, "path": matched_path, 
+                    "reason": data.get("thought", ""), "description": data.get("description_of_selected", ""),
+                    "score": data.get("confidence_score", 0), "status": data.get("selection_status", "CERTAIN"),
+                    "metadata": data
+                }
+            
+            return {"success": True, "path": None, "score": 0, "status": "REJECTED", "reason": data.get("failure_analysis", "Rejected"), "metadata": data}
+        except Exception as e: return {"success": False, "error": str(e)}
+
+    def select_best(self, images: List[Path], description: str, guidance: str, descriptions_map: Dict[str, str] = {}) -> List[Dict[str, Any]]:
+        """Synchronous wrapper."""
+        import concurrent.futures
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    return executor.submit(lambda: asyncio.run(self.select_best_async(images, description, guidance, descriptions_map))).result()
+            return asyncio.run(self.select_best_async(images, description, guidance, descriptions_map))
+        except RuntimeError: return asyncio.run(self.select_best_async(images, description, guidance, descriptions_map))

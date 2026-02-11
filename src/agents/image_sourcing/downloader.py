@@ -1,148 +1,160 @@
-"ImageDownloader: Shotgun Concurrency with Atomic Cleanup."
+"ImageDownloader: Shotgun Concurrency with VQA Thumbnail Generation."
 
-import requests
+import httpx
+import asyncio
 import random
 import time
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import urllib3
 import json
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from .browser import BrowserManager
+from PIL import Image
+import io
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ImageDownloader:
-    """Downloads images using massive parallelism and multi-strategy competition."""
+    """
+    Downloads images using massive ASYNC parallelism.
+    Maintains ORIGINAL binary while generating VQA thumbnails for speed.
+    """
 
     def __init__(self, browser_manager: BrowserManager, debug: bool = False):
         self.browser_manager = browser_manager
         self.debug = debug
+        self.timeout = httpx.Timeout(15.0, connect=5.0)
+        self.max_concurrency = 30 
+        self.vqa_dim = 1024 # Standard dimension for VLM audit
 
-    def download_candidates(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
+    async def download_candidates_async(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
         """
-        Shotgun Strategy: Fire ALL methods for ALL images at once.
-        Automatically cleans up competing temp files, leaving only the winners.
+        1. Competition download.
+        2. Pick original winners.
+        3. Generate VQA thumbnails.
+        Returns: List of Path objects to the ORIGINAL files.
         """
-        if not candidates:
-            return []
+        if not candidates: return []
+        if self.debug: print(f"    - [Downloader] Sourcing {len(candidates)} candidates...")
 
-        if self.debug:
-            print(f"    - [Shotgun] Launching extreme parallel download for {len(candidates)} images...")
-
-        max_workers = min(len(candidates) * 4, 100)
-        results_map = {} 
+        semaphore = asyncio.Semaphore(self.max_concurrency)
         
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_task = {}
-            for i, cand in enumerate(candidates):
+        async def competitive_download(idx: int, cand: Dict[str, str]) -> List[Path]:
+            async with semaphore:
                 url = cand['url']
-                future_to_task[executor.submit(self._method_direct_requests, url, i, target_dir)] = (i, "direct")
-                future_to_task[executor.submit(self._method_browser_suite, url, i, target_dir)] = (i, "browser_suite")
+                tasks = [
+                    self._method_direct_httpx(url, idx, target_dir),
+                    self._method_browser_suite_async(url, idx, target_dir)
+                ]
+                results = await asyncio.gather(*tasks)
+                flat = []
+                for r in results:
+                    if isinstance(r, list): flat.extend(r)
+                    elif isinstance(r, Path): flat.append(r)
+                return flat
 
-            for future in concurrent.futures.as_completed(future_to_task):
-                idx, method_name = future_to_task[future]
-                try:
-                    paths = future.result()
-                    if paths:
-                        if isinstance(paths, Path): paths = [paths]
-                        if idx not in results_map: results_map[idx] = []
-                        results_map[idx].extend(paths)
-                except Exception: pass
-
-        final_paths = []
-        for idx, potential_paths in results_map.items():
+        all_results = await asyncio.gather(*[competitive_download(i, c) for i, c in enumerate(candidates)])
+        
+        original_winners = []
+        for idx, potential_paths in enumerate(all_results):
             valid_files = [p for p in potential_paths if p.exists() and self._is_valid_image(p)]
             if not valid_files: continue
                 
-            # Selection: The largest file is usually the highest resolution
             winner = max(valid_files, key=lambda p: p.stat().st_size)
+            final_orig_path = target_dir / f"img_{idx+1}{winner.suffix}"
+            if winner != final_orig_path: shutil.copy2(winner, final_orig_path)
             
-            # Standardize filename
-            final_path = target_dir / f"img_{idx+1}{winner.suffix}"
-            if winner != final_path:
-                shutil.copy2(winner, final_path)
-            
-            # ATOMIC CLEANUP: Delete all competing temp files for THIS image index
+            # Generate VQA Thumbnail (Cached once on disk)
+            vqa_path = target_dir / f"img_{idx+1}_vqa.jpg"
+            await asyncio.to_thread(self._create_vqa_thumb, final_orig_path, vqa_path)
+
+            # Cleanup fragments
             for p in potential_paths:
                 try:
-                    if p.exists() and p != final_path:
-                        p.unlink()
+                    if p.exists() and p != final_orig_path and p != vqa_path: p.unlink()
                 except: pass
-            
-            # Secondary sweep for glob pattern safety
             for p in target_dir.glob(f"temp_{idx}_*"):
                 try: p.unlink()
                 except: pass
 
             desc = candidates[idx].get('desc')
             if desc: (target_dir / f"img_{idx+1}.txt").write_text(desc, encoding='utf-8')
-            final_paths.append(final_path)
+            original_winners.append(final_orig_path)
                     
-        return final_paths
+        return original_winners
 
-    def _method_direct_requests(self, url: str, index: int, target_dir: Path) -> Optional[Path]:
+    def _create_vqa_thumb(self, src: Path, dest: Path):
+        """Creates a resized JPEG for VLM audit. Source remains untouched."""
+        try:
+            with Image.open(src) as img:
+                if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+                if max(img.size) > self.vqa_dim:
+                    img.thumbnail((self.vqa_dim, self.vqa_dim), Image.Resampling.LANCZOS)
+                img.save(dest, "JPEG", quality=85, optimize=True)
+        except: pass
+
+    async def _method_direct_httpx(self, url: str, index: int, target_dir: Path) -> Optional[Path]:
         try:
             if r'\u' in url: url = url.encode().decode('unicode_escape')
             from urllib.parse import unquote, urlparse
-            url = unquote(url)
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                'Referer': f"{urlparse(url).scheme}://{urlparse(url).netloc}/"
+                'Referer': f"{urlparse(unquote(url)).scheme}://{urlparse(unquote(url)).netloc}/"
             }
-            resp = requests.get(url, headers=headers, timeout=15, verify=False)
-            if resp.status_code == 200 and len(resp.content) > 2000:
-                c_type = resp.headers.get('Content-Type', '').lower()
-                ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
-                p = target_dir / f"temp_{index}_direct{ext}"
-                p.write_bytes(resp.content)
-                return p
+            async with httpx.AsyncClient(verify=False, timeout=self.timeout, follow_redirects=True) as client:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code == 200 and len(resp.content) > 2000:
+                    ext = ".png" if 'png' in resp.headers.get('Content-Type', '').lower() else ".webp" if 'webp' in resp.headers.get('Content-Type', '').lower() else ".jpg"
+                    p = target_dir / f"temp_{index}_direct{ext}"
+                    p.write_bytes(resp.content)
+                    return p
         except: pass
         return None
 
-    def _method_browser_suite(self, url: str, index: int, target_dir: Path) -> List[Path]:
-        found = []
-        page = self.browser_manager.page
-        with ThreadPoolExecutor(max_workers=3) as sub_executor:
+    async def _method_browser_suite_async(self, url: str, index: int, target_dir: Path) -> List[Path]:
+        def sync_browser_work():
+            found = []
+            page = self.browser_manager.page
             tab = page.new_tab()
             try:
                 tab.get(url, timeout=10)
                 ua, cookies = tab.user_agent, {c['name']: c['value'] for c in tab.cookies() if isinstance(c, dict)}
-                
-                def run_fast():
-                    try:
-                        s = requests.Session()
-                        s.headers.update({"User-Agent": ua, "Referer": url})
-                        s.cookies.update(cookies)
-                        r = s.get(url, timeout=15, verify=False)
-                        if r.status_code == 200:
-                            p = (target_dir / f"temp_{index}_fast").with_suffix(".png" if 'png' in r.headers.get('Content-Type','') else ".jpg")
-                            p.write_bytes(r.content)
-                            return p
-                    except: return None
-
-                def run_slow():
-                    try:
-                        res = tab.download(url, str(target_dir.resolve()), f"temp_{index}_slow")
-                        return Path(res[1]) if res and res[0] else None
-                    except: return None
-
-                futures = [sub_executor.submit(run_fast), sub_executor.submit(run_slow)]
-                for f in concurrent.futures.as_completed(futures):
-                    res_p = f.result()
-                    if res_p: found.append(res_p)
+                try:
+                    import requests
+                    s = requests.Session()
+                    s.headers.update({"User-Agent": ua, "Referer": url})
+                    s.cookies.update(cookies)
+                    r = s.get(url, timeout=15, verify=False)
+                    if r.status_code == 200:
+                        p = (target_dir / f"temp_{index}_fast").with_suffix(".png" if 'png' in r.headers.get('Content-Type','') else ".jpg")
+                        p.write_bytes(r.content)
+                        found.append(p)
+                except: pass
+                try:
+                    res = tab.download(url, str(target_dir.resolve()), f"temp_{index}_slow")
+                    if res and res[0]: found.append(Path(res[1]))
+                except: pass
             finally:
                 try: tab.close()
                 except: pass
-        return found
+            return found
+        return await asyncio.to_thread(sync_browser_work)
 
     def _is_valid_image(self, file_path: Path) -> bool:
         if not file_path.exists() or file_path.stat().st_size < 2048: return False
         try:
-            with open(file_path, 'rb') as f:
-                header = f.read(12)
-                return any(header.startswith(m) for m in [b'\xff\xd8\xff', b'\x89PNG', b'RIFF', b'GIF87a', b'GIF89a'])
+            with Image.open(file_path) as img: img.verify()
+            return True
         except: return False
+
+    def download_candidates(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                with ThreadPoolExecutor() as executor:
+                    return executor.submit(lambda: asyncio.run(self.download_candidates_async(candidates, target_dir))).result()
+            return asyncio.run(self.download_candidates_async(candidates, target_dir))
+        except RuntimeError: return asyncio.run(self.download_candidates_async(candidates, target_dir))
