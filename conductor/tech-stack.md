@@ -9,6 +9,7 @@
 ## Agent Architecture
 - **Framework**: Custom multi-agent ecosystem utilizing specialized roles (Architect, SME Writer, Asset Critic, Editorial QA).
 - **Communication**: Asynchronous event-driven architecture using `asyncio`.
+- **Network Engine**: `httpx` (AsyncClient) for high-performance non-blocking I/O and intelligent connection pooling.
 - **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
   - Native Multimodal `inline_data` support.
   - Native JSON Schema enforcement.
@@ -19,11 +20,17 @@
   - "Thinking" token (thoughts) capture and state integration.
   - Intelligent connection pooling and exponential backoff for network resilience.
   - High-concurrency parallel fulfillment with semaphore-based rate limiting.
+  - **Shotgun Sourcing Strategy**: Massive parallelism across multiple download methods (Direct, Browser-based, Clean Header) with winner-takes-all selection.
+  - **Fidelity-First Asset Pipeline**:
+    - In-memory/On-disk hybrid processing for 100% original binary preservation.
+    - Pre-generated VQA thumbnails for low-latency VLM transfer.
+    - Atomic cleanup of candidate fragments post-sourcing.
 
 ## Frontend & Tooling
 - **Dashboard**: Streamlit (for project monitoring and manual intervention).
 - **HTML/CSS Processing**: BeautifulSoup4 and lxml (for semantic manipulation of generated outputs).
 - **Visual Auditing**: Playwright (for headless browser-based Visual QA and screenshot capture).
+- **Image Intelligence**: `Pillow` (PIL) for high-fidelity image manipulation, format normalization, and memory-safe scaling.
 
 ## Documentation & Standards
 - **Source Format**: Markdown with custom `:::` container extensions for scripts and visual assets.
