@@ -1,4 +1,4 @@
-"ImageDownloader: Robust multi-layer download strategy for image candidates."
+"ImageDownloader: Shotgun Concurrency with Atomic Cleanup."
 
 import requests
 import random
@@ -9,14 +9,13 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import urllib3
 import json
+import shutil
 from .browser import BrowserManager
 
-# Disable insecure request warnings for proxy/SSL issues
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 class ImageDownloader:
-    """Downloads images using requests with browser fallback."""
+    """Downloads images using massive parallelism and multi-strategy competition."""
 
     def __init__(self, browser_manager: BrowserManager, debug: bool = False):
         self.browser_manager = browser_manager
@@ -24,294 +23,126 @@ class ImageDownloader:
 
     def download_candidates(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
         """
-        Download a list of candidate images using a 3-layer strategy.
-        
-        Args:
-            candidates: List of {'url', 'desc'} dicts
-            target_dir: Directory to save images
-            
-        Returns:
-            List of Path objects for successfully downloaded images
+        Shotgun Strategy: Fire ALL methods for ALL images at once.
+        Automatically cleans up competing temp files, leaving only the winners.
         """
         if not candidates:
             return []
-            
-        session = requests.Session()
-        local_paths = [None] * len(candidates)
-        failed_indices = []
 
-        # 1. LAYER 1: Parallel Requests
         if self.debug:
-            print(f"    - Starting parallel download of {len(candidates)} images...")
-            
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = {
-                executor.submit(
-                    self._download_single_requests, 
-                    candidates[i]['url'], 
-                    i, 
-                    target_dir, 
-                    session, 
-                    candidates[i]['desc']
-                ): i for i in range(len(candidates))
-            }
-            for future in concurrent.futures.as_completed(futures):
-                idx = futures[future]
-                try:
-                    path = future.result()
-                    if path:
-                        local_paths[idx] = path
-                    else:
-                        failed_indices.append(idx)
-                except:
-                    failed_indices.append(idx)
+            print(f"    - [Shotgun] Launching extreme parallel download for {len(candidates)} images...")
 
-        # 2. LAYER 2: Browser Fallback (Anti-bot Bypass + Session Injection)
-        if failed_indices:
-            if self.debug:
-                print(f"    - {len(failed_indices)} failed simple download. Trying Browser-based fallback...")
-            
-            # Use the shared browser instance
-            page = self.browser_manager.page
+        max_workers = min(len(candidates) * 4, 100)
+        results_map = {} 
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_task = {}
+            for i, cand in enumerate(candidates):
+                url = cand['url']
+                future_to_task[executor.submit(self._method_direct_requests, url, i, target_dir)] = (i, "direct")
+                future_to_task[executor.submit(self._method_browser_suite, url, i, target_dir)] = (i, "browser_suite")
 
-            def _download_via_browser(idx):
-                url = candidates[idx]['url']
-                desc = candidates[idx]['desc']
+            for future in concurrent.futures.as_completed(future_to_task):
+                idx, method_name = future_to_task[future]
                 try:
-                    if self.debug:
-                        print(f"      - Fallback trying {idx+1} via Browser...")
+                    paths = future.result()
+                    if paths:
+                        if isinstance(paths, Path): paths = [paths]
+                        if idx not in results_map: results_map[idx] = []
+                        results_map[idx].extend(paths)
+                except Exception: pass
+
+        final_paths = []
+        for idx, potential_paths in results_map.items():
+            valid_files = [p for p in potential_paths if p.exists() and self._is_valid_image(p)]
+            if not valid_files: continue
+                
+            # Selection: The largest file is usually the highest resolution
+            winner = max(valid_files, key=lambda p: p.stat().st_size)
+            
+            # Standardize filename
+            final_path = target_dir / f"img_{idx+1}{winner.suffix}"
+            if winner != final_path:
+                shutil.copy2(winner, final_path)
+            
+            # ATOMIC CLEANUP: Delete all competing temp files for THIS image index
+            for p in potential_paths:
+                try:
+                    if p.exists() and p != final_path:
+                        p.unlink()
+                except: pass
+            
+            # Secondary sweep for glob pattern safety
+            for p in target_dir.glob(f"temp_{idx}_*"):
+                try: p.unlink()
+                except: pass
+
+            desc = candidates[idx].get('desc')
+            if desc: (target_dir / f"img_{idx+1}.txt").write_text(desc, encoding='utf-8')
+            final_paths.append(final_path)
                     
-                    # Create a new tab for this specific download
-                    tab = page.new_tab()
-                    try:
-                        # A. Navigate to bypass checks (Cloudflare/hotlink protection)
-                        tab.get(url, timeout=12)
-                        
-                        # Wait briefly for challenges
-                        if "cloudflare" in tab.title.lower() or "just a moment" in tab.title.lower():
-                            if self.debug: print(f"        [!] Anti-bot challenge detected for {idx+1}, waiting...")
-                            time.sleep(3)
-                            tab.wait.doc_loaded(timeout=5)
+        return final_paths
 
-                        # B. INJECT COOKIES into a fast requests Session
-                        raw_cookies = {}
-                        try:
-                            c_list = tab.cookies()
-                            for c in c_list:
-                                if isinstance(c, dict):
-                                    raw_cookies[c.get('name')] = c.get('value')
-                        except:
-                            pass
-                        
-                        ua = tab.user_agent
-                        from urllib.parse import urlparse
-                        parsed_url = urlparse(url)
-                        domain_referer = f"{parsed_url.scheme}://{parsed_url.netloc}/"
-                        
-                        # Create high-fidelity requests session
-                        fast_session = requests.Session()
-                        fast_session.headers.update({
-                            "User-Agent": ua, 
-                            "Referer": domain_referer,
-                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Bar";v="24", "Google Chrome";v="122"',
-                            "Sec-Ch-Ua-Mobile": "?0",
-                            "Sec-Ch-Ua-Platform": '"macOS"',
-                            "Sec-Fetch-Dest": "document",
-                            "Sec-Fetch-Mode": "navigate",
-                            "Sec-Fetch-Site": "none",
-                            "Sec-Fetch-User": "?1",
-                            "Upgrade-Insecure-Requests": "1"
-                        })
-                        fast_session.cookies.update(raw_cookies)
-                        
-                        # C. Fast Download
-                        target_path = target_dir / f"img_{idx+1}"
-                        download_success = False
-                        
-                        try:
-                            # Stream download
-                            resp = fast_session.get(url, stream=True, timeout=25, verify=False)
-                            
-                            # SOTA: If 403 or 567, try one last time with stripped headers
-                            if resp.status_code in [403, 567]:
-                                if self.debug: print(f"        [!] Status {resp.status_code} detected for {idx+1}, trying Clean Header Fallback...")
-                                clean_headers = {
-                                    'User-Agent': ua,
-                                    'Accept': 'image/*',
-                                    'Referer': domain_referer
-                                }
-                                resp = session.get(url, headers=clean_headers, timeout=30, verify=False, stream=True)
-
-                            if resp.status_code == 200:
-                                c_type = resp.headers.get('Content-Type', '').lower()
-                                ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
-                                final_path = target_path.with_suffix(ext)
-                                
-                                with open(final_path, 'wb') as f:
-                                    for chunk in resp.iter_content(chunk_size=8192):
-                                        f.write(chunk)
-                                        
-                                self._resize_image(final_path)
-                                if self._is_valid_image(final_path):
-                                    if self.debug: print(f"        [+] Fast session download success: {final_path.name}")
-                                    if desc: (target_dir / f"{final_path.stem}.txt").write_text(desc, encoding='utf-8')
-                                    return final_path
-                                else:
-                                    if self.debug: print(f"        [-] Fast session integrity check failed for {idx+1}.")
-                                    if final_path.exists(): final_path.unlink()
-                            else:
-                                if self.debug: print(f"        [-] Fast session download failed for {idx+1}: {resp.status_code}")
-                        except Exception as e:
-                            if self.debug: print(f"        [-] Fast session error for {idx+1}: {e}")
-
-                        # D. Slow Browser Download (Last Resort)
-                        if not download_success:
-                            if self.debug: print(f"        [!] Reverting to slow browser download for {idx+1}...")
-                            res = tab.download(url, str(target_dir.resolve()), f"img_{idx+1}")
-                            if res and res[0]:
-                                downloaded_path = Path(res[1])
-                                self._resize_image(downloaded_path)
-                                if self._is_valid_image(downloaded_path):
-                                    if desc: (target_dir / f"{downloaded_path.stem}.txt").write_text(desc, encoding='utf-8')
-                                    return downloaded_path
-                                else:
-                                    if downloaded_path.exists(): downloaded_path.unlink()
-                    finally:
-                        try:
-                            tab.close()
-                        except:
-                            pass
-                except Exception as e:
-                    if self.debug:
-                        print(f"      - Fallback {idx+1} failed: {e}")
-                return None
-
-            with ThreadPoolExecutor(max_workers=min(len(failed_indices), 5)) as fallback_executor:
-                future_to_idx = {fallback_executor.submit(_download_via_browser, i): i for i in failed_indices}
-                for future in concurrent.futures.as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    path = future.result()
-                    if path:
-                        local_paths[idx] = path
-            
-        return [p for p in local_paths if p is not None]
-            
-        return [p for p in local_paths if p is not None]
-
-    def _download_single_requests(self, url: str, index: int, target_dir: Path, session, desc: str) -> Optional[Path]:
-        """Layer 1: Download using requests with headers."""
+    def _method_direct_requests(self, url: str, index: int, target_dir: Path) -> Optional[Path]:
         try:
-            # Handle unicode escapes and unquote
-            if r'\u' in url:
-                url = url.encode().decode('unicode_escape')
+            if r'\u' in url: url = url.encode().decode('unicode_escape')
             from urllib.parse import unquote, urlparse
             url = unquote(url)
-            
-            # SOTA: 使用目标域名的根路径作为 Referer 绕过热链保护
-            parsed_url = urlparse(url)
-            referer = f"{parsed_url.scheme}://{parsed_url.netloc}/"
-            
-            user_agents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
-                'Mozilla/5.0 (X11; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0'
-            ]
-            
             headers = {
-                'User-Agent': random.choice(user_agents),
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': referer,
-                'Sec-Fetch-Dest': 'image',
-                'Sec-Fetch-Mode': 'no-cors',
-                'Sec-Fetch-Site': 'cross-site',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'Referer': f"{urlparse(url).scheme}://{urlparse(url).netloc}/"
             }
-            
-            time.sleep(random.uniform(0.1, 0.4))
-            
-            # SOTA: First attempt with full headers
-            try:
-                resp = session.get(url, headers=headers, timeout=25, verify=False, allow_redirects=True)
-            except Exception as e:
-                if self.debug: print(f"      [Layer 1] First attempt failed ({e}), trying Clean Header Fallback...")
-                # Layer 1.1: Clean Header Fallback (strip Sec-Fetch and other complex tokens)
-                clean_headers = {
-                    'User-Agent': headers['User-Agent'],
-                    'Accept': 'image/*',
-                    'Referer': headers['Referer']
-                }
-                resp = session.get(url, headers=clean_headers, timeout=30, verify=False, allow_redirects=True)
-            
+            resp = requests.get(url, headers=headers, timeout=15, verify=False)
             if resp.status_code == 200 and len(resp.content) > 2000:
                 c_type = resp.headers.get('Content-Type', '').lower()
                 ext = ".png" if 'png' in c_type else ".webp" if 'webp' in c_type else ".jpg"
-                path = target_dir / f"img_{index+1}{ext}"
-                path.write_bytes(resp.content)
-                if desc:
-                    (target_dir / f"img_{index+1}.txt").write_text(desc, encoding='utf-8')
-                self._resize_image(path)
-                
-                # SOTA: Final integrity check
-                if self._is_valid_image(path):
-                    return path
-                else:
-                    if self.debug: 
-                        print(f"      [Layer 1] Integrity check FAILED for {path.name}. Headers: {dict(resp.headers)}")
-                    path.unlink(missing_ok=True)
-                    return None
-            elif self.debug:
-                # SOTA Diagnostic: Capture the reason for failure
-                print(f"      [Layer 1] FAILED: {resp.status_code} for {url[:60]}...")
-                print(f"      [Layer 1] Response Headers: {json.dumps(dict(resp.headers), indent=2)}")
-                if len(resp.content) <= 2000:
-                    print(f"      [Layer 1] Warning: Payload too small ({len(resp.content)} bytes). Likely a block page.")
-        except Exception as e:
-            if self.debug:
-                print(f"      [Layer 1] CRITICAL ERROR downloading {url[:60]}: {e}")
+                p = target_dir / f"temp_{index}_direct{ext}"
+                p.write_bytes(resp.content)
+                return p
+        except: pass
         return None
 
-    def _resize_image(self, path: Path):
-        """Resize image to 768px max side and convert to JPEG for Gemini Vision."""
-        try:
-            from PIL import Image
-            with Image.open(path) as img:
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
-                if max(img.size) > 768:
-                    img.thumbnail((768, 768), Image.Resampling.LANCZOS)
-                    img.save(path, "JPEG", quality=80)
-        except:
-            pass
+    def _method_browser_suite(self, url: str, index: int, target_dir: Path) -> List[Path]:
+        found = []
+        page = self.browser_manager.page
+        with ThreadPoolExecutor(max_workers=3) as sub_executor:
+            tab = page.new_tab()
+            try:
+                tab.get(url, timeout=10)
+                ua, cookies = tab.user_agent, {c['name']: c['value'] for c in tab.cookies() if isinstance(c, dict)}
+                
+                def run_fast():
+                    try:
+                        s = requests.Session()
+                        s.headers.update({"User-Agent": ua, "Referer": url})
+                        s.cookies.update(cookies)
+                        r = s.get(url, timeout=15, verify=False)
+                        if r.status_code == 200:
+                            p = (target_dir / f"temp_{index}_fast").with_suffix(".png" if 'png' in r.headers.get('Content-Type','') else ".jpg")
+                            p.write_bytes(r.content)
+                            return p
+                    except: return None
+
+                def run_slow():
+                    try:
+                        res = tab.download(url, str(target_dir.resolve()), f"temp_{index}_slow")
+                        return Path(res[1]) if res and res[0] else None
+                    except: return None
+
+                futures = [sub_executor.submit(run_fast), sub_executor.submit(run_slow)]
+                for f in concurrent.futures.as_completed(futures):
+                    res_p = f.result()
+                    if res_p: found.append(res_p)
+            finally:
+                try: tab.close()
+                except: pass
+        return found
 
     def _is_valid_image(self, file_path: Path) -> bool:
-        """Verify magic numbers and minimum file size."""
-        if not file_path.exists():
-            return False
-        
-        # SOTA: Minimum 2KB to filter out generic block pages or blank pixels
-        if file_path.stat().st_size < 2048:
-            return False
-            
+        if not file_path.exists() or file_path.stat().st_size < 2048: return False
         try:
             with open(file_path, 'rb') as f:
                 header = f.read(12)
-                # JPEG
-                if header.startswith(b'\xff\xd8\xff'):
-                    return True
-                # PNG
-                if header.startswith(b'\x89PNG\r\n\x1a\n'):
-                    return True
-                # WEBP
-                if header.startswith(b'RIFF') and b'WEBP' in header:
-                    return True
-                # GIF
-                if header.startswith(b'GIF87a') or header.startswith(b'GIF89a'):
-                    return True
-        except:
-            pass
-            
-        return False
+                return any(header.startswith(m) for m in [b'\xff\xd8\xff', b'\x89PNG', b'RIFF', b'GIF87a', b'GIF89a'])
+        except: return False
