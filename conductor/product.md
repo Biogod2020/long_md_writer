@@ -18,3 +18,16 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 - **Modular Asset Management**: A hierarchical "Workspace Mounting" system with Human-in-the-Loop selection, simultaneous multi-pool aggregation, and instant intra-session reuse to maximize asset consistency and production efficiency.
     - **Transactional Parallel Fulfillment**: Orchestrates dozens of visual assets in parallel with a transactional "Working Copy" mechanism. Ensures 100% resume capability and fault tolerance through incremental live-patching and physical asset idempotency.
     - **High-Fidelity State Audit & Breakpoint Resume**: Native integration with LangGraph persistence (AsyncSqliteSaver) combined with a specialized SnapshotManager. Every critical node transition is logically persisted and physically snapshotted, enabling granular "Time Travel" debugging, seamless resumption from process failures, and transparent human-in-the-loop auditing of intermediate artifacts.
+    - **Intelligent Sourcing Sub-Agent**: A specialized black-box engine for web-based image discovery. 
+        - **Reflection & Self-Correction**: Features an autonomous reflection loop where audit rejections are fed back into query strategy generation to pivot search efforts.
+        - **Fidelity-First Pipeline**: Utilizes a "Shotgun" concurrency model (httpx + multi-tab browser) to guarantee 100% original binary quality while using optimized thumbnails for high-speed VLM evaluation.
+        - **Atomic Lifecycle Management**: Ensures clean workspaces by automatically removing temporary sourcing fragments while preserving all canonical assets.
+
+## Frontend & Tooling
+- **Dashboard**: Streamlit (for project monitoring and manual intervention).
+- **HTML/CSS Processing**: BeautifulSoup4 and lxml (for semantic manipulation of generated outputs).
+- **Visual Auditing**: Playwright (for headless browser-based Visual QA and screenshot capture).
+
+## Documentation & Standards
+- **Source Format**: Markdown with custom `:::` container extensions for scripts and visual assets.
+- **Target Format**: Industrial-grade, responsive HTML5.
