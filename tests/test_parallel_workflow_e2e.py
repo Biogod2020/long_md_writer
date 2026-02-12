@@ -64,7 +64,7 @@ Text D.""", encoding="utf-8")
         # 2. Run Parallel Fulfillment
         agent = AssetFulfillmentAgent(client=self.mock_client, skip_generation=False)
         # Mock audit_svg_visual_async to always pass to avoid repair loop complexity in this E2E
-        with unittest.mock.patch('src.agents.asset_management.fulfillment.audit_svg_visual_async', 
+        with unittest.mock.patch('src.agents.svg_generation.agent.audit_svg_visual_async', 
                                  AsyncMock(return_value={"result": "pass", "overall_score": 100})):
             updated_state = await agent.run_parallel_async(state)
         

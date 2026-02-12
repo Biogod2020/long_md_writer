@@ -17,7 +17,7 @@ class TestAssetReuseE2E(unittest.IsolatedAsyncioTestCase):
         shutil.rmtree(self.test_dir)
         
     @patch("src.agents.asset_management.fulfillment.AssetFulfillmentAgent._calculate_reuse_score")
-    @patch("src.agents.asset_management.fulfillment.generate_svg_async")
+    @patch("src.agents.svg_generation.agent.generate_svg_async")
     async def test_e2e_reuse_flow(self, mock_gen_svg, mock_score):
         """
         E2E Scenario:

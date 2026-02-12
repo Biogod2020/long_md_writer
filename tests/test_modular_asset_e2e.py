@@ -39,7 +39,7 @@ class TestModularAssetE2E(unittest.IsolatedAsyncioTestCase):
 
     @patch("builtins.input")
     @patch("src.agents.asset_management.fulfillment.AssetFulfillmentAgent._calculate_reuse_score")
-    @patch("src.agents.asset_management.fulfillment.generate_svg_async")
+    @patch("src.agents.svg_generation.agent.generate_svg_async")
     async def test_full_modular_flow(self, mock_gen_svg, mock_score, mock_input):
         """
         E2E Test:

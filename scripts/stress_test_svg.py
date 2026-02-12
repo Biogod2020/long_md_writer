@@ -2,7 +2,7 @@ import asyncio
 import time
 from pathlib import Path
 from src.core.gemini_client import GeminiClient
-from src.agents.asset_management.processors.svg import generate_svg_async
+from src.agents.svg_generation.processor import generate_svg_async
 
 async def stress_test_svg():
     client = GeminiClient()

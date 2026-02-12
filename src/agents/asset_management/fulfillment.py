@@ -28,13 +28,12 @@ from ...core.types import (
 from ...core.patcher import StuckDetector, apply_smart_patch
 from ...core.json_utils import extract_json_from_text
 from .models import VisualDirective
-from .processors.svg import generate_svg_async, repair_svg_async
 from .processors.mermaid import (
     generate_mermaid_async,
     render_mermaid_to_png,
 )
-from .processors.audit import audit_svg_visual_async, render_svg_to_png_base64
 from ..image_sourcing.agent import ImageSourcingAgent
+from ..svg_generation.agent import SVGAgent
 from .utils import (
     generate_figure_html,
     generate_mermaid_html,
@@ -67,6 +66,7 @@ class AssetFulfillmentAgent:
         self.uar_lock = asyncio.Lock() # SOTA: 用于确保 UAR 持久化线程安全
         self.stuck_detector = StuckDetector()
         self.sourcing_agent = ImageSourcingAgent(client=self.client, debug=debug)
+        self.svg_agent = SVGAgent(client=self.client, debug=debug)
 
     async def run_parallel_async(self, state: AgentState) -> AgentState:
         """并行执行全书资产履约 (解耦版)"""
@@ -233,7 +233,15 @@ class AssetFulfillmentAgent:
         src_path.mkdir(parents=True, exist_ok=True)
 
         if d.action == AssetFulfillmentAction.GENERATE_SVG:
-            return await self._fulfill_svg_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
+            success, asset, html = await self.svg_agent.fulfill_directive_async(
+                d, state, target_file=target_file
+            )
+            if success and asset:
+                d.fulfilled, d.result_html = True, html
+                d.result_asset_id = asset.id
+                return d, asset
+            return d, None
+
         if d.action == AssetFulfillmentAction.GENERATE_MERMAID:
             return await self._fulfill_mermaid_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.SEARCH_WEB:
@@ -244,67 +252,6 @@ class AssetFulfillmentAgent:
         
         d.fulfilled = True
         d.result_html = f"<!-- Action {d.action} skipped -->"
-        return d, None
-
-    async def _fulfill_svg_step(self, d, uar, out_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
-        trace["steps"].append({"type": "init", "intent": d.description})
-        print(f"    [Fulfillment] 🚀 开始初始 SVG 生成 (ID: {d.id})...")
-        svg_code = await generate_svg_async(self.client, d.get_full_context(), state=state, style_hints=d.style_hints or "")
-        
-        if not svg_code:
-            print(f"    [Fulfillment] ❌ 初始生成失败 (ID: {d.id})")
-            d.error = "Initial SVG generation failed"
-            return d, None
-
-        print(f"    [Fulfillment] ✨ 初始生成成功 (长度: {len(svg_code)} 字符)")
-        attempt, is_valid = 0, False
-        file_path = out_path / f"{d.id}.svg"
-
-        while attempt < self.MAX_REPAIR_ATTEMPTS:
-            attempt += 1
-            print(f"    [Fulfillment] 📋 正在进行 VLM 审计 (尝试 {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
-            file_path.write_text(svg_code, encoding="utf-8")
-            
-            # SOTA: 审计时也必须提供全量上下文，否则审计员无法判断图表是否真正符合正文逻辑
-            full_context = d.get_full_context()
-            audit = await audit_svg_visual_async(self.client, svg_code, full_context, state=state, svg_path=file_path)
-            trace["steps"].append({"attempt": attempt, "audit": audit, "code_len": len(svg_code)})
-
-            if audit and audit.get("result") == "pass":
-                is_valid = True
-                print(f"    [Fulfillment] ✅ 审计通过 (ID: {d.id})")
-                break
-            
-            issues = audit.get("issues", ["Audit failed"]) if audit else ["API Timeout/Error"]
-            print(f"    [Fulfillment] ⚠️ 审计未通过: {issues[0][:50]}...")
-            
-            if attempt < self.MAX_REPAIR_ATTEMPTS:
-                print(f"    [Fulfillment] 🛠️ 正在尝试修复...")
-                png_b64 = render_svg_to_png_base64(svg_code)
-                # SOTA: 修复时也必须提供全量上下文，防止修复逻辑发生领域漂移
-                full_context = d.get_full_context()
-                new_svg = await repair_svg_async(self.client, full_context, svg_code, issues, audit.get("suggestions", []) if audit else [], state=state, rendered_image_b64=png_b64)
-                if not new_svg: 
-                    print(f"    [Fulfillment] ⚠️ 修复 Agent 未返回有效代码，保持当前版本...")
-                else:
-                    svg_code = new_svg
-                    print(f"    [Fulfillment] 🛠️ 修复完成 (新长度: {len(svg_code)})")
-
-        if not is_valid:
-            print(f"\n⚠️ [WARNING] 已耗尽 {self.MAX_REPAIR_ATTEMPTS} 次修复尝试，资产 '{d.id}' 仍未通过 VLM 审计。")
-
-        if is_valid or svg_code:
-            asset = AssetEntry(
-                id=d.id, source=AssetSource.AI, local_path=str(file_path.relative_to(ws_path)),
-                semantic_label=d.description[:100], content_hash=hashlib.md5(svg_code.encode()).hexdigest(),
-                alt_text=d.description, tags=["svg", ns], vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
-            )
-            d.fulfilled, d.result_html = True, generate_figure_html(
-                asset, d.description, target_file=target_file, workspace_path=ws_path
-            )
-            # SOTA: 必须记录结果 ID 供统计使用
-            d.result_asset_id = asset.id
-            return d, asset
         return d, None
 
     async def _fulfill_mermaid_step(self, d, uar, out_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:

@@ -80,3 +80,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 
 *Link: [./conductor/tracks/agentic_sourcing_stress_20260211/](./conductor/tracks/agentic_sourcing_stress_20260211/)*
+
+---
+
+- [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
+*Link: [./tracks/svg_subagent_decoupling_20260212/](./tracks/svg_subagent_decoupling_20260212/)*

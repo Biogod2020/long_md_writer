@@ -1,0 +1,8 @@
+{
+  "track_id": "svg_subagent_decoupling_20260212",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-12T10:00:00Z",
+  "updated_at": "2026-02-12T10:00:00Z",
+  "description": "Refactor SVG generation, auditing, and repair logic from AssetFulfillmentAgent into a dedicated black-box sub-agent package with a formal Reflection Loop."
+}
