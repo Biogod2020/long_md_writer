@@ -22,6 +22,9 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
         - **Reflection & Self-Correction**: Features an autonomous reflection loop where audit rejections are fed back into query strategy generation to pivot search efforts.
         - **Fidelity-First Pipeline**: Utilizes a "Shotgun" concurrency model (httpx + multi-tab browser) to guarantee 100% original binary quality while using optimized thumbnails for high-speed VLM evaluation.
         - **Atomic Lifecycle Management**: Ensures clean workspaces by automatically removing temporary sourcing fragments while preserving all canonical assets.
+    - **Autonomous SVG Sub-Agent**: A dedicated black-box engine for technical illustration.
+        - **Reflection Loop**: Implements a self-correcting logic where audit feedback is used to pivot repair strategies via high-precision patching.
+        - **Contextual Alignment**: Ensures generated vector graphics remain pedagogically consistent with the surrounding text through full-context perception.
 
 ## Frontend & Tooling
 - **Dashboard**: Streamlit (for project monitoring and manual intervention).

@@ -7,7 +7,7 @@
 - **Data Validation**: Pydantic (for strictly typed inter-agent communication and configuration).
 
 ## Agent Architecture
-- **Framework**: Custom multi-agent ecosystem utilizing specialized roles (Architect, SME Writer, Asset Critic, Editorial QA).
+- **Framework**: Custom multi-agent ecosystem utilizing specialized roles (Architect, SME Writer, Asset Critic, Editorial QA) and intent-driven sub-agents (Sourcing, SVG).
 - **Communication**: Asynchronous event-driven architecture using `asyncio`.
 - **Network Engine**: `httpx` (AsyncClient) for high-performance non-blocking I/O and intelligent connection pooling.
 - **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
