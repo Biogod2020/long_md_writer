@@ -1,0 +1,8 @@
+{
+  "id": "agentic_sourcing_stress_20260211",
+  "title": "Agentic ImageSourcing & VLM Concurrency Stress Test",
+  "status": "IN_PROGRESS",
+  "owner": "Gemini CLI",
+  "priority": "HIGH",
+  "created_at": "2026-02-11"
+}
