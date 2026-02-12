@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageSourcing Sub-Agent SOTA 2.0 Workflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; background: #f9f9f9; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #e1f5fe; color: #0288d1; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-badge">SOTA 2.0 ARCHITECTURE</div>
+        <h1>ImageSourcing Sub-Agent Workflow</h1>
+        
+        <div class="mermaid">
+graph TD
+    %% Entry Point
+    A[VisualDirective] --> B{Local UAR Match?}
+    
+    %% Local Path
+    B -- "High Score Hit" --> C[Return Existing Asset & HTML]
+    
+    %% Web Sourcing Path
+    B -- "Cache Miss" --> D[<b>StrategyGenerator</b><br/>Input: Description + Context]
+    
+    subgraph Search_Phase [Search & Shotgun Download]
+        D --> E[Parallel Google Image Search]
+        E --> F[<b>ImageDownloader</b><br/>Shotgun Concurrency]
+        
+        subgraph Shotgun [Methods Fired Simultaneously]
+            F1[Direct httpx]
+            F2[Browser FastSession]
+            F3[Clean Header Fallback]
+            F4[Browser Native Download]
+        end
+        
+        F --> Shotgun
+        Shotgun --> G{Winner Takes All?}
+        G -- "Largest Binary" --> H[Save Original High-Res]
+    end
+    
+    subgraph Audit_Phase [VLM Intelligent Audit]
+        H --> I[<b>Pre-Resize</b><br/>Generate VQA Thumbnails]
+        I --> J[<b>VisionSelector</b><br/>Batch 20 VLM Audit]
+        
+        J -- "CERTAIN / PROBABLE" --> K[Copy Original High-Res to Assets]
+        K --> L[Generate Figure HTML]
+        L --> M[<b>Success</b>: Return AssetEntry]
+    end
+    
+    %% Reflection Loop
+    J -- "REJECTED" --> N[<b>Reflection Loop</b><br/>Capture Failure Reason]
+    N --> O{Max Attempts?}
+    O -- "No" --> P[<b>Pivot Strategy</b><br/>Add Feedback to Queries]
+    P --> E
+    O -- "Yes" --> Q[<b>Failure</b>: Return Null]
+
+    %% Styling
+    style A fill:#fff,stroke:#333,stroke-width:2px
+    style M fill:#d4edda,stroke:#28a745,stroke-width:2px
+    style Q fill:#f8d7da,stroke:#dc3545,stroke-width:2px
+    style D fill:#e1f5fe,stroke:#01579b
+    style J fill:#fff3e0,stroke:#e65100
+    style N fill:#fff3e0,stroke:#e65100
+        </div>
+
+        <div style="margin-top: 40px; color: #666; font-size: 14px;">
+            <h3>Key Innovations:</h3>
+            <ul>
+                <li><strong>Shotgun Concurrency</strong>: 4 methods compete for every image to bypass WAF/403 blocks.</li>
+                <li><strong>Fidelity-First</strong>: Disks store 100% original binaries; VLM uses low-latency thumbnails.</li>
+                <li><strong>Reflection Loop</strong>: Vision rejections are fed back into query generation for self-correction.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+</body>
+</html>

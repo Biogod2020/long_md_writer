@@ -1,5 +1,6 @@
 """
 StrategyGenerator: Handles VLM prompt generation for search query strategy.
+SOTA 2.0: Added support for reflection loop via audit feedback.
 """
 
 import re
@@ -15,7 +16,7 @@ class StrategyGenerator:
         self.client = client
         self.debug = debug
 
-    def generate(self, description: str, context: str, failed_queries: Optional[List[str]] = None) -> Dict[str, Any]:
+    def generate(self, description: str, context: str, failed_queries: Optional[List[str]] = None, rejection_feedback: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Generate search strategy with queries and acceptance guidance.
         
@@ -23,17 +24,18 @@ class StrategyGenerator:
             description: Image description from placeholder
             context: HTML context snippet
             failed_queries: Previously failed queries to avoid
+            rejection_feedback: Feedback from VLM audit on why previous candidates were rejected
             
         Returns:
             Dict with 'queries' and 'guidance' keys
         """
         failed_queries_section = ""
         if failed_queries:
-            failed_queries_section = f"""
-**IMPORTANT: Previous Attempts Failed**
-The following queries were already tried but did NOT yield any suitable images. You MUST generate COMPLETELY DIFFERENT queries that use alternative keywords, synonyms, or different aspects of the subject:
-Previously failed queries: {failed_queries}
-"""
+            failed_queries_section = f"\n**Previously Failed Queries**: {failed_queries}"
+        
+        rejection_section = ""
+        if rejection_feedback:
+            rejection_section = f"\n**Critical Audit Feedback**: Previous images were REJECTED because: {rejection_feedback}. You MUST pivot your keywords to address these specific concerns."
         
         prompt = f"""You are an expert visual content curator for academic and technical publications. Your task is to devise an optimal image sourcing strategy.
 
@@ -44,7 +46,8 @@ First, carefully analyze the following:
 ```html
 {context}
 ```
-{failed_queries_section}
+{failed_queries_section}{rejection_section}
+
 **Step 2: Strategic Query Design (Keywords Only)**
 Generate exactly 2 Google Image Search queries that maximize the chance of finding professional, relevant results.
 STRICT CONSTRAINTS:
@@ -98,7 +101,8 @@ Provide a single, short sentence of guidance for selecting the best image (e.g.,
                     prompt=prompt,
                     response_schema=schema,
                     schema_name="ImageSearchStrategy",
-                    temperature=0.2
+                    temperature=0.2,
+                    stream=True
                 )
                 
                 if response.success and response.json_data:
@@ -133,7 +137,6 @@ Provide a single, short sentence of guidance for selecting the best image (e.g.,
                 print(f"      - Strategy generation error: {e}")
         
         # Fallback: Generate 2 queries from description
-        # Split description into keywords for a second query variant
         keywords = description.replace("。", "").replace("，", " ").split()[:3]
         fallback_query_2 = " ".join(keywords) if len(keywords) > 1 else description
         

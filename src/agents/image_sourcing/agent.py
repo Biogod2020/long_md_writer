@@ -78,9 +78,15 @@ class ImageSourcingAgent:
             
             max_sourcing_attempts = 2
             all_failed_queries = []
+            rejection_feedback = [] # Track VLM rejection reasons
             
             for attempt in range(max_sourcing_attempts):
-                strategy = self.strategy_gen.generate(description, html_context, failed_queries=all_failed_queries if all_failed_queries else None)
+                # SOTA: Reflection loop - pass feedback to pivot strategy
+                strategy = self.strategy_gen.generate(
+                    description, html_context, 
+                    failed_queries=all_failed_queries if all_failed_queries else None,
+                    rejection_feedback=rejection_feedback if rejection_feedback else None
+                )
                 queries = strategy.get("queries", [description])[:2]
                 guidance = strategy.get("guidance", "Accurate representation.")
                 
@@ -130,6 +136,10 @@ class ImageSourcingAgent:
                         if not self.debug:
                             shutil.rmtree(temp_dir, ignore_errors=True)
                         return True, asset, html
+                    else:
+                        # Capture feedback for next attempt
+                        rejection_reasons = [r.get("reason", "Unknown") for r in ranked_results if r.get("status") == "REJECTED"]
+                        if rejection_reasons: rejection_feedback.extend(rejection_reasons)
                 
                 all_failed_queries.extend(queries)
                 if not self.debug: shutil.rmtree(temp_dir, ignore_errors=True)

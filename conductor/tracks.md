@@ -71,7 +71,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 
 
-- [ ] **Track: Agentic ImageSourcing & VLM Concurrency Stress Test**
+- [x] **Track: Agentic ImageSourcing & VLM Concurrency Stress Test**
 
 
 

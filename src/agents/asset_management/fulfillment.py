@@ -365,26 +365,29 @@ class AssetFulfillmentAgent:
         return d, None
 
     async def _fulfill_search_step(self, d, uar, src_path, ns, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
-        import asyncio
-        from functools import partial
-        loop = asyncio.get_event_loop()
-        f = partial(self.sourcing_agent._source_single_image, img_id=d.id, description=d.description, assets_dir=src_path, html_context=d.get_full_context(), uar=uar, preserve_candidates=True)
-        html = await loop.run_in_executor(None, f)
+        """
+        SOTA 2.0 Sub-Agent Integration:
+        Calls ImageSourcingAgent as a pure async black box.
+        """
+        print(f"    [Fulfillment] 🔍 Calling Sub-Agent for Search: {d.id}")
         
-        if html:
-            found_files = list(src_path.glob(f"{d.id}.*"))
-            if found_files:
-                img_file = found_files[0]
-                ws_path = Path(state.workspace_path)
-                asset = AssetEntry(
-                    id=d.id, source=AssetSource.WEB, local_path=str(img_file.relative_to(ws_path)),
-                    semantic_label=d.description[:100], content_hash=hashlib.md5(img_file.read_bytes()).hexdigest(),
-                    alt_text=d.description, tags=["sourced", ns], vqa_status=AssetVQAStatus.PENDING
-                )
-                html = generate_figure_html(asset, d.description, target_file=target_file, workspace_path=ws_path)
-                d.fulfilled, d.result_html = True, html
-                return d, asset
+        # Directly await the high-performance async interface
+        success, asset, html = await self.sourcing_agent.fulfill_directive_async(
+            d, state, target_file=target_file
+        )
+        
+        if success and asset:
+            # SOTA: Inject namespace tags into the returned asset for consistency
+            if ns and ns not in asset.tags:
+                asset.tags.append(ns)
+            if "sourced" not in asset.tags:
+                asset.tags.append("sourced")
+                
             d.fulfilled, d.result_html = True, html
+            d.result_asset_id = asset.id
+            return d, asset
+            
+        print(f"    [Fulfillment] ❌ Sub-Agent failed to source image for {d.id}")
         return d, None
 
     async def _fulfill_use_existing_step(self, d, uar, ns, ws_path, state, trace, target_file: Optional[Path] = None):
