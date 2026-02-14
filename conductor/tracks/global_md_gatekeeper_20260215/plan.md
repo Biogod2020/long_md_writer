@@ -2,13 +2,13 @@
 
 This plan implements a global quality gate for the Markdown publication pipeline, ensuring structural, technical, and narrative consistency in the final merged document before HTML transformation.
 
-## Phase 1: Foundation & Physical Merging
-- [ ] Task: Implement `MarkdownMerger` Utility
-    - [ ] Create `src/core/merger.py` to concatenate `completed_md_sections` into `final_full.md`.
-    - [ ] Inject clear traceability markers (e.g., `<!-- SECTION: s1 -->`) between chapters.
-- [ ] Task: Write Unit Tests for `MarkdownMerger`
-    - [ ] Verify section ordering, marker preservation, and handle empty/missing files.
-- [ ] Task: Conductor - User Manual Verification 'Foundation & Physical Merging' (Protocol in workflow.md)
+## Phase 1: Foundation & Physical Merging [checkpoint: a22b231]
+- [x] Task: Implement `MarkdownMerger` Utility
+    - [x] Create `src/core/merger.py` to concatenate `completed_md_sections` into `final_full.md`.
+    - [x] Inject clear traceability markers (e.g., `<!-- SECTION: s1 -->`) between chapters.
+- [x] Task: Write Unit Tests for `MarkdownMerger`
+    - [x] Verify section ordering, marker preservation, and handle empty/missing files.
+- [x] Task: Conductor - User Manual Verification 'Foundation & Physical Merging' (Protocol in workflow.md)
 
 ## Phase 2: EditorialQAAgent Architectural Upgrade
 - [ ] Task: Refactor `EditorialQAAgent` to SOTA 2.0 Critic-Advicer-Fixer Pattern
