@@ -10,16 +10,16 @@ This plan implements a global quality gate for the Markdown publication pipeline
     - [x] Verify section ordering, marker preservation, and handle empty/missing files.
 - [x] Task: Conductor - User Manual Verification 'Foundation & Physical Merging' (Protocol in workflow.md)
 
-## Phase 2: EditorialQAAgent Architectural Upgrade
-- [ ] Task: Refactor `EditorialQAAgent` to SOTA 2.0 Critic-Advicer-Fixer Pattern
-    - [ ] Decompose `src/agents/editorial_qa_agent.py` into modular components (Critic, Advicer, Fixer).
-    - [ ] Ensure it leverages the `Universal Patcher` from `src/core/patcher.py`.
-- [ ] Task: Integrate Local Sanity Pre-checks
-    - [ ] Port regex-based JSON and container validation logic from `MarkdownSanityAgent`.
-- [ ] Task: Implement Contextual/Spatial Anchoring for Large Files
-    - [ ] Enhance the Fixer to provide high-precision anchors suitable for the merged `final_full.md`.
-- [ ] Task: Write Tests for Refactored Editorial Agent
-- [ ] Task: Conductor - User Manual Verification 'EditorialQAAgent Architectural Upgrade' (Protocol in workflow.md)
+## Phase 2: EditorialQAAgent Architectural Upgrade [checkpoint: f2878ad]
+- [x] Task: Refactor `EditorialQAAgent` to SOTA 2.0 Critic-Advicer-Fixer Pattern
+    - [x] Decompose `src/agents/editorial_qa_agent.py` into modular components (Critic, Advicer, Fixer).
+    - [x] Ensure it leverages the `Universal Patcher` from `src/core/patcher.py`.
+- [x] Task: Integrate Local Sanity Pre-checks
+    - [x] Port regex-based JSON and container validation logic from `MarkdownSanityAgent`.
+- [x] Task: Implement Contextual/Spatial Anchoring for Large Files
+    - [x] Enhance the Fixer to provide high-precision anchors suitable for the merged `final_full.md`.
+- [x] Task: Write Tests for Refactored Editorial Agent
+- [x] Task: Conductor - User Manual Verification 'EditorialQAAgent Architectural Upgrade' (Protocol in workflow.md)
 
 ## Phase 3: Global Audit Logic & Repair Loop
 - [ ] Task: Implement Macro-Audit Intelligence
