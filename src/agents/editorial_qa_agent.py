@@ -168,6 +168,11 @@ class EditorialQAAgent:
             print("    [Critic] Performing full-context semantic audit...")
             critique = await run_editorial_critic(self.client, state, content, debug=state.debug_mode)
             
+            # SOTA: Capture Thinking tokens from state (if populated by critic)
+            if hasattr(state, "thoughts") and state.thoughts:
+                # Store them in a dedicated log file
+                (qa_log_dir / f"thinking_it{iteration}.txt").write_text(state.thoughts, encoding="utf-8")
+
             # Log critique for observability
             qa_log_dir = workspace / "editorial_qa_logs"
             qa_log_dir.mkdir(exist_ok=True)
@@ -188,9 +193,16 @@ class EditorialQAAgent:
             # Check if stuck
             advice_id = f"global_qa_{iteration}"
             if not self.stuck_detector.check_progress(advice_id, content):
-                print("    [EditorialQA] ⚠️ Repair stagnation detected. Triggering manual intervention...")
-                state.markdown_approved = False
-                break
+                print(f"    [EditorialQA] ⚠️ Repair stagnation detected at iteration {iteration}.")
+                
+                # SOTA: Backoff Strategy - Request more precision if first retry fails
+                if iteration > 1:
+                    print("    [EditorialQA] 🛑 Stagnation persisted after retry. Triggering manual intervention.")
+                    state.markdown_approved = False
+                    break
+                else:
+                    print("    [EditorialQA] 🔄 Attempting recovery with enhanced instructions...")
+                    feedback = f"PREVIOUS ATTEMPT FAILED TO APPLY PATCHES. You MUST provide more context in your SEARCH blocks to ensure a unique match. Issues to fix: {feedback}"
 
             # 4. GLOBAL ADVICER (Instruction Generation)
             print("    [Advicer] Generating patching instructions for final_full.md...")
@@ -218,6 +230,16 @@ class EditorialQAAgent:
                 break
 
         print(f"[EditorialQA] Global quality gate complete.")
+        
+        # SOTA: Generate Final Global QA Report
+        final_report = {
+            "status": "APPROVED" if state.markdown_approved else "NEEDS_INTERVENTION",
+            "iterations": iteration,
+            "merged_file": str(merged_path.relative_to(workspace)),
+            "timestamp": json.dumps(True) # Dummy for timestamp
+        }
+        (workspace / "qa_report_global.json").write_text(json.dumps(final_report, indent=2), encoding="utf-8")
+        
         return state
 
     def run(self, state: AgentState) -> AgentState:
