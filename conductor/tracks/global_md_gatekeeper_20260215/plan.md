@@ -21,16 +21,16 @@ This plan implements a global quality gate for the Markdown publication pipeline
 - [x] Task: Write Tests for Refactored Editorial Agent
 - [x] Task: Conductor - User Manual Verification 'EditorialQAAgent Architectural Upgrade' (Protocol in workflow.md)
 
-## Phase 3: Global Audit Logic & Repair Loop
-- [ ] Task: Implement Macro-Audit Intelligence
-    - [ ] Add specific Critic rules for cross-chapter heading hierarchy (H1-H3).
-    - [ ] Implement terminology alignment checks (e.g., medical term consistency).
-- [ ] Task: Implement Multi-Iteration Repair Loop
-    - [ ] Integrate `StuckDetector` to handle repair stagnation.
-    - [ ] Implement the 3-iteration cap and failure reporting.
-- [ ] Task: Implement QA Observability & Reporting
-    - [ ] Generate `qa_report_global.json` and capture `Thinking` tokens for transparency.
-- [ ] Task: Conductor - User Manual Verification 'Global Audit Logic & Repair Loop' (Protocol in workflow.md)
+## Phase 3: Global Audit Logic & Repair Loop [checkpoint: 8c33a74]
+- [x] Task: Implement Macro-Audit Intelligence
+    - [x] Add specific Critic rules for cross-chapter heading hierarchy (H1-H3).
+    - [x] Implement terminology alignment checks (e.g., medical term consistency).
+- [x] Task: Implement Multi-Iteration Repair Loop
+    - [x] Integrate `StuckDetector` to handle repair stagnation.
+    - [x] Implement the 3-iteration cap and failure reporting.
+- [x] Task: Implement QA Observability & Reporting
+    - [x] Generate `qa_report_global.json` and capture `Thinking` tokens for transparency.
+- [x] Task: Conductor - User Manual Verification 'Global Audit Logic & Repair Loop' (Protocol in workflow.md)
 
 ## Phase 4: Workflow Integration & SSOT
 - [ ] Task: Update LangGraph Orchestration
