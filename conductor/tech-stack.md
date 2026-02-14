@@ -15,7 +15,8 @@
   - Native JSON Schema enforcement.
   - **Robust JSON Parsing**: Advanced error-correction for malformed LLM outputs, including unescaped LaTeX backslashes and illegal whitespace characters.
   - VLM-driven semantic candidate selection for local asset matching.
-  - **High-Precision Patching**: Fuzzy text matching and indentation-agnostic patching logic via `diff-match-patch`.
+  - **High-Precision Patching**: Fuzzy text matching, indentation-agnostic patching logic, and a **multi-stage escalation retry loop** with rich error feedback and full-code fallback.
+  - **Scientific Rigor Auditing**: VLM-driven visual verification focusing on technical correctness, mathematical alignment, and standard scientific conventions.
   - **Transactional Resilience**: Atomic file operations and breakpoint resume for long-running asset pipelines.
   - "Thinking" token (thoughts) capture and state integration.
   - Intelligent connection pooling and exponential backoff for network resilience.

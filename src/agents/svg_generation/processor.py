@@ -35,6 +35,26 @@ Create a professional SVG illustration based on the following specific requireme
 Your output should not just be a 'drawing', but a high-fidelity 'Knowledge Interface'.
 """
 
+SVG_CAPTION_REFINEMENT_PROMPT = """You are a Senior Technical Editor. Your task is to write a precise, factual, and professional caption for the provided SVG illustration.
+
+### Instructions:
+1. **Analyze the Image**: Look at what is ACTUALLY rendered in the image (labels, arrows, colors, structures).
+2. **Consult Context**: Read the [ARTICLE CONTEXT] to understand the intended narrative and terminology.
+3. **Synthesize**: Write a caption that:
+   - Describes the core mechanism or concept shown.
+   - Specifically mentions key labels visible in the diagram to anchor the text to the visual.
+   - Is concise (1-2 sentences) but high-value.
+   - Avoids "Here is a diagram showing..." or "This image illustrates...". Start directly with the factual description.
+   - Match the language of the [ARTICLE CONTEXT].
+
+### Input Data:
+- **Original Directive**: {original_directive}
+- **Article Context**: {article_context}
+
+### Final Caption Output:
+(Output only the caption text, no JSON or quotes)
+"""
+
 
 def extract_svg(text: str) -> Optional[str]:
     """从文本中提取 SVG 代码"""
@@ -123,6 +143,7 @@ SVG_REPAIR_PROMPT = """You are a senior SVG technical specialist. Your task is t
    - Issues: {issues}
    - Suggestions: {suggestions}
 3. **Current SVG Code**: (See below)
+4. **Previous Attempt Feedback**: {feedback}
 
 ### Instructions:
 - **Logical Alignment**: First, verify if the current SVG's content actually matches the [ARTICLE CONTEXT]. If the diagram is fundamentally representing the wrong subject, prioritize structural changes to match the intended logic.
@@ -131,6 +152,7 @@ SVG_REPAIR_PROMPT = """You are a senior SVG technical specialist. Your task is t
 - **Minimal Changes**: Only modify what is necessary.
 - **Precision**: Ensure the `search` text is unique enough.
 - **Global Awareness**: Ensure adjustments don't trigger new collisions or push elements outside the `viewBox`.
+- **Fallback**: If precise patching fails or is too complex, you may provide the COMPLETE repaired SVG code in the `full_code` field.
 
 ### Output Format (JSON Only):
 {{
@@ -140,7 +162,8 @@ SVG_REPAIR_PROMPT = """You are a senior SVG technical specialist. Your task is t
       "search": "exact text to find",
       "replace": "new text to put in"
     }}
-  ]
+  ],
+  "full_code": "Optional: Only use this for complete rewrites if patches are likely to fail."
 }}
 
 ## CURRENT SVG CODE (Immutable Source)
@@ -160,8 +183,8 @@ async def repair_svg_async(
     max_retries: int = 2
 ) -> Optional[str]:
     """
-    Repair an SVG by generating targeted patches instead of full regeneration.
-    Uses the Universal High-Precision Patcher to apply fixes.
+    Repair an SVG by generating targeted patches or full rewrites.
+    Implements a 3-attempt escalation loop with rich feedback.
     """
     from ...core.patcher import apply_smart_patch
     from ...core.json_utils import parse_json_dict_robust
@@ -169,72 +192,126 @@ async def repair_svg_async(
     issues_text = "\n".join(f"- {issue}" for issue in issues) if issues else "- None"
     suggestions_text = "\n".join(f"- {s}" for s in suggestions) if suggestions else "- None"
     
-    # We include full code in the prompt as requested
-    prompt = SVG_REPAIR_PROMPT.format(
-        original_intent=original_intent,
-        failed_svg_code=failed_svg_code,
-        issues=issues_text,
-        suggestions=suggestions_text
-    )
-    
-    # Multi-modal parts
-    parts = []
-    if rendered_image_b64:
-        parts.append({"text": "## Visual Reference of Errors\nStudy this screenshot to identify where elements are overlapping or incorrect:"})
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/jpeg", 
-                "data": rendered_image_b64
-            }
-        })
-    
-    parts.append({"text": prompt})
+    current_svg_code = failed_svg_code
+    last_feedback = "This is the first repair attempt."
 
     for attempt in range(max_retries + 1):
+        # Prepare the prompt with current code and feedback
+        prompt = SVG_REPAIR_PROMPT.format(
+            original_intent=original_intent,
+            failed_svg_code=current_svg_code,
+            issues=issues_text,
+            suggestions=suggestions_text,
+            feedback=last_feedback
+        )
+        
+        # Multi-modal parts (study the image in every retry)
+        parts = []
+        if rendered_image_b64:
+            parts.append({"text": "## Visual Reference\nStudy this current rendering to locate issues:"})
+            parts.append({"inline_data": {"mime_type": "image/jpeg", "data": rendered_image_b64}})
+        
+        parts.append({"text": prompt})
+
         try:
+            print(f"    [SVG Repair] 🛠️ Attempt {attempt + 1}/{max_retries + 1}...")
             response = await client.generate_async(
                 parts=parts,
-                system_instruction="You are a SOTA SVG Patching Agent. Fix specific visual bugs using JSON patches. Output JSON only.",
-                temperature=0.0, # Zero temp for precision patching
+                system_instruction="You are a SOTA SVG Patching Agent. Fix issues using JSON patches or full_code fallback. Output JSON only.",
+                temperature=0.0,
                 stream=True
             )
 
             if not response.success:
-                if attempt < max_retries: continue
-                return None
+                last_feedback = f"API Error: {response.error}"
+                continue
 
-            # Capture thoughts
             if state and response.thoughts:
-                state.thoughts += f"\n[SVG Patch Repair Attempt {attempt+1}] {response.thoughts}"
+                state.thoughts += f"\n[SVG Repair Attempt {attempt+1}] {response.thoughts}"
 
-            # Parse patches
             result = response.json_data if response.json_data else parse_json_dict_robust(response.text)
-            if not result or "patches" not in result:
+            if not result:
+                last_feedback = "Failed to parse your previous JSON response. Ensure strict JSON format."
                 continue
 
-            # Apply patches sequentially
-            current_content = failed_svg_code
-            applied_any = False
-            for patch in result.get("patches", []):
-                search_text = patch.get("search")
-                replace_text = patch.get("replace")
-                if search_text:
-                    new_content, success = apply_smart_patch(current_content, search_text, replace_text)
+            # 1. Check for Full Code Fallback (Highest Reliability)
+            if "full_code" in result and result["full_code"] and len(result["full_code"]) > 50:
+                new_code = extract_svg(result["full_code"])
+                if new_code:
+                    print(f"    [SVG Repair] ✅ Success via Full Rewrite (Attempt {attempt+1})")
+                    return new_code
+
+            # 2. Sequential Patching
+            if "patches" in result and result["patches"]:
+                applied_content = current_svg_code
+                patch_errors = []
+                
+                for i, patch in enumerate(result["patches"]):
+                    search = patch.get("search")
+                    replace = patch.get("replace")
+                    if not search: continue
+                    
+                    new_content, success = apply_smart_patch(applied_content, search, replace)
                     if success:
-                        current_content = new_content
-                        applied_any = True
+                        applied_content = new_content
                     else:
-                        print(f"    [SVG Repair] ⚠️ Patch failed to match: {search_text[:50]}...")
-            
-            if applied_any:
-                return current_content
-            
-            if attempt < max_retries:
-                print("    [SVG Repair] No patches applied successfully, retrying...")
-                continue
-            
+                        patch_errors.append(f"Patch {i+1} FAILED: {new_content}")
+                
+                if not patch_errors:
+                    print(f"    [SVG Repair] ✅ Success via Precision Patching (Attempt {attempt+1})")
+                    return applied_content
+                else:
+                    # Provide specific matching errors back to the AI
+                    error_report = "\n".join(patch_errors)
+                    last_feedback = f"PATCHING FAILED on attempt {attempt+1}:\n{error_report}\n\nPlease try again with more precise 'search' strings or use the 'full_code' fallback."
+                    print(f"    [SVG Repair] ⚠️ Patch matching failed, retrying with feedback...")
+            else:
+                last_feedback = "No patches or full_code were found in your response. Please provide a fix."
+
         except Exception as e:
-            print(f"    [SVG Repair] Exception during repair: {e}")
-            if attempt < max_retries: continue
+            print(f"    [SVG Repair] Exception: {e}")
+            last_feedback = f"System Exception: {str(e)}"
             
     return None
+
+
+async def refine_svg_caption_async(
+    client: GeminiClient,
+    original_directive: str,
+    article_context: str,
+    rendered_image_b64: str,
+    state: Optional[AgentState] = None
+) -> str:
+    """
+    Refine the SVG description (caption) based on the actual rendered image.
+    Ensures high alignment between text and visual evidence.
+    """
+    prompt = SVG_CAPTION_REFINEMENT_PROMPT.format(
+        original_directive=original_directive,
+        article_context=article_context
+    )
+    
+    parts = [
+        {"text": "Analyze this final rendered SVG illustration:"},
+        {
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": rendered_image_b64
+            }
+        },
+        {"text": prompt}
+    ]
+    
+    try:
+        response = await client.generate_async(
+            parts=parts,
+            system_instruction="You are a Technical Copywriter. Write factual captions based on visual evidence.",
+            temperature=0.0
+        )
+        
+        if response.success:
+            return response.text.strip()
+        return original_directive # Fallback to original
+    except Exception as e:
+        print(f"    [SVGAgent] Caption refinement failed: {e}")
+        return original_directive

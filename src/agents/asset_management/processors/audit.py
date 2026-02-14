@@ -181,23 +181,90 @@ async def audit_svg_async(
 
 
 # ============================================================================
+# 语义图注优化 (SOTA 2.0 Post-Fulfillment Alignment)
+# ============================================================================
+
+CAPTION_REFINEMENT_PROMPT = """You are a Senior Technical Editor. Your task is to write a high-fidelity, structured, and aesthetically pleasing caption for the provided visual asset.
+
+### 🎨 SOTA 2.0 Styling Rules:
+- **Structure**: Use a "Title: Description" format.
+- **Emphasis**: **Bold** the core subject and key visual labels (e.g., **RA**, **Vector V**).
+- **Conciseness**: Avoid filler words. Every word must add value.
+- **Narrative Bridge**: Use the [FULL SECTION MARKDOWN] to ensure the caption explains NOT JUST what the image is, but WHY it matters to the surrounding argument.
+
+### Instructions:
+1. **Analyze the Visual Evidence**: Identify specific labels, colors, and spatial arrangements.
+2. **Deep Context Integration**: Reference specific terms or logic found in the [FULL SECTION MARKDOWN].
+3. **Synthesis**: Create a caption that feels like an organic extension of the text.
+
+### Input Data:
+- **Original Directive**: {original_directive}
+- **Full Section Markdown**: {section_markdown}
+
+### Output Format:
+**[Refined Title]**: [1-2 sentences of professional technical description incorporating visual evidence].
+(Output ONLY the final caption text)
+"""
+
+async def refine_caption_async(
+    client: GeminiClient,
+    image_b64: str,
+    original_directive: str,
+    section_markdown: str,
+    state: Optional[AgentState] = None
+) -> str:
+    """
+    根据视觉证据和完整的章节上下文优化资产描述（图注）。
+    """
+    prompt = CAPTION_REFINEMENT_PROMPT.format(
+        original_directive=original_directive,
+        section_markdown=section_markdown
+    )
+    
+    parts = [
+        {"text": "Analyze this final visual asset (Image Evidence):"},
+        {
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": image_b64
+            }
+        },
+        {"text": prompt}
+    ]
+    
+    try:
+        response = await client.generate_async(
+            parts=parts,
+            system_instruction="You are a Technical Copywriter. Write structured, beautiful captions based on visual evidence and section context.",
+            temperature=0.0
+        )
+        
+        if response.success:
+            return response.text.strip().replace("Refined Title:", "").replace("[", "").replace("]", "")
+        return original_directive
+    except Exception as e:
+        print(f"    [Audit] Caption refinement failed: {e}")
+        return original_directive
+
+
+# ============================================================================
 # SVG 渲染与视觉审计 (SOTA 2.0 双路交叉验证)
 # ============================================================================
 
-SVG_VISUAL_AUDIT_PROMPT = """You are a Senior Executive Editor and Visual Quality Lead. Your mission is to evaluate if this SVG asset achieves the SOTA standard for professional scientific documentation.
+SVG_VISUAL_AUDIT_PROMPT = """You are a Senior Executive Editor and Visual Quality Lead. Your mission is to evaluate if this SVG asset achieves the SOTA standard for professional documentation.
 
-## Audit Philosophy: Functional Clarity over Mechanical Perfection
-Do not act as a simple collision detector. Instead, use your expert judgment to answer: "Does this diagram effectively and professionally communicate the intended concept to a medical student based on the surrounding article context?"
+## Audit Philosophy: Scientific Rigor & Functional Clarity
+You MUST prioritize **scientific accuracy and technical correctness**. Use your expert judgment to verify that the diagram is scientifically sound and correctly reflects the reality described in the context.
 
 ## Evaluation Rubric (0-100)
 
-1. **Analytical Accuracy (40%)**: Does the diagram correctly represent the scientific or anatomical mechanism described in the [ARTICLE CONTEXT]? Check labels, vector directions, and logical connections against the text.
+1. **Analytical Accuracy (40%)**: Does the diagram correctly represent the concepts or mechanisms described in the [ARTICLE CONTEXT]? **Ensure total scientific and technical correctness.**
 2. **Pedagogical Effectiveness (30%)**: Is the information clear? Are labels positioned intuitively? A minor overlap is acceptable IF the text remains 100% legible and the meaning is unambiguous.
-3. **Executive Aesthetic (30%)**: Does it look like a custom illustration from a premium journal (Nature, NEJM)? Evaluate the use of color harmony, line weights, and spatial balance.
+3. **Executive Aesthetic (30%)**: Does it look like a custom illustration for a premium publication? Evaluate the use of color harmony, line weights, and spatial balance.
 
 ## Decision Guidelines
-- **PASS**: The diagram is professional, accurate, and perfectly aligned with the article's narrative. Minor spacing issues that don't hinder comprehension are ignored.
-- **NEEDS_REVISION**: There are errors in scientific logic relative to the text, or severe clutter that makes the information difficult to parse.
+- **PASS**: The diagram is professional, **scientifically correct**, and perfectly aligned with the article's narrative. Minor spacing issues that don't hinder comprehension are ignored.
+- **NEEDS_REVISION**: There are errors in logic relative to the text, **technical inaccuracies**, or severe clutter that makes the information difficult to parse.
 - **FAIL**: Factual inaccuracies, broken rendering, or completely unprofessional layout.
 
 ## Output (JSON only)
