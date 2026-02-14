@@ -16,22 +16,22 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [x] **Track: 不允许writer直接复用资产，所有的资产使用+创作+sourcing都要通过fulfillment，然后需要所有章节创作完之后fulfillment agent并行处理所有visual的内容，并在每个section后设置纯文本输入QA。**
+- [x] **Track: 不允许writer directly reuse assets...**
 *Link: [./tracks/parallel_fulfillment_20260121/](./tracks/parallel_fulfillment_20260121/)*
 
 ---
 
-- [x] **Track: Fix parallel fulfillment bugs: physical write-back redundancy, missing UAR interface methods, and strengthen parallel exception handling/tracing.**
+- [x] **Track: Fix parallel fulfillment bugs...**
 *Link: [./tracks/fulfillment_robustness_20260122/](./tracks/fulfillment_robustness_20260122/)*
 
 ---
 
-- [x] **Track: Fix Universal Asset Registry (UAR) race conditions during parallel asset fulfillment and improve reporting accuracy.**
+- [x] **Track: Fix Universal Asset Registry (UAR) race conditions...**
 *Link: [./tracks/uar_parallel_safety_20260125/](./tracks/uar_parallel_safety_20260125/)*
 
 ---
 
-- [x] **Track: Organize the project root directory by relocating scripts, tests, and documentation to appropriate subdirectories while preserving original functionality and task-tracking files.**
+- [x] **Track: Organize the project root directory...**
 
 *Link: [./tracks/repo_tidy_up_20260129/](./tracks/repo_tidy_up_20260129/)*
 
@@ -84,8 +84,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 ---
 
 - [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
-
----
-
-- [x] **Track: Robust SVG Repair Escalation Logic**
-*Link: [./tracks/svg_repair_escalation_20260214/](./tracks/svg_repair_escalation_20260214/)*
