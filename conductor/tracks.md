@@ -84,4 +84,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 ---
 
 - [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
-*Link: [./tracks/svg_subagent_decoupling_20260212/](./tracks/svg_subagent_decoupling_20260212/)*
+
+---
+
+- [ ] **Track: Robust SVG Repair Escalation Logic**
+*Link: [./tracks/svg_repair_escalation_20260214/](./tracks/svg_repair_escalation_20260214/)*
