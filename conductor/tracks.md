@@ -85,8 +85,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
 *Link: [./tracks/svg_agent_decoupling_20260212/](./tracks/svg_agent_decoupling_20260212/)*
-
----
-
-- [x] **Track: Global Markdown Gatekeeper (Editorial QA Upgrade)**
-*Link: [./tracks/global_md_gatekeeper_20260215/](./tracks/global_md_gatekeeper_20260215/)*
