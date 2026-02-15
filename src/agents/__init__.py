@@ -2,6 +2,8 @@
 
 from .asset_management import AssetIndexerAgent, AssetFulfillmentAgent, AssetCriticAgent
 from .writer_agent import WriterAgent
+from .markdown_sanity_agent import MarkdownSanityAgent
+from .markdown_qa_agent import MarkdownQAAgent
 from .script_decorator_agent import ScriptDecoratorAgent, get_components_schema
 from .editorial_qa_agent import (
     EditorialQAAgent,

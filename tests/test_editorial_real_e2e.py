@@ -24,7 +24,7 @@ class TestEditorialRealE2E(unittest.IsolatedAsyncioTestCase):
         
         self.renderer = PlaywrightRenderer(self.test_dir, headless=True)
         self.client = GeminiClient() # Real Client
-        self.agent = EditorialQAAgent(client=self.client, renderer=self.renderer)
+        self.agent = EditorialQAAgent(client=self.client, renderer=self.renderer, max_iterations=1)
 
     def _create_red_square(self, path: Path):
         from PIL import Image

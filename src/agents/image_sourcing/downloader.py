@@ -27,6 +27,8 @@ class ImageDownloader:
         self.debug = debug
         self.timeout = httpx.Timeout(15.0, connect=5.0)
         self.max_concurrency = 30 
+        self.browser_concurrency = 5 # SOTA: 限制浏览器标签页数量
+        self.browser_semaphore = asyncio.Semaphore(self.browser_concurrency)
         self.vqa_dim = 1024 # Standard dimension for VLM audit
 
     async def download_candidates_async(self, candidates: List[Dict[str, str]], target_dir: Path) -> List[Path]:
@@ -115,33 +117,41 @@ class ImageDownloader:
         return None
 
     async def _method_browser_suite_async(self, url: str, index: int, target_dir: Path) -> List[Path]:
-        def sync_browser_work():
-            found = []
-            page = self.browser_manager.page
-            tab = page.new_tab()
-            try:
-                tab.get(url, timeout=10)
-                ua, cookies = tab.user_agent, {c['name']: c['value'] for c in tab.cookies() if isinstance(c, dict)}
+        async with self.browser_semaphore:
+            def sync_browser_work():
+                found = []
                 try:
-                    import requests
-                    s = requests.Session()
-                    s.headers.update({"User-Agent": ua, "Referer": url})
-                    s.cookies.update(cookies)
-                    r = s.get(url, timeout=15, verify=False)
-                    if r.status_code == 200:
-                        p = (target_dir / f"temp_{index}_fast").with_suffix(".png" if 'png' in r.headers.get('Content-Type','') else ".jpg")
-                        p.write_bytes(r.content)
-                        found.append(p)
-                except: pass
+                    page = self.browser_manager.page
+                    tab = page.new_tab()
+                except Exception as e:
+                    if self.debug: print(f"      [Browser] Failed to open tab: {e}")
+                    return []
+                
                 try:
-                    res = tab.download(url, str(target_dir.resolve()), f"temp_{index}_slow")
-                    if res and res[0]: found.append(Path(res[1]))
-                except: pass
-            finally:
-                try: tab.close()
-                except: pass
-            return found
-        return await asyncio.to_thread(sync_browser_work)
+                    tab.get(url, timeout=10)
+                    ua, cookies = tab.user_agent, {c['name']: c['value'] for c in tab.cookies() if isinstance(c, dict)}
+                    try:
+                        import requests
+                        s = requests.Session()
+                        s.headers.update({"User-Agent": ua, "Referer": url})
+                        s.cookies.update(cookies)
+                        r = s.get(url, timeout=10, verify=False)
+                        if r.status_code == 200:
+                            p = (target_dir / f"temp_{index}_fast").with_suffix(".png" if 'png' in r.headers.get('Content-Type','') else ".jpg")
+                            p.write_bytes(r.content)
+                            found.append(p)
+                    except: pass
+                    try:
+                        res = tab.download(url, str(target_dir.resolve()), f"temp_{index}_slow")
+                        if res and res[0]: found.append(Path(res[1]))
+                    except: pass
+                except Exception as e:
+                    if self.debug: print(f"      [Browser] Error during tab session: {e}")
+                finally:
+                    try: tab.close()
+                    except: pass
+                return found
+            return await asyncio.to_thread(sync_browser_work)
 
     def _is_valid_image(self, file_path: Path) -> bool:
         if not file_path.exists() or file_path.stat().st_size < 2048: return False

@@ -29,7 +29,7 @@ class TestEditorialFixer(unittest.IsolatedAsyncioTestCase):
         namespace = "test_ns"
         
         # Run
-        new_state, report = await self.agent.run_async(state, content, namespace)
+        new_state, report, final_content = await self.agent.run_async(state, content, namespace)
         
         # Verify
         self.assertTrue(report.passed)

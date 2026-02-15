@@ -1,11 +1,16 @@
 """
 Editorial Critic Component (SOTA 2.0 Phase E)
 Evaluates the MERGED full document for global consistency and structural rigor.
+Supports Multimodal input (screenshots) for visual alignment.
 """
 
 import json
+import base64
+import io
 from pathlib import Path
 from typing import Optional, Dict, List
+from PIL import Image
+
 from ...core.gemini_client import GeminiClient
 from ...core.types import AgentState
 from ...core.json_utils import parse_json_dict_robust
@@ -15,6 +20,7 @@ async def run_editorial_critic(
     client: GeminiClient,
     state: AgentState,
     merged_content: str,
+    screenshot_paths: Optional[List[Path]] = None,
     debug: bool = False
 ) -> Dict:
     """Executes a full-context global audit on the merged content."""
@@ -29,7 +35,7 @@ async def run_editorial_critic(
         ]
     }
 
-    prompt = f"""# Project Brief
+    text_prompt = f"""# Project Brief
 {state.project_brief}
 
 # Approved Manifest
@@ -43,14 +49,33 @@ async def run_editorial_critic(
 ---
 Perform a macro-level audit on the merged document above. 
 Focus on global hierarchy, terminology consistency, and narrative flow.
-Output ONLY valid JSON.
 """
+    
+    parts = [{"text": text_prompt}]
+    
+    # 2. Multimodal Injection (Visual Evidence)
+    if screenshot_paths:
+        for i, path in enumerate(screenshot_paths):
+            try:
+                with Image.open(path) as img:
+                    if img.mode in ('RGBA', 'P'): img = img.convert('RGB')
+                    if img.width > 1200:
+                        ratio = 1200 / img.width
+                        img = img.resize((1200, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                    
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="JPEG", quality=80)
+                    image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                    
+                    parts.append({"inline_data": {"mime_type": "image/jpeg", "data": image_data}})
+                    parts.append({"text": f"[Visual Evidence: Screenshot Part {i+1}]"})
+            except Exception as e:
+                print(f"    [EditorialCritic] Error loading image {path}: {e}")
 
-    if debug:
-        print(f"    [EditorialCritic] Prompt size: {len(prompt)} chars")
+    parts.append({"text": "\nOutput ONLY valid JSON."})
 
     response = await client.generate_async(
-        prompt=prompt,
+        parts=parts,
         system_instruction=EDITORIAL_CRITIC_SYSTEM_PROMPT,
         temperature=0.0,
         stream=True

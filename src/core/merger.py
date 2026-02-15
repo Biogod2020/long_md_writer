@@ -55,3 +55,43 @@ def merge_markdown_sections(
     except Exception as e:
         print(f"  [Merger] ❌ Error: {e}")
         return False
+
+def split_merged_document(
+    merged_file_path: str,
+    output_dir: str
+) -> bool:
+    """
+    Splits a merged Markdown document back into individual section files
+    based on the <!-- SECTION: xxx --> markers.
+    
+    Returns:
+        True if successful.
+    """
+    try:
+        path = Path(merged_file_path)
+        if not path.exists():
+            return False
+            
+        content = path.read_text(encoding="utf-8")
+        out_path = Path(output_dir)
+        out_path.mkdir(parents=True, exist_ok=True)
+        
+        import re
+        # Pattern to split by section marker
+        sections = re.split(r'<!-- SECTION: (.*?) -->', content)
+        
+        # re.split will return [intro_text, id1, content1, id2, content2, ...]
+        # We skip the first element if it's empty or whitespace
+        for i in range(1, len(sections), 2):
+            section_id = sections[i].strip()
+            section_content = sections[i+1].strip()
+            
+            if section_id:
+                file_path = out_path / f"{section_id}.md"
+                # Keep H1 title if it was stripped or just write content
+                file_path.write_text(section_content, encoding="utf-8")
+                
+        return True
+    except Exception as e:
+        print(f"  [Merger] ❌ Split-back failed: {e}")
+        return False

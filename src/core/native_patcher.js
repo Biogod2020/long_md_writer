@@ -1,5 +1,5 @@
 /**
- * Native Patcher Bridge (Scientific Alignment with gemini-cli)
+ * Native Patcher Bridge (Structural Alignment with gemini-cli)
  * 
  * Ported from: ref_repo/gemini-cli/packages/core/src/tools/edit.ts
  * and ref_repo/gemini-cli/packages/core/src/utils/textUtils.ts

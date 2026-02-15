@@ -197,7 +197,7 @@ class TransformerAgent:
 
         # 7. Image Handling (PLACEHOLDERS for Real Photos)
         parts.append("# Image Handling (PLACEHOLDERS)\n")
-        parts.append("For real-world photographs, medical imagery, product photos, historical images, screenshots:\n")
+        parts.append("For real-world photographs, technical imagery, product photos, historical images, screenshots:\n")
         parts.append("- Do NOT use `<img>` tags with external URLs.\n")
         parts.append("- Generate a placeholder using this exact structure:\n")
         parts.append('```html\n<div class="img-placeholder" data-img-id="unique-semantic-id">\n')

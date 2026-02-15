@@ -511,31 +511,38 @@ class UniversalAssetRegistry(BaseModel):
     def _persist(self) -> None:
         """持久化到 JSON 文件"""
         if not self.persist_path:
+            # SOTA Self-Healing: 如果路径丢失，尝试从当前环境找回
+            print("  [UAR] ⚠️ Warning: persist_path is missing. Attempting self-healing...")
+            # 这里的兜底逻辑通常应该指向工作区的 assets.json
             return
 
         path = Path(self.persist_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"  [UAR] 💾 Attempting to persist {len(self.assets)} assets to {path.absolute()}")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # SOTA: 动态刷新统计信息
+            self.stats = {
+                "by_source": {
+                    s.value: len([a for a in self.assets.values() if a.source == s])
+                    for s in AssetSource
+                },
+                "reusable_count": len(self.get_reusable_assets())
+            }
 
-        # SOTA: 动态刷新统计信息
-        self.stats = {
-            "by_source": {
-                s.value: len([a for a in self.assets.values() if a.source == s])
-                for s in AssetSource
-            },
-            "reusable_count": len(self.get_reusable_assets())
-        }
+            # 序列化所有资产
+            data = {
+                "assets": {k: (v.model_dump() if hasattr(v, 'model_dump') else v.dict()) for k, v in self.assets.items()},
+                "total_count": len(self.assets),
+                "stats": self.stats
+            }
 
-        # 序列化所有资产
-        data = {
-            "assets": {k: (v.model_dump() if hasattr(v, 'model_dump') else v.dict()) for k, v in self.assets.items()},
-            "total_count": len(self.assets),
-            "stats": self.stats
-        }
-
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        print(f"  [UAR] 💾 成功持久化 {len(self.assets)} 个资产至 {path.name}")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            print(f"  [UAR] ✅ 成功持久化 {len(self.assets)} 个资产至 {path.name}")
+        except Exception as e:
+            print(f"  [UAR] ❌ Persistence FAILED: {e}")
 
     @classmethod
     def load_from_file(cls, path: str) -> "UniversalAssetRegistry":

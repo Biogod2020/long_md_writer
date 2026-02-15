@@ -54,7 +54,7 @@ class TestEditorialCriticVisual(unittest.TestCase):
         
         # Run the agent
         loop = asyncio.get_event_loop()
-        new_state, report = loop.run_until_complete(
+        new_state, report, final_content = loop.run_until_complete(
             self.agent.run_async(state, content, namespace, full_context=full_context)
         )
         

@@ -22,6 +22,7 @@ from ..agents.refiner_agent import RefinerAgent
 from ..agents.architect_agent import ArchitectAgent
 from ..agents.techspec_agent import TechSpecAgent
 from ..agents.writer_agent import WriterAgent
+from ..agents.markdown_sanity_agent import MarkdownSanityAgent
 from ..agents.markdown_qa_agent import MarkdownQAAgent
 
 
@@ -49,6 +50,7 @@ class SOTA2NodeFactory:
         self.architect = ArchitectAgent(self.client)
         self.techspec = TechSpecAgent(self.client)
         self.writer = WriterAgent(self.client)
+        self.sanity_fixer = MarkdownSanityAgent(self.client)
         # SOTA: 开启搜图功能 (skip_search=False)
         self.fulfillment = AssetFulfillmentAgent(client=self.client, skip_generation=False, skip_search=False)
         self.markdown_qa = MarkdownQAAgent(self.client)
@@ -56,6 +58,10 @@ class SOTA2NodeFactory:
     async def asset_indexer_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 📦 Phase 0: Asset Indexing")
         return await self.asset_indexer.run_async(state)
+
+    async def markdown_sanity_node(self, state: AgentState) -> AgentState:
+        """本地语法预检节点 (New)"""
+        return await self.sanity_fixer.run_async(state)
 
     def clarifier_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 💡 Phase 1.1: Clarifier")
@@ -132,6 +138,13 @@ class SOTA2NodeFactory:
         SnapshotManager(state).capture("BP-8_Assets_Done", auto_continue=True)
         return state
 
+    async def global_markdown_qa_node(self, state: AgentState) -> AgentState:
+        print("\n[SOTA2] 🛡️ Phase 4.2: Global Markdown QA (Merged Gatekeeper)")
+        from ..agents.editorial_qa_agent import EditorialQAAgent
+        agent = EditorialQAAgent(client=self.client)
+        state = await agent.run_async(state)
+        return state
+
     def batch_asset_review_node(self, state: AgentState) -> AgentState: 
         return state
 
@@ -164,9 +177,11 @@ def create_sota2_workflow(
     workflow.add_node("review_outline", nodes.review_outline_node)
     workflow.add_node("techspec", nodes.techspec_node)
     workflow.add_node("writer", nodes.writer_node)
+    workflow.add_node("markdown_sanity", nodes.markdown_sanity_node)
     workflow.add_node("markdown_qa", nodes.markdown_qa_node)
     workflow.add_node("markdown_review", nodes.markdown_review_node)
     workflow.add_node("batch_fulfillment", nodes.batch_fulfillment_node)
+    workflow.add_node("global_markdown_qa", nodes.global_markdown_qa_node)
     workflow.add_node("batch_asset_review", nodes.batch_asset_review_node)
 
     # --- Routing Functions ---
@@ -176,25 +191,28 @@ def create_sota2_workflow(
     def should_review_outline(state: AgentState) -> Literal["techspec", "architect"]:
         return "techspec" if getattr(state, "outline_approved", False) else "architect"
 
-    def should_continue_section_loop(state: AgentState) -> Literal["markdown_qa", "markdown_review", "writer"]:
+    def should_continue_section_loop(state: AgentState) -> Literal["markdown_sanity", "markdown_review", "writer"]:
         if getattr(state, "rewrite_needed", False): return "writer"
         if state.md_qa_needs_revision and state.md_qa_iterations < 3:
-            return "markdown_qa"
+            return "markdown_sanity"
         return "markdown_review"
 
-    def should_advance_to_fulfillment(state: AgentState) -> Literal["writer", "batch_fulfillment", "markdown_qa"]:
+    def should_advance_to_fulfillment(state: AgentState) -> Literal["writer", "batch_fulfillment", "markdown_sanity"]:
         if not state.markdown_approved or state.md_qa_needs_revision:
-            return "markdown_qa"
+            return "markdown_sanity"
         if state.all_sections_written():
             return "batch_fulfillment"
         return "writer"
 
     def should_finish_fulfillment(state: AgentState) -> Literal["batch_asset_review", "end"]:
-        # 如果已经手动批准，或者没有需要修复的资产，则结束
+        # 如果已经手动批准，或者没有需要修复的资产，且全局 MD QA 通过，则结束
         if state.asset_approved:
             return "end"
-        if state.asset_revision_needed:
+        
+        # SOTA: 如果资产需要修复，或者全局 Markdown 审核未通过，则进入人工审核节点
+        if state.asset_revision_needed or not state.markdown_approved:
             return "batch_asset_review"
+            
         return "end"
 
     # Define Edges
@@ -207,11 +225,20 @@ def create_sota2_workflow(
     workflow.add_edge("architect", "review_outline")
     workflow.add_conditional_edges("review_outline", should_review_outline, {"techspec": "techspec", "architect": "architect"})
     workflow.add_edge("techspec", "writer")
-    workflow.add_edge("writer", "markdown_qa")
+    workflow.add_edge("writer", "markdown_sanity")
+    workflow.add_edge("markdown_sanity", "markdown_qa")
     
-    workflow.add_conditional_edges("markdown_qa", should_continue_section_loop, {"markdown_qa": "markdown_qa", "markdown_review": "markdown_review", "writer": "writer"})
-    workflow.add_conditional_edges("markdown_review", should_advance_to_fulfillment, {"writer": "writer", "batch_fulfillment": "batch_fulfillment", "markdown_qa": "markdown_qa"})
-    workflow.add_conditional_edges("batch_fulfillment", should_finish_fulfillment, {"batch_asset_review": "batch_asset_review", "end": END})
+    workflow.add_conditional_edges("markdown_qa", should_continue_section_loop, {"markdown_sanity": "markdown_sanity", "markdown_review": "markdown_review", "writer": "writer"})
+    workflow.add_conditional_edges("markdown_review", should_advance_to_fulfillment, {"writer": "writer", "batch_fulfillment": "batch_fulfillment", "markdown_sanity": "markdown_sanity"})
+    
+    # --- SOTA 2.0 Global Gatekeeper Flow ---
+    # 1. First fulfill all assets (Images, SVGs)
+    workflow.add_edge("batch_fulfillment", "global_markdown_qa")
+    
+    # 2. Then run global audit on the merged fully-fulfilled document
+    workflow.add_conditional_edges("global_markdown_qa", should_finish_fulfillment, {"batch_asset_review": "batch_asset_review", "end": END})
+    
+    # 3. If human review is needed, loop back to fulfillment (if assets need fix) or logic fix
     workflow.add_edge("batch_asset_review", "batch_fulfillment")
 
     # Compile with persistence

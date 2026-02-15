@@ -32,12 +32,15 @@ This plan implements a global quality gate for the Markdown publication pipeline
     - [x] Generate `qa_report_global.json` and capture `Thinking` tokens for transparency.
 - [x] Task: Conductor - User Manual Verification 'Global Audit Logic & Repair Loop' (Protocol in workflow.md)
 
-## Phase 4: Workflow Integration & SSOT
-- [ ] Task: Update LangGraph Orchestration
-    - [ ] Add `global_markdown_qa` node to `src/orchestration/workflow_markdown.py`.
-    - [ ] Wire the node to execute after `batch_fulfillment` but before HTML phases.
-- [ ] Task: Establish `final_full.md` as SSOT
-    - [ ] Update downstream nodes (`DesignTokens`, `Transformer`) to prioritize the merged file if available.
-- [ ] Task: End-to-End (E2E) Integration Testing
-    - [ ] Create a test scenario involving terminology drift and unclosed containers across multiple chapters.
-- [ ] Task: Conductor - User Manual Verification 'Workflow Integration & SSOT' (Protocol in workflow.md)
+## Phase 4: Workflow Integration & SSOT [checkpoint: f8a2fc4]
+- [x] Task: Update LangGraph Orchestration
+    - [x] Add `global_markdown_qa` node to `src/orchestration/workflow_markdown.py`.
+    - [x] Wire the node to execute after `batch_fulfillment` but before HTML phases.
+- [x] Task: Establish `final_full.md` as SSOT
+    - [x] Update downstream nodes (`DesignTokens`, `Transformer`) to prioritize the merged file if available.
+- [x] Task: End-to-End (E2E) Integration Testing
+    - [x] Create a test scenario involving terminology drift and unclosed containers across multiple chapters.
+- [x] Task: Conductor - User Manual Verification 'Workflow Integration & SSOT' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions

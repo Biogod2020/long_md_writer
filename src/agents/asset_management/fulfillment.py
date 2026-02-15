@@ -32,6 +32,7 @@ from .processors.mermaid import (
     generate_mermaid_async,
     render_mermaid_to_png,
 )
+from .processors.audit import refine_caption_async, render_svg_to_png_base64
 from ..image_sourcing.agent import ImageSourcingAgent
 from ..svg_generation.agent import SVGAgent
 from .utils import (
@@ -119,6 +120,9 @@ class AssetFulfillmentAgent:
         async def worker(task):
             d = task["directive"]
             trace = {"id": d.id, "file": task["original_path"].name, "steps": []}
+            # Capture the full content of the current file for context
+            full_section_content = task["original_path"].read_text(encoding="utf-8")
+            
             async with self.semaphore:
                 try:
                     if await self._check_asset_exists(d, uar, workspace_path):
@@ -130,22 +134,28 @@ class AssetFulfillmentAgent:
                         workspace_path / "agent_generated", 
                         workspace_path / "agent_sourced", 
                         task["namespace"], workspace_path, state, trace,
-                        target_file=task["original_path"]
+                        target_file=task["original_path"],
+                        full_section_markdown=full_section_content
                     )
                     
-                    if new_asset:
-                        async with self.uar_lock:
-                            uar.register_immediate(new_asset)
-
                     return (task["original_path"], result_d, new_asset)
                 except Exception as e:
                     import traceback
+                    print(f"    [Fulfillment] ❌ Worker CRASHED for {d.id}: {e}")
+                    traceback.print_exc()
                     d.error = str(e)
                     trace["error"] = traceback.format_exc()
                     return (task["original_path"], d, None)
 
         print(f"[AssetFulfillment] 正在处理 {len(all_tasks)} 个视觉资产...")
         results = await tqdm.gather(*(worker(t) for t in all_tasks), desc="Fulfillment Progress")
+
+        # SOTA: 统一原子化注册所有新产出的资产
+        new_entries = [r[2] for r in results if r[2] is not None]
+        if new_entries:
+            print(f"  [Fulfillment] 📦 正在将 {len(new_entries)} 个新资产入库...")
+            async with self.uar_lock:
+                uar.register_batch(new_entries)
 
         # 3. 阶段二：顺序物理回写 (Sequential Write-back)
         print("\n[AssetFulfillment] 💾 生成完成，开始顺序物理回写...")
@@ -177,7 +187,8 @@ class AssetFulfillmentAgent:
                         import re
                         id_pattern = rf':::visual\s*\{{[^}}]*?"id":\s*"{re.escape(d.id)}"[^}}]*?\}}[\s\S]*?:::'
                         if re.search(id_pattern, current_content):
-                            current_content = re.sub(id_pattern, d.result_html, current_content, count=1)
+                            # SOTA Fix: 使用 lambda 保护 repl 字符串
+                            current_content = re.sub(id_pattern, lambda _: d.result_html, current_content, count=1)
                             success = True
                             print(f"    [Fulfillment] 🪄 通过正则模糊匹配成功修复锚点: {d.id}")
 
@@ -198,12 +209,17 @@ class AssetFulfillmentAgent:
                     import re
                     cleanup_pattern = rf':::visual\s*\{{[^}}]*?"id":\s*"{re.escape(d.id)}"[^}}]*?\}}[\s\S]*?:::'
                     if re.search(cleanup_pattern, current_content):
-                        current_content = re.sub(cleanup_pattern, d.result_html, current_content)
+                        # SOTA Fix: 使用 lambda 避免 re.sub 对 repl 字符串中的反斜杠（如 LaTeX \P）进行转义解释
+                        current_content = re.sub(cleanup_pattern, lambda _: d.result_html, current_content)
                         print(f"    [Fulfillment] 🛡️ 最终防线触发：强制擦除残留指令 (ID: {d.id})")
 
             # 写入并提交该文件的最终修改
             manager.working_path.write_text(current_content, encoding="utf-8")
             manager.commit()
+
+        # SOTA: 最终强制物理持久化 UAR，确保磁盘 assets.json 与内存同步
+        async with self.uar_lock:
+            uar._persist()
 
         print(f"[AssetFulfillment] ✅ 履约完成: 新增 {new_assets_count}, 复用 {reused_count}")
         state.batch_fulfillment_complete = True
@@ -228,7 +244,7 @@ class AssetFulfillmentAgent:
             
         return False
 
-    async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace, target_file: Optional[Path] = None) -> Tuple[VisualDirective, Optional[AssetEntry]]:
+    async def _fulfill_directive_async(self, d, uar, gen_path, src_path, ns, ws_path, state, trace, target_file: Optional[Path] = None, full_section_markdown: str = "") -> Tuple[VisualDirective, Optional[AssetEntry]]:
         gen_path.mkdir(parents=True, exist_ok=True)
         src_path.mkdir(parents=True, exist_ok=True)
 
@@ -237,6 +253,24 @@ class AssetFulfillmentAgent:
                 d, state, target_file=target_file
             )
             if success and asset:
+                # SOTA 2.0: Post-Fulfillment Semantic Alignment
+                svg_path = ws_path / asset.local_path
+                if svg_path.exists():
+                    svg_code = svg_path.read_text(encoding="utf-8")
+                    png_b64 = render_svg_to_png_base64(svg_code)
+                    if png_b64:
+                        print(f"    [Fulfillment] ✍️ Refining caption for SVG: {d.id}...")
+                        refined_caption = await refine_caption_async(
+                            self.client, png_b64, d.description, full_section_markdown or d.get_full_context(), state=state
+                        )
+                        if refined_caption:
+                            asset.alt_text = refined_caption
+                            asset.semantic_label = refined_caption[:100]
+                            # Regenerate HTML with new caption
+                            html = generate_figure_html(
+                                asset, refined_caption, target_file=target_file, workspace_path=ws_path
+                            )
+                
                 d.fulfilled, d.result_html = True, html
                 d.result_asset_id = asset.id
                 return d, asset
@@ -245,7 +279,26 @@ class AssetFulfillmentAgent:
         if d.action == AssetFulfillmentAction.GENERATE_MERMAID:
             return await self._fulfill_mermaid_step(d, uar, gen_path, ns, ws_path, state, trace, target_file=target_file)
         if d.action == AssetFulfillmentAction.SEARCH_WEB:
-            return await self._fulfill_search_step(d, uar, src_path, ns, state, trace, target_file=target_file)
+            res_d, asset = await self._fulfill_search_step(d, uar, src_path, ns, state, trace, target_file=target_file)
+            if res_d.fulfilled and asset:
+                # SOTA 2.0: Refine caption for Web images too
+                img_path = ws_path / asset.local_path
+                if img_path.exists():
+                    import base64
+                    with open(img_path, "rb") as f:
+                        img_b64 = base64.b64encode(f.read()).decode("utf-8")
+                    
+                    print(f"    [Fulfillment] ✍️ Refining caption for Web image: {d.id}...")
+                    refined_caption = await refine_caption_async(
+                        self.client, img_b64, d.description, full_section_markdown or d.get_full_context(), state=state
+                    )
+                    if refined_caption:
+                        asset.alt_text = refined_caption
+                        asset.semantic_label = refined_caption[:100]
+                        res_d.result_html = generate_figure_html(
+                            asset, refined_caption, target_file=target_file, workspace_path=ws_path
+                        )
+            return res_d, asset
         if d.action == AssetFulfillmentAction.USE_EXISTING:
             res_d = await self._fulfill_use_existing_step(d, uar, ns, ws_path, state, trace, target_file=target_file)
             return res_d, None
@@ -373,13 +426,16 @@ class AssetFulfillmentAgent:
                     raw_block = "".join(current_block_lines)
                     end_pos = current_global_pos + len(line)
                     
-                    from ...core.json_utils import extract_json_from_text
+                    from ...core.json_utils import extract_json_from_text, parse_json_dict_robust
                     raw_json = extract_json_from_text(raw_block)
                     
                     if raw_json:
                         d = VisualDirective(raw_block=raw_block, start_pos=start_pos, end_pos=end_pos)
                         try:
-                            cfg = json.loads(raw_json)
+                            cfg = parse_json_dict_robust(raw_json)
+                            if not cfg:
+                                raise ValueError("Empty or malformed JSON")
+                                
                             extracted_id = str(cfg.get("id", "")).strip()
                             d.id = extracted_id if extracted_id else f"v-{len(directives)}"
                             d.action = AssetFulfillmentAction(cfg.get("action", "GENERATE_SVG").upper())

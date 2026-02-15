@@ -59,7 +59,7 @@ class TestEditorialE2E(unittest.IsolatedAsyncioTestCase):
         namespace = "e2e_ns"
         
         # Run
-        new_state, report = await self.agent.run_async(state, content, namespace, full_context=full_context)
+        new_state, report, final_content = await self.agent.run_async(state, content, namespace, full_context=full_context)
         
         # Verify
         self.assertTrue(report.passed)

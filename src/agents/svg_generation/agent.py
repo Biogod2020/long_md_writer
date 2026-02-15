@@ -22,7 +22,7 @@ from ..asset_management.utils import generate_figure_html
 
 class SVGAgent:
     """
-    Sub-Agent dedicated to SVG generation and refinement.
+    Sub-Agent dedicated to SVG generation.
     Implements a formal Reflection Loop to improve SVG quality based on audit feedback.
     """
 
@@ -53,7 +53,6 @@ class SVGAgent:
         print(f"    [SVGAgent] 🚀 Starting SVG generation loop (ID: {d.id})...")
         
         # 1. Initial Generation
-        # We pass full context to ensure thematic consistency
         full_context = d.get_full_context()
         svg_code = await generate_svg_async(
             self.client, 
@@ -77,11 +76,10 @@ class SVGAgent:
             attempt += 1
             print(f"    [SVGAgent] 📋 VLM Audit (Attempt {attempt}/{self.MAX_REPAIR_ATTEMPTS})...")
             
-            # Persist to disk for auditing (needed by audit_svg_visual_async if it uses external renderers)
+            # Persist to disk for auditing
             file_path.write_text(svg_code, encoding="utf-8")
             
             # SOTA: Cross-modal audit (Code + Visual)
-            # We must provide full context for accurate pedagogical assessment
             audit = await audit_svg_visual_async(
                 self.client, 
                 svg_code, 
@@ -103,12 +101,7 @@ class SVGAgent:
             
             if attempt < self.MAX_REPAIR_ATTEMPTS:
                 print(f"    [SVGAgent] 🛠️ Attempting precise repair via Reflection Loop...")
-                
-                # Render current state for repair agent's visual reference
                 png_b64 = render_svg_to_png_base64(svg_code)
-                
-                # SOTA: Targeted Patching Repair
-                # The repair agent receives the original intent + audit feedback + visual reference
                 new_svg = await repair_svg_async(
                     self.client, 
                     full_context, 
@@ -128,7 +121,6 @@ class SVGAgent:
                 print(f"\n⚠️ [SVGAgent] Exhausted {self.MAX_REPAIR_ATTEMPTS} attempts. Asset '{d.id}' remains un-audited.")
 
         # 3. Finalization
-        # Even if not fully 'passed', we provide the best version we have
         asset = AssetEntry(
             id=d.id, 
             source=AssetSource.AI, 
@@ -140,7 +132,6 @@ class SVGAgent:
             vqa_status=AssetVQAStatus.PASS if is_valid else AssetVQAStatus.FAIL
         )
         
-        # SOTA: Set object-fit to contain for SVG technical diagrams to prevent label clipping
         if asset.crop_metadata.object_fit == "cover":
             asset.crop_metadata.object_fit = "contain"
             

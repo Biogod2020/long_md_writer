@@ -243,9 +243,13 @@ class EmbeddedHTMLValidator:
         return result
 
     def _validate_img_tag(self, result: ValidationResult, line_num: int, attrs: dict) -> None:
-        """验证单个 img 标签 (SOTA 2.0: 严禁直接使用)"""
+        """验证单个 img 标签 (SOTA 2.0: 允许履约后的标签，严禁手写)"""
+        # 如果带有 data-asset-id，说明是系统履约生成的，合法
+        if "data-asset-id" in attrs:
+            return
+
         result.add_error(
-            "严禁在 Markdown 中直接使用 <img> 标签。所有图像需求必须使用 :::visual 指令声明。",
+            "严禁在 Markdown 中直接手写 <img> 标签。请使用 :::visual 指令，或确保标签包含 data-asset-id。",
             line_number=line_num,
             suggestion="将此标签转换为 :::visual 指令，并在 description 中描述所需图片内容。"
         )

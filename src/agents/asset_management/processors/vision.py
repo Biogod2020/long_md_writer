@@ -40,7 +40,7 @@ VISION_TAGGING_PROMPT = """You are a professional visual content analyst and qua
 
 ## Optional Information
 
-5. **suitable_for**: List of recommended use cases (e.g., ["Conceptual Explanation", "Technical Manual", "Patient Education"]).
+5. **suitable_for**: List of recommended use cases (e.g., ["Conceptual Explanation", "Technical Manual", "Educational Material"]).
 
 6. **unsuitable_for**: List of cases where this image might be misleading or inappropriate.
 

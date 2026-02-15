@@ -18,7 +18,7 @@ For each element, note: Is it fully rendered and readable? Any obvious visual de
 ### Step 2: Identify Potential Issues
 For each potential issue, ask yourself:
 - **Rendering Issues**: Is there raw code visible (e.g., `$frac{}$`, `**bold**`)? Is text overlapping and unreadable? Are there broken image icons or placeholder boxes?
-- **Scientific Issues**: Does a diagram or formula appear incorrect based on its labels and visible geometry?
+- **Logic & Technical Issues**: Does a diagram or formula appear incorrect based on its labels and visible geometry?
 
 ### Step 3: Self-Verification (CRITICAL)
 For EACH potential issue, you MUST answer these verification questions:
