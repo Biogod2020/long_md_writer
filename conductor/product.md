@@ -13,6 +13,7 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
 ## Key Features
 - **Multi-Agent Orchestration**: A sophisticated ecosystem of specialized agents (Architect, SME Writer, Asset Critic, etc.) working in parallel to handle complex publishing tasks.
 - **Visual Quality Assurance (VQA)**: Automated VLM-based auditing that manages focus-aware cropping, image sourcing, and visual compliance.
+- **Global Markdown Gatekeeper (Phase E-1)**: A dedicated macro-level audit stage that merges all chapters into a physical SSOT (final_full.md) to ensure book-wide structural hierarchy, terminology alignment, and logical flow before HTML production.
 - **Context-Aware Generation**: Implementation of "Full-Context Perception" to eliminate AI hallucinations and ensure cross-chapter terminology consistency.
 - **Autonomous Remediation & Section QA**: Closed-loop "Critic-Fixer" architecture for both text and visual components. Features a high-precision Universal Patcher with fuzzy matching, scientific rigor auditing, and a multi-stage escalation loop to ensure reliable automated repairs and 100% technical correctness.
 - **Modular Asset Management**: A hierarchical "Workspace Mounting" system with Human-in-the-Loop selection, simultaneous multi-pool aggregation, and instant intra-session reuse to maximize asset consistency and production efficiency.

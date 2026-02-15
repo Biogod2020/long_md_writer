@@ -35,4 +35,5 @@
 
 ## Documentation & Standards
 - **Source Format**: Markdown with custom `:::` container extensions for scripts and visual assets.
+- **SSOT Lifecycle**: Employs a physical merging strategy (`final_full.md`) with traceability markers (`<!-- SECTION: xxx -->`) for cross-chapter global QA and automated non-destructive sync.
 - **Target Format**: Industrial-grade, responsive HTML5.
