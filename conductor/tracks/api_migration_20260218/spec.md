@@ -11,9 +11,10 @@ This track involves migrating the core LLM communication layer from the legacy `
 
 ## Functional Requirements
 - **Endpoint Adaptation**: Update the default `GeminiClient` base URL from `http://localhost:8888` to `http://localhost:3000`.
+- **Model Name Standardization**: Refactor `GeminiClient` to strip non-standard suffixes (e.g., `-maxthinking`, `-thinking`) before sending requests to the API, ensuring compatibility with standard proxies like AIClient-2-API.
+- **Explicit Thinking Configuration**: Automatically inject `thinkingConfig` (including `thinkingLevel` or `thinkingBudget`) and `responseModalities: ["TEXT"]` based on the requested model variant.
 - **Protocol Preservation**: Maintain the existing Gemini Native protocol implementation (`/v1beta/models/...`) to preserve "thinking" token capture and SSE stream parsing logic.
 - **Auth Compatibility**: Ensure Bearer token handling remains compatible with AIClient-2-API's security requirements.
-- **Environment Parity**: Update all `.env` templates and configuration documentation to reflect the new default port and setup instructions.
 
 ## Non-Functional Requirements
 - **Zero Regression**: Existing E2E tests (specifically `verification_v13.py`) must pass with the new provider without code changes to the agent logic.

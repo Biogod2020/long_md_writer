@@ -85,4 +85,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
 *Link: [./tracks/svg_agent_decoupling_20260212/](./tracks/svg_agent_decoupling_20260212/)*
-\n---\n\n- [ ] **Track: Migrate API provider from geminicli2api to AIClient-2-API**\n*Link: [./tracks/api_migration_20260218/](./tracks/api_migration_20260218/)*
+\n---\n\n- [~] **Track: Migrate API provider from geminicli2api to AIClient-2-API**\n*Link: [./tracks/api_migration_20260218/](./tracks/api_migration_20260218/)*

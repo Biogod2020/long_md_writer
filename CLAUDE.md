@@ -29,10 +29,10 @@ streamlit run app.py
 python main.py --input inputs/prompt.txt --output workspaces/workspace/project_name/
 
 # With custom API endpoint
-python main.py --input inputs/prompt.txt --api-url http://localhost:8888/v1 --auth-token your_token
+python main.py --input inputs/prompt.txt --api-url http://localhost:3000 --auth-token your_token
 
 # Test API connection
-python main.py --test-connection --api-url http://localhost:8888/v1
+python main.py --test-connection --api-url http://localhost:3000
 
 # Debug mode (saves intermediate states)
 python main.py --input inputs/prompt.txt --debug
@@ -235,10 +235,10 @@ src/agents/
 
 ## API Client Configuration
 
-The system uses a custom `GeminiClient` that wraps the geminicli2api proxy (OpenAI-compatible):
+The system uses a custom `GeminiClient` that wraps the AIClient-2-API proxy (OpenAI-compatible):
 
-- Default endpoint: `http://localhost:8888/v1`
-- Default model: `gemini-3-flash-preview-maxthinking`
+- Default endpoint: `http://localhost:3000`
+- Default model: `gemini-3-flash-preview`
 - Authentication: Bearer token (env var `GEMINI_AUTH_PASSWORD`)
 - Timeout: 120s default (configurable)
 

@@ -1,6 +1,6 @@
 # Geminicli2api 运行与集成指南
 
-本指南旨在帮助开发者快速部署并集成 `geminicli2api` 代理服务。该服务将 Google 的生成能力转化为全异步、高并发的 OpenAI 兼容接口。
+本指南旨在帮助开发者快速部署并集成 `AIClient-2-API` 代理服务。该服务将 Google 的生成能力转化为全异步、高并发的 OpenAI 兼容接口。
 
 ## 1. 快速启动 (Running the Service)
 
@@ -18,7 +18,7 @@
 
 ### 1.3 运行服务
 ```bash
-# 默认监听端口 8888
+# 默认监听端口 3000
 python run.py
 ```
 
@@ -27,14 +27,14 @@ python run.py
 ## 2. API 集成规范 (Integration Specs)
 
 ### 2.1 基础信息
-- **Base URL**: `http://localhost:8888/v1`
+- **Base URL**: `http://localhost:3000`
 - **鉴权 Header**: `Authorization: Bearer <你的密码>`
 
 ### 2.2 模型选择 (Gemini 3 系列)
 推荐使用最新的 **Gemini 3** 模型，通过后缀控制核心能力：
 - **基础版**: `gemini-3-flash-preview`, `gemini-3-pro-preview`
 - **联网版**: 模型名 + `-search` (自动启用 Google Search)
-- **推理版**: 模型名 + `-maxthinking` (分配最大逻辑推理预算)
+- **推理版**: 模型名 + `` (分配最大逻辑推理预算)
 - **快速版**: 模型名 + `-nothinking` (极速响应，最小推理)
 
 ---
@@ -84,7 +84,7 @@ import httpx
 import time
 
 async def fetch_answer(client, i, question):
-    url = "http://localhost:8888/v1/chat/completions"
+    url = "http://localhost:3000/chat/completions"
     headers = {"Authorization": "Bearer YOUR_PASSWORD"}
     payload = {
         "model": "gemini-3-flash-preview",
@@ -116,7 +116,7 @@ import httpx
 import json
 
 def get_structured_data():
-    url = "http://localhost:8888/v1/chat/completions"
+    url = "http://localhost:3000/chat/completions"
     headers = {"Authorization": "Bearer YOUR_PASSWORD"}
     
     # 定义期望的 JSON 结构
@@ -165,7 +165,7 @@ import httpx
 import json
 
 async def fetch_stream_json(client, i):
-    url = "http://localhost:8888/v1/chat/completions"
+    url = "http://localhost:3000/chat/completions"
     headers = {"Authorization": "Bearer YOUR_PASSWORD"}
     payload = {
         "model": "gemini-3-flash-preview",
