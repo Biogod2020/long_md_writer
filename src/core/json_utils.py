@@ -111,9 +111,22 @@ def fix_common_json_errors(json_str: str) -> str:
     def safe_backslash_replace(match):
         s = match.group(0)
         inner = s[1:-1]
-        # We need to escape every \ that is not followed by a valid escape char
-        # This regex looks for backslashes and checks what follows
-        fixed_inner = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', inner)
+        
+        # 1. Protect existing double backslashes (the only way to have a literal backslash in valid JSON)
+        step1 = inner.replace('\\\\', '\x01\x01')
+        
+        # 2. Protect other valid escape sequences: \", \/, \b, \f, \n, \r, \t, \uXXXX
+        def protect_valid(m):
+            return f"\x02{m.group(1)}"
+        step2 = re.sub(r'\\(["/bfnrt]|u[0-9a-fA-F]{4})', protect_valid, step1)
+        
+        # 3. Any remaining naked backslashes were NOT intended to be escaped (e.g. malformed LaTeX).
+        # Double them now.
+        step3 = step2.replace('\\', '\\\\')
+        
+        # 4. Restore placeholders to standard backslashes
+        fixed_inner = step3.replace('\x01', '\\').replace('\x02', '\\')
+        
         return f'"{fixed_inner}"'
 
     # Only apply to content inside double quotes

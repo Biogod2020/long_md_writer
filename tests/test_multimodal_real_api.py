@@ -32,7 +32,7 @@ class TestMultimodalRealAPI(unittest.IsolatedAsyncioTestCase):
         
         # Ensure client points to local proxy
         self.client = GeminiClient(
-            api_base_url="http://localhost:8888/v1",
+            api_base_url="http://localhost:3000",
             auth_token=os.getenv("GEMINI_AUTH_PASSWORD", "123456"),
             model="gemini-3-flash-preview" # Use flash for faster/cheaper tests
         )

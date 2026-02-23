@@ -11,7 +11,7 @@ sys.path.append(str(root_dir))
 from src.core.gemini_client import GeminiClient
 
 async def test_parallel_large():
-    api_url = os.getenv("API_URL", "http://localhost:8888/v1")
+    api_url = os.getenv("API_URL", "http://localhost:3000")
     client = GeminiClient(api_base_url=api_url, timeout=300)
     
     # 3 Parallel tasks with 200k chars each

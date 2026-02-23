@@ -11,7 +11,7 @@ sys.path.append(str(root_dir))
 from src.core.gemini_client import GeminiClient
 
 async def test_truncation():
-    api_url = os.getenv("API_URL", "http://localhost:8888/v1")
+    api_url = os.getenv("API_URL", "http://localhost:3000")
     client = GeminiClient(api_base_url=api_url, timeout=120)
     
     magic_suffix = "END_OF_PROMPT_MAGIC_12345"

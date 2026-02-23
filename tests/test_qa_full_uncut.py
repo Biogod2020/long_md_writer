@@ -70,7 +70,7 @@ Provide a concise list of major issues found. Be specific.
     print(f"Total Prompt size: {len(prompt)} chars")
     
     # 5. Send to API
-    api_url = os.getenv("API_URL", "http://localhost:8888/v1")
+    api_url = os.getenv("API_URL", "http://localhost:3000")
     client = GeminiClient(api_base_url=api_url, timeout=300)
     
     print(f"Sending request to {api_url} (timeout=300s, stream={stream})...")

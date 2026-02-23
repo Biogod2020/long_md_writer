@@ -18,7 +18,7 @@ def debug_markdown_qa():
     print("=== Markdown QA Debugger ===")
     
     # 1. Configuration
-    api_url = os.getenv("API_URL", "http://localhost:8888/v1")
+    api_url = os.getenv("API_URL", "http://localhost:3000")
     workspace_id = "d2d3d333" # Using the one from previous run
     workspace_path = root_dir / "workspace" / workspace_id
     

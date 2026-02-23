@@ -11,8 +11,7 @@ from src.orchestration.workflow_markdown import run_sota2_workflow
 from src.core.types import AssetSource, AssetVQAStatus
 
 async def test_full_e2e_with_svg_subagent():
-    print("
-🚀 [FULL E2E TEST] Starting SOTA 2.0 Workflow...")
+    print("\n🚀 [FULL E2E TEST] Starting SOTA 2.0 Workflow...")
     
     # 1. Load Real Inputs
     prompt_path = Path("inputs/prompt.txt")
@@ -50,8 +49,7 @@ async def test_full_e2e_with_svg_subagent():
     )
     
     # 3. Comprehensive Verification
-    print("
---- [E2E VERIFICATION REPORT] ---")
+    print("\n--- [E2E VERIFICATION REPORT] ---")
     print(f"Job Status: {'SUCCESS' if not state.errors else 'FAILED'}")
     
     if state.errors:
@@ -65,15 +63,13 @@ async def test_full_e2e_with_svg_subagent():
     svg_assets = [a for a in assets if "svg" in a.tags]
     web_assets = [a for a in assets if a.source == AssetSource.WEB]
     
-    print(f"
-📊 Asset Statistics:")
+    print("\n📊 Asset Statistics:")
     print(f"  - Total Assets in UAR: {len(assets)}")
     print(f"  - SVG Assets (via SVGAgent): {len(svg_assets)}")
     print(f"  - Web Assets (via ImageSourcingAgent): {len(web_assets)}")
     
     # Validation A: SVG Fulfillment
-    print("
-🔍 Validating SVG Assets:")
+    print("\n🔍 Validating SVG Assets:")
     for a in svg_assets:
         abs_p = workspace_path / a.local_path
         exists = abs_p.exists()
@@ -81,13 +77,12 @@ async def test_full_e2e_with_svg_subagent():
         if exists:
             content = abs_p.read_text()
             if "<svg" in content and "</svg>" in content:
-                print(f"    ✅ Valid SVG syntax confirmed.")
+                print("    ✅ Valid SVG syntax confirmed.")
             else:
-                print(f"    ❌ Corrupted SVG file.")
+                print("    ❌ Corrupted SVG file.")
 
     # Validation B: Web Sourcing Fulfillment
-    print("
-🔍 Validating Web Sourced Assets:")
+    print("\n🔍 Validating Web Sourced Assets:")
     for a in web_assets:
         abs_p = workspace_path / a.local_path
         exists = abs_p.exists()
@@ -97,8 +92,7 @@ async def test_full_e2e_with_svg_subagent():
             print(f"    ✅ Image downloaded successfully ({size/1024:.1f} KB)")
 
     # Validation C: Physical Write-back
-    print("
-🔍 Validating Markdown Physical Write-back:")
+    print("\n🔍 Validating Markdown Physical Write-back:")
     md_files = list(Path(state.workspace_path).glob("md/*.md"))
     write_back_success = False
     for md in md_files:
@@ -109,12 +103,10 @@ async def test_full_e2e_with_svg_subagent():
             
     # Final Score
     if not state.errors and len(svg_assets) > 0 and len(web_assets) >= 2 and write_back_success:
-        print("
-🏆 [FULL E2E RESULT] SOTA 2.0 WORKFLOW PASSED.")
+        print("\n🏆 [FULL E2E RESULT] SOTA 2.0 WORKFLOW PASSED.")
         print("The new SVGAgent and Reflection Loop are fully operational and integrated.")
     else:
-        print("
-❌ [FULL E2E RESULT] WORKFLOW FAILED TO MEET CRITERIA.")
+        print("\n❌ [FULL E2E RESULT] WORKFLOW FAILED TO MEET CRITERIA.")
         exit(1)
 
 if __name__ == "__main__":

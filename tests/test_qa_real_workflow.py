@@ -76,7 +76,7 @@ async def run_real_qa_verification():
     state.debug_mode = True
 
     # 6. Run Agent
-    api_url = os.getenv("API_URL", "http://localhost:8888/v1")
+    api_url = os.getenv("API_URL", "http://localhost:3000")
     client = GeminiClient(api_base_url=api_url, timeout=300)
     agent = MarkdownQAAgent(client=client)
 

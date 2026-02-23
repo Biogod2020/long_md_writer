@@ -7,6 +7,8 @@ import random
 from typing import Optional, Dict, List
 from dataclasses import dataclass
 
+from .config import DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_AUTH_PASSWORD, DEFAULT_THINKING_LEVEL
+
 @dataclass
 class GeminiResponse:
     """Wrapper for Native Gemini API Response"""
@@ -19,12 +21,9 @@ class GeminiResponse:
 
 class GeminiClient:
     """
-    Native Gemini API Client targeting the geminicli2api proxy (/v1beta/models/...).
+    Native Gemini API Client targeting standard proxies or direct API (/v1beta/models/...).
     Uses Google's native JSON structure for maximum stability and feature support.
     """
-    
-    DEFAULT_MODEL = "gemini-3-flash-preview-maxthinking"
-    DEFAULT_BASE_URL = "http://localhost:8888" # Proxy root
     
     _client: Optional[httpx.AsyncClient] = None
 
@@ -40,8 +39,8 @@ class GeminiClient:
         if self.api_base_url.endswith("/v1"):
             self.api_base_url = self.api_base_url[:-3]
             
-        self.auth_token = auth_token or os.getenv("GEMINI_AUTH_PASSWORD", "123456")
-        self.model = model or self.DEFAULT_MODEL
+        self.auth_token = auth_token or DEFAULT_AUTH_PASSWORD
+        self.model = model or DEFAULT_MODEL
         self.timeout = timeout
         
     def _get_headers(self) -> dict:
@@ -106,9 +105,10 @@ class GeminiClient:
         max_tokens: int = 65536,
         model: Optional[str] = None,
         stream: bool = False,
+        thinking_level: Optional[str] = None,
         **kwargs
     ) -> GeminiResponse:
-        """Native async generation with enhanced resilience."""
+        """Native async generation with official Google thinking support."""
         target_model = model or self.model
         action = "streamGenerateContent" if stream else "generateContent"
         url = f"{self.api_base_url}/v1beta/models/{target_model}:{action}"
@@ -123,6 +123,25 @@ class GeminiClient:
             }
         }
         
+        # Official Thinking Configuration (Gemini 3+)
+        # SOTA: thinkingLevel is the standardized way to control reasoning.
+        is_gemini_3 = "gemini-3" in target_model or "gemini3" in target_model
+        
+        # Default to HIGH for Gemini 3 models unless specified
+        t_level = thinking_level or kwargs.get("thinking_level")
+        if not t_level and is_gemini_3:
+            t_level = DEFAULT_THINKING_LEVEL
+
+        if t_level:
+            payload["generationConfig"]["thinkingConfig"] = {
+                "includeThoughts": True,
+                "thinkingLevel": t_level.upper()
+            }
+            # SOTA: Thinking models REQUIRE responseModalities: ["TEXT"] 
+            # unless tools are present (which causes 400).
+            if "tools" not in kwargs:
+                payload["generationConfig"]["responseModalities"] = ["TEXT"]
+
         if system_instruction:
             payload["system_instruction"] = {"parts": [{"text": system_instruction}]}
 
@@ -220,18 +239,21 @@ class GeminiClient:
             return GeminiResponse(success=False, error=f"Parse failed: {e}", raw_response=data)
 
     async def _handle_native_stream(self, client, url, payload) -> GeminiResponse:
-        """Handles Server-Sent Events for native stream."""
+        """Handles Server-Sent Events for native stream with enhanced robustness."""
         full_text = []
         full_thoughts = []
         last_data = None
         
         try:
-            async with client.stream("POST", url, json=payload, headers=self._get_headers()) as resp:
+            # SOTA: Increase read timeout specifically for streaming to handle thinking latency
+            async with client.stream("POST", url, json=payload, headers=self._get_headers(), timeout=httpx.Timeout(self.timeout, read=300.0)) as resp:
                 if resp.status_code != 200:
                     err_body = await resp.aread()
                     return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {err_body.decode()}")
                 
                 async for line in resp.aiter_lines():
+                    if not line: continue
+                    
                     if line.startswith("data: "):
                         data_str = line[6:].strip()
                         if data_str == "[DONE]": break
@@ -246,7 +268,10 @@ class GeminiClient:
                                         full_thoughts.append(p.get("text", ""))
                                     elif "text" in p:
                                         full_text.append(p["text"])
-                        except:
+                        except Exception as e:
+                            # Skip malformed chunks but continue the stream
+                            if self.api_base_url.startswith("http://localhost"):
+                                print(f"  [GeminiClient] ⚠️ Stream Chunk Parse Error: {e}")
                             continue
             
             return GeminiResponse(
@@ -255,8 +280,10 @@ class GeminiClient:
                 success=True,
                 raw_response=last_data
             )
+        except httpx.ReadTimeout:
+            return GeminiResponse(success=False, error="Stream Read Timeout (Server taking too long to think)")
         except Exception as e:
-            return GeminiResponse(success=False, error=str(e))
+            return GeminiResponse(success=False, error=f"Stream Error: {str(e)}")
 
     def test_connection(self) -> bool:
         """Simple health check via native endpoint."""
@@ -305,7 +332,7 @@ class GeminiClient:
 
     async def generate_parallel_async(self, tasks: List[Dict], debug: bool = False) -> List[GeminiResponse]:
         """Execute multiple native tasks in parallel."""
-        max_concurrent = 3 
+        max_concurrent = 5 
         semaphore = asyncio.Semaphore(max_concurrent)
         
         async def worker(task):
