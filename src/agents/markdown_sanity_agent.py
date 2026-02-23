@@ -91,6 +91,7 @@ class MarkdownSanityAgent:
                 advice = "\n".join(advice_parts)
                 
                 # 调用 Universal Fixer
+                print(f"    [Sanity] 🚀 Requesting patch from Fixer (Iteration {retry})...")
                 fix_result = await run_markdown_fixer(
                     self.client,
                     content,
@@ -99,16 +100,18 @@ class MarkdownSanityAgent:
                 )
                 
                 if fix_result and fix_result.get("status") == "FIXED":
+                    print(f"    [Sanity] 📥 Fixer returned {len(fix_result.get('patches', []))} patches. Applying...")
                     new_content = apply_patches(content, fix_result)
                     if new_content != content:
                         md_path.write_text(new_content, encoding="utf-8")
                         modified_any = True
-                        print(f"    ✅ 已应用修复补丁至 {md_path.name}")
+                        print(f"    ✅ 已成功应用修复补丁至 {md_path.name}")
                     else:
-                        print(f"    ⚠️ Fixer 未能产生有效变更")
+                        print(f"    ⚠️ Fixer 补丁内容与原文一致，未产生实际变更。")
                         break
                 else:
-                    print(f"    ❌ Fixer 运行失败")
+                    reason = fix_result.get("reason", "Unknown API error/timeout") if fix_result else "No response"
+                    print(f"    ❌ Fixer 运行失败: {reason}")
                     break
                     
         if modified_any:

@@ -184,25 +184,28 @@ async def audit_svg_async(
 # 语义图注优化 (SOTA 2.0 Post-Fulfillment Alignment)
 # ============================================================================
 
-CAPTION_REFINEMENT_PROMPT = """You are a Senior Technical Editor. Your task is to write a high-fidelity, structured, and aesthetically pleasing caption for the provided visual asset.
+CAPTION_REFINEMENT_PROMPT = """You are a Senior Editor. Your task is to write a high-fidelity, structured, and context-aware caption for the provided visual asset.
+
+### 🎯 Core Mission: Argumentative Support
+The caption MUST serve as a bridge between the visual evidence and the narrative logic in the [FULL SECTION MARKDOWN]. Do not just describe the image in isolation; explain how it validates, illustrates, or extends the specific argument being made in the surrounding text.
 
 ### 🎨 SOTA 2.0 Styling Rules:
+- **Narrative Integration**: The caption must feel like an organic continuation of the chapter's thought process. Use terminology and phrasing consistent with the [FULL SECTION MARKDOWN].
 - **Structure**: Use a "Title: Description" format.
 - **Emphasis**: **Bold** the core subject and key visual labels (e.g., **RA**, **Vector V**).
-- **Conciseness**: Avoid filler words. Every word must add value.
-- **Narrative Bridge**: Use the [FULL SECTION MARKDOWN] to ensure the caption explains NOT JUST what the image is, but WHY it matters to the surrounding argument.
+- **Conciseness**: Every word must add analytical value to the reader's understanding.
 
 ### Instructions:
 1. **Analyze the Visual Evidence**: Identify specific labels, colors, and spatial arrangements.
-2. **Deep Context Integration**: Reference specific terms or logic found in the [FULL SECTION MARKDOWN].
-3. **Synthesis**: Create a caption that feels like an organic extension of the text.
+2. **Deep Context Synthesis**: Reference specific mechanisms or concepts introduced in the [FULL SECTION MARKDOWN].
+3. **Outcome**: Create a caption that makes the image an indispensable part of the narrative proof.
 
 ### Input Data:
 - **Original Directive**: {original_directive}
 - **Full Section Markdown**: {section_markdown}
 
 ### Output Format:
-**[Refined Title]**: [1-2 sentences of professional technical description incorporating visual evidence].
+**[Refined Title]**: [Professional description that integrates visual evidence into the section's narrative context].
 (Output ONLY the final caption text)
 """
 

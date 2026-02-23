@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from DrissionPage import ChromiumOptions, ChromiumPage
 
+from ..core.config import DEFAULT_MODEL
 from ..core.gemini_client import GeminiClient
 from ..core.types import AgentState
 from ..core.json_utils import parse_json_dict_robust
@@ -86,7 +87,7 @@ class VisualQAAgent:
         self.debug = debug
         self.headless = headless
         self.max_iterations = 3
-        self.model_name = "gemini-3-flash-preview-maxthinking"
+        self.model_name = DEFAULT_MODEL
 
     def run(self, state: AgentState) -> AgentState:
         """Execute visual QA using Critic-Fixer dual-agent architecture."""

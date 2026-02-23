@@ -47,7 +47,7 @@ class AssetFulfillmentAgent:
     """
 
     MAX_REPAIR_ATTEMPTS = 5
-    DEFAULT_MAX_CONCURRENCY = 3
+    DEFAULT_MAX_CONCURRENCY = 5
 
     def __init__(
         self,

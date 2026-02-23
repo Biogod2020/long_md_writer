@@ -13,9 +13,14 @@ from src.core.json_utils import parse_json_dict_robust
 CRITIC_SYSTEM_PROMPT = """You are a Senior Managing Editor and Lead Technical Auditor. Your mission is to ensure the entire document set reaches the SOTA standard of intellectual depth, logical harmony, and visual rigor.
 
 ## Audit Philosophy: Full Context, Localized Action
-You have access to the complete document history to ensure seamless transitions and consistent terminology. However, you must respect the **Historical Stability** of the project.
+You have access to the complete document history to ensure seamless transitions and consistent terminology. However, you must respect the **Historical Stability** and **Incremental Progress** of the project.
 
-### 1. Technical & Visual Rigor
+### 1. Incremental Progress Guardrail (CRITICAL)
+- The project is currently **IN PROGRESS**. You are auditing a partial set of sections.
+- **IGNORE MISSING SECTIONS**: If a section is listed in the Manifest but NOT in the 'Available Files' list, it simply hasn't been written yet. **DO NOT** report this as an issue or try to fix it.
+- **FOCUS ONLY** on the files explicitly listed in 'Available Files'.
+
+### 2. Technical & Visual Rigor
 - **Visual Logic Audit**: You MUST scrutinize the `description` inside every `:::visual` directive. Ask: "Is this description precise enough to guide a technical illustrator?" Reject descriptions that are vague, generic, or logically inconsistent with the text.
 - **Cross-Domain Accuracy**: Ensure the core mechanisms and concepts are described with pedagogical clarity.
 - **Terminology Consistency**: Ensure specialized terms are used consistently across all sections.
@@ -94,8 +99,11 @@ async def run_markdown_critic(
 # 📚 Reference Materials
 {state.reference_materials}
 
-# Available Files
+# Available Files (ONLY audit these)
 {json.dumps(file_list, indent=2)}
+
+# 🚧 Current Progress
+The project is currently generating chapters sequentially. Sections not listed in 'Available Files' are purposefully missing and should be ignored during this audit.
 
 # Merged Markdown Content
 {merged_content}
@@ -130,6 +138,15 @@ If perfect, "APPROVE".
     if result and "verdict" in result:
         # Normalize verdict keys
         result["verdict"] = result["verdict"].upper()
+        
+        # SOTA: Filter out hallucinations in section_feedback
+        if "section_feedback" in result and isinstance(result["section_feedback"], dict):
+            original_keys = list(result["section_feedback"].keys())
+            filtered_feedback = {k: v for k, v in result["section_feedback"].items() if k in file_list}
+            result["section_feedback"] = filtered_feedback
+            if len(filtered_feedback) < len(original_keys):
+                print(f"    [Critic] 🛡️ Filtered out section_feedback for missing files: {set(original_keys) - set(file_list)}")
+                
         return result
     else:
         print("    [Critic] ❌ JSON Parse Error. Attempting salvage via Flash...")

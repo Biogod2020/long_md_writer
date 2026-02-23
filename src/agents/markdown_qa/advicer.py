@@ -19,16 +19,14 @@ Input:
 
 Output:
 A JSON object mapping EACH filename that needs changes to a specific "advice" string.
-Format:
-{
-  "filename.md": "Specific instruction 1. Specific instruction 2..."
-}
 
 Rules:
+- **INCREMENTAL MODE**: Only generate instructions for files that are present in the 'Available Files' list. Ignore any sections from the manifest that are missing.
 - THE INSTRUCTIONS MUST BE ACTIONABLE. Don't say "fix the tone", say "change 'you' to 'the user'".
 - For complex formatting issues (like math-hell), break down the instructions into small, granular steps (e.g. "Step 1: Fix formula on line 5. Step 2: Fix formula on line 12.").
 - Look at the 'section_feedback' from the Critic to know what to fix in each file.
 - Only include files that actually need changes.
+- **STRICT CONSTRAINT**: You MUST ONLY provide advice for files listed in the 'Available Files' section. Do NOT mention or invent any other filenames.
 """
 
 async def run_markdown_advicer(
@@ -46,7 +44,7 @@ async def run_markdown_advicer(
     prompt = f"""# Critic's General Feedback
 {critic_feedback}
 
-# Available Files
+# Available Files (STRICT LIST)
 {files_json}
 
 # Merged Content
@@ -75,7 +73,12 @@ Return ONLY valid JSON.
         
     advice_map = parse_json_dict_robust(text)
     if advice_map:
-        return advice_map
+        # SOTA: Filter out hallucinations (files not in the original list)
+        filtered_map = {k: v for k, v in advice_map.items() if k in file_list}
+        if len(filtered_map) < len(advice_map):
+            hallucinated = set(advice_map.keys()) - set(file_list)
+            print(f"    [Advicer] 🛡️ Filtered out hallucinated files: {hallucinated}")
+        return filtered_map
     else:
         print("    [Advicer] ⚠️ JSON Parse Error from robust parser.")
         return {}

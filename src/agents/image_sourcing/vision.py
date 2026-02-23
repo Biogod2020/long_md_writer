@@ -78,7 +78,8 @@ class VisionSelector:
 ### EVALUATION STRATEGY:
 1. **Deductive Analysis**: Look at all candidates as a set to find consistent visual evidence.
 2. **Cross-Verification**: Match visual clues inside images against the "Source Context" text.
-3. **Truth over Aesthetics**: Prioritize authenticity over artistic variations.
+3. **Narrative Alignment**: Ensure the image provides strong evidence or illustration for the surrounding context.
+4. **Truth over Aesthetics**: Prioritize authenticity and factual clarity.
 
 **Target Subject**: "{description}"
 **Acceptance Guidance**: {guidance}

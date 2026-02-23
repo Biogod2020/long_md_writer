@@ -18,6 +18,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.orchestration.workflow_html import run_workflow
 from src.core.gemini_client import GeminiClient
+from src.core.config import DEFAULT_BASE_URL, DEFAULT_AUTH_PASSWORD
 
 
 console = Console()
@@ -68,15 +69,15 @@ def main():
     parser.add_argument(
         "--api-url",
         type=str,
-        default="http://localhost:8888",
-        help="Gemini API Native Proxy root URL (default: http://localhost:8888)"
+        default=DEFAULT_BASE_URL,
+        help=f"Gemini API Native Proxy root URL (default: {DEFAULT_BASE_URL})"
     )
     
     parser.add_argument(
         "--auth-token",
         type=str,
-        default="",
-        help="API 认证 token"
+        default=DEFAULT_AUTH_PASSWORD,
+        help=f"API 认证 token (default: {DEFAULT_AUTH_PASSWORD})"
     )
     
     parser.add_argument(

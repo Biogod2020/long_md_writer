@@ -292,13 +292,15 @@ def create_generation_workflow(
     return workflow.compile(checkpointer=MemorySaver())
 
 
+from src.core.config import DEFAULT_BASE_URL, DEFAULT_AUTH_PASSWORD
+
 async def run_workflow(
     raw_materials: str,
     reference_docs: Optional[list[str]] = None,
     workspace_base: str = "./workspace",
     job_id: Optional[str] = None,
-    api_base_url: str = "http://localhost:8888/v1",
-    auth_token: str = "123456",
+    api_base_url: str = DEFAULT_BASE_URL,
+    auth_token: str = DEFAULT_AUTH_PASSWORD,
     debug_mode: bool = False,
     skip_markdown_qa: bool = False,
 ) -> AgentState:

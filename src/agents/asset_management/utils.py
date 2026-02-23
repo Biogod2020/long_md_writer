@@ -86,7 +86,11 @@ def generate_figure_html(
     )
     return f'''<figure>
 {img_tag}
-<figcaption>{caption}</figcaption>
+<figcaption>
+
+{caption}
+
+</figcaption>
 </figure>'''
 
 

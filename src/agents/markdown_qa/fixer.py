@@ -7,6 +7,12 @@ from typing import Dict, Optional, Any
 from src.core.gemini_client import GeminiClient
 from src.core.patcher import apply_smart_patch
 
+def add_line_numbers(code: str) -> str:
+    """Add line numbers to code for AI reference."""
+    lines = code.split('\n')
+    width = len(str(len(lines)))
+    return '\n'.join(f"{str(i+1).rjust(width)} | {line}" for i, line in enumerate(lines))
+
 
 FIXER_SYSTEM_PROMPT = r"""You are an expert code-editing assistant. 
 Your task is to provide a \`search\` string that will match the text in the file precisely, and a \`replace\` string with the corrected content.
@@ -41,17 +47,24 @@ async def run_markdown_fixer(
     Run the Fixer to generate patches for a single file.
     """
     # Optimized Prompt Structure: Clear separation, reduced noise
-    prompt = f"""# GOAL (The Fix to Apply)
+    prompt = f"""# 🛠️ MISSION: APPLY TARGETED PATCHES
+Apply the following specific changes to the target file.
+
+## 📋 ADVICE / FEEDBACK
 {advice}
 
-# TARGET FILE CONTENT (Read-Only Source)
-{file_content}
+## 📄 TARGET FILE CONTENT (Line numbers for reference only)
+```markdown
+{add_line_numbers(file_content)}
+```
 
-# REFERENCE CONTEXT (Optional)
-{context if context else "(None)"} 
+## 🔍 ADDITIONAL CONTEXT (Merged Document View)
+<details>
+{context if context else "(None)"}
+</details>
 
 ---
-Identify the text block to change and generate the JSON patch.
+Generate the JSON patch. Ensure the `search` block matches the target file content EXACTLY (without line numbers).
 """
     
     if debug:
