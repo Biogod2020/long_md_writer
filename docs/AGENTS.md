@@ -14,7 +14,7 @@ Magnum Opus HTML Agent is a multi-agent system for generating technical Markdown
 ## Key Workflows
 - Streamlit GUI: `streamlit run app.py`
 - CLI: `python main.py --input inputs/prompt.txt --output workspace/<job_id>/`
-- With custom API: `python main.py --input inputs/prompt.txt --api-url http://localhost:8888/v1 --auth-token <token>`
+- With custom API: `python main.py --input inputs/prompt.txt --api-url http://localhost:3000/v1beta --auth-token <token>`
 
 ## Primary Data Models
 Defined in `src/core/types.py`:
