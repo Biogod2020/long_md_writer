@@ -147,10 +147,15 @@ class EditorialQAAgent:
         
         print(f"\n[EditorialQA] 🛡️ Starting Global Quality Gate (Merged Document)...")
 
-        # 1. PHYSICAL MERGE
-        print(f"  [EditorialQA] Merging {len(state.completed_md_sections)} sections...")
-        if not merge_markdown_sections(state.completed_md_sections, str(merged_path)):
-            print("  [EditorialQA] ❌ Physical merge failed. Aborting QA.")
+        # 1. PHYSICAL MERGE & SOTA EXPORT
+        print(f"  [EditorialQA] Merging {len(state.completed_md_sections)} sections and exporting assets...")
+        if not merge_markdown_sections(
+            state.completed_md_sections, 
+            str(merged_path), 
+            workspace_path=state.workspace_path,
+            asset_registry=state.get_uar()
+        ):
+            print("  [EditorialQA] ❌ Physical merge/export failed. Aborting QA.")
             state.markdown_approved = False
             return state
 
