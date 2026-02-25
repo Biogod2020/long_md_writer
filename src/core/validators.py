@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from html.parser import HTMLParser
 
+from src.core.json_utils import parse_json_robust
+
 
 class ValidationSeverity(str, Enum):
     """校验问题严重程度"""
@@ -95,80 +97,130 @@ class ValidationResult:
 
 class MarkdownStructureValidator:
     """
-    Markdown 指令块结构校验器
-
-    检查内容：
-    1. `:::` 容器块是否正确闭合
-    2. 指令首行的 JSON 配置是否语法正确
-    3. 嵌套指令块是否合法
+    SOTA 2.0 状态机指令校验器 (State-Machine Based Validator)
+    
+    采用平衡栈逻辑取代脆弱的全局正则，核心原则：
+    1. 资产契约优先：对 visual/script 执行严格 JSON 审计。
+    2. 创作包容性：对 tip/important 等语义容器仅做边界平衡校验。
+    3. 机械严谨：严格要求 ::: 位于行首，防止误伤。
     """
 
-    # 匹配指令开始: :::name 或 :::name {json}
-    DIRECTIVE_START_PATTERN = re.compile(r'^(:::)(\w+)(?:\s+(\{.*\}))?$', re.MULTILINE)
-    # 匹配指令结束: :::
-    DIRECTIVE_END_PATTERN = re.compile(r'^:::$', re.MULTILINE)
-    # 匹配带类型的指令: :::visual, :::script, :::important 等
-    KNOWN_DIRECTIVES = {"visual", "script", "important", "warning", "note", "tip", "details", "quote"}
+    # 必须执行 JSON 校验的硬契约指令
+    DATA_DIRECTIVES = {"visual", "script"}
+    # 允许灵活格式的语义指令
+    SEMANTIC_DIRECTIVES = {"important", "warning", "note", "tip", "details", "quote"}
 
-    def validate(self, content: str) -> ValidationResult:
-        """执行校验"""
+    def validate(self, content: str, expected_namespace: Optional[str] = None) -> ValidationResult:
         result = ValidationResult(is_valid=True, validator_name="MarkdownStructureValidator")
-
         lines = content.split("\n")
-        directive_stack = []  # 栈: [(directive_name, line_number, json_config)]
+        
+        # 状态追踪栈: [[name, line_num, raw_content, buffer]]
+        # buffer 用于收集多行内容 (针对 DATA_DIRECTIVES)
+        stack = []
 
-        for line_num, line in enumerate(lines, start=1):
+        for line_idx, line in enumerate(lines):
+            line_num = line_idx + 1
             stripped = line.strip()
-
-            # 检查指令开始
-            start_match = self.DIRECTIVE_START_PATTERN.match(stripped)
-            if start_match:
-                directive_name = start_match.group(2)
-                json_config = start_match.group(3)
-
-                # 验证 JSON 配置
-                if json_config:
-                    try:
-                        json.loads(json_config)
-                    except json.JSONDecodeError as e:
-                        result.add_error(
-                            f"指令 :::{directive_name} 的 JSON 配置语法错误: {e.msg}",
-                            line_number=line_num,
-                            context=stripped,
-                            suggestion="检查 JSON 格式：确保引号配对、逗号正确、无多余字符"
-                        )
-
-                # 检查未知指令 (警告级别)
-                if directive_name not in self.KNOWN_DIRECTIVES:
-                    result.add_warning(
-                        f"未知指令类型: :::{directive_name}",
-                        line_number=line_num,
-                        suggestion=f"已知指令: {', '.join(self.KNOWN_DIRECTIVES)}"
-                    )
-
-                directive_stack.append((directive_name, line_num, json_config))
-                continue
-
-            # 检查指令结束
+            
+            # --- 逻辑 A: 处理指令结束 (严格匹配行首 :::) ---
             if stripped == ":::":
-                if not directive_stack:
+                if not stack:
+                    # 发现孤立的结束标记
+                    context = self._get_context(lines, line_idx)
                     result.add_error(
-                        "发现未匹配的指令结束标记 `:::`",
+                        "发现多余或未匹配的指令结束标记 `:::`",
                         line_number=line_num,
-                        suggestion="删除多余的 `:::` 或检查是否缺少指令开始"
+                        context=context,
+                        suggestion="删除此行，或检查上方指令是否因格式问题未被识别为“开始”。"
                     )
                 else:
-                    directive_stack.pop()
+                    name, start_line, raw_start, buffer = stack.pop()
+                    
+                    # 如果是硬契约指令，在结束时进行整体 JSON 审计
+                    if name in self.DATA_DIRECTIVES:
+                        # 合并 buffer 中的内容进行解析
+                        full_content = "\n".join(buffer)
+                        config = parse_json_robust(full_content)
+                        
+                        if not config or not isinstance(config, dict):
+                            result.add_error(
+                                f"资产指令 :::{name} 的 JSON 语法错误或配置为空",
+                                line_number=start_line,
+                                context=raw_start,
+                                suggestion="确保指令块内包含合法的 JSON 对象，且包含 id 字段。"
+                            )
+                        else:
+                            # 严守项校验: 必须有 id
+                            asset_id = config.get("id")
+                            if not asset_id:
+                                result.add_error(
+                                    f"资产指令 :::{name} 缺少必需字段 'id'",
+                                    line_number=start_line,
+                                    context=raw_start,
+                                    suggestion="资产指令必须包含一个唯一的 id。"
+                                )
+                            elif expected_namespace:
+                                # 严守项校验: 必须符合命名空间前缀 (如 s1-)
+                                prefix = f"{expected_namespace}-"
+                                if not asset_id.startswith(prefix):
+                                    result.add_error(
+                                        f"资产指令 :::{name} 的 ID '{asset_id}' 缺少命名空间前缀 '{prefix}'",
+                                        line_number=start_line,
+                                        context=raw_start,
+                                        suggestion=f"请确保 ID 以 '{prefix}' 开头。"
+                                    )
+                continue
 
-        # 检查未闭合的指令
-        for directive_name, start_line, _ in directive_stack:
+            # 如果栈顶是 DATA_DIRECTIVE，且当前不是结束标记，则继续收集内容
+            if stack and stack[-1][0] in self.DATA_DIRECTIVES:
+                stack[-1][3].append(line)
+                continue
+
+            # --- 逻辑 B: 处理指令开始 (以 ::: 开头但不是单纯的 :::) ---
+            if stripped.startswith(":::") and len(stripped) > 3:
+                # 提取指令名: :::name {suffix}
+                match = re.match(r'^:::(?P<name>\w+)(?:\s+(?P<suffix>.*))?$', stripped)
+                if not match:
+                    # 可能是格式错误的开始标记，如 ::: tip (多了空格)
+                    result.add_warning(
+                        f"指令开始标记格式不规范: '{stripped}'",
+                        line_number=line_num,
+                        suggestion="标准格式为 :::name [suffix]，冒号与名称间不应有空格。"
+                    )
+                    continue
+
+                name = match.group('name')
+                suffix = (match.group('suffix') or "").strip()
+
+                # 1. 压栈: [name, line_num, stripped, buffer]
+                # 如果有后缀，直接加入 buffer
+                buffer = [suffix] if suffix else []
+                stack.append([name, line_num, stripped, buffer])
+                
+                # 2. 针对非标准指令发出提示 (不计入错误)
+                if name not in self.DATA_DIRECTIVES and name not in self.SEMANTIC_DIRECTIVES:
+                    result.add_info(
+                        f"检测到自定义语义容器: :::{name}",
+                        line_number=line_num,
+                        suggestion="只要 HTML Transformer 能理解此意图即可，无需修改。"
+                    )
+
+        # --- 逻辑 C: 检查未闭合的指令 (栈内残留) ---
+        for name, start_line, raw, _ in stack:
             result.add_error(
-                f"指令 :::{directive_name} 未正确闭合",
+                f"指令 :::{name} 未正确闭合",
                 line_number=start_line,
-                suggestion="在指令内容后添加单独一行 `:::`"
+                context=raw,
+                suggestion=f"请在指令内容结束后的新行添加 `:::`。该指令始于第 {start_line} 行。"
             )
 
         return result
+
+    def _get_context(self, lines: list[str], current_idx: int, window: int = 2) -> str:
+        """抓取错误行附近的物理上下文"""
+        start = max(0, current_idx - window)
+        end = min(len(lines), current_idx + window + 1)
+        return "\n".join(lines[start:end])
 
 
 # ============================================================================
@@ -496,7 +548,7 @@ class MarkdownValidator:
         combined = ValidationResult(is_valid=True, validator_name="MarkdownValidator")
 
         # 1. 结构校验 (始终执行)
-        structure_result = self.structure_validator.validate(content)
+        structure_result = self.structure_validator.validate(content, namespace)
         combined.merge(structure_result)
 
         # 2. HTML 校验
@@ -516,10 +568,10 @@ class MarkdownValidator:
 
         return combined
 
-    def validate_quick(self, content: str) -> ValidationResult:
+    def validate_quick(self, content: str, namespace: Optional[str] = None) -> ValidationResult:
         """
         快速校验 (仅检查结构)
 
         用于实时校验场景，追求速度
         """
-        return self.structure_validator.validate(content)
+        return self.structure_validator.validate(content, namespace)
