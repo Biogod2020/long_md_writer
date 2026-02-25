@@ -85,6 +85,23 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: SVG Sub-Agent Decoupling & Enhancement**
 *Link: [./tracks/svg_agent_decoupling_20260212/](./tracks/svg_agent_decoupling_20260212/)*
-\n---\n\n- [x] **Track: Migrate API provider from geminicli2api to AIClient-2-API**\n*Link: [./tracks/api_migration_20260218/](./tracks/api_migration_20260218/)*
-- [ ] [sourcing_rescue_20260223](./tracks/sourcing_rescue_20260223/spec.md): Automated CAPTCHA Rescue UI
-- [ ] [output_refinement_20260223](./tracks/output_refinement_20260223/spec.md): SOTA Output Quality Refinement
+
+---
+
+- [x] **Track: Migrate API provider from geminicli2api to AIClient-2-API**
+*Link: [./tracks/api_migration_20260218/](./tracks/api_migration_20260218/)*
+
+---
+
+- [ ] **Track: Automated CAPTCHA Rescue UI**
+*Link: [./tracks/sourcing_rescue_20260223/](./tracks/sourcing_rescue_20260223/)*
+
+---
+
+- [ ] **Track: SOTA Output Quality Refinement**
+*Link: [./tracks/output_refinement_20260223/](./tracks/output_refinement_20260223/)*
+
+---
+
+- [ ] **Track: Upgrade MarkdownStructureValidator to be block-aware and robust against multi-line JSON configurations.**
+*Link: [./tracks/validator_robustness_20260225/](./tracks/validator_robustness_20260225/)*
