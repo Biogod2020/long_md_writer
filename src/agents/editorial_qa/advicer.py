@@ -25,6 +25,8 @@ async def run_editorial_advicer(
 
 ---
 Provide specific, actionable instructions for final_full.md to resolve the identified errors.
+QUOTA: You MUST generate NO MORE THAN 5 atomic steps per iteration. 
+Focus on the most critical (P0/ERROR) issues first.
 Return ONLY valid JSON.
 """
     

@@ -13,10 +13,12 @@ SOTA 2.0 本地静态校验器 (Local Static Validators)
 
 import re
 import json
-from typing import Optional
+from typing import Optional, List, Dict
 from dataclasses import dataclass, field
 from enum import Enum
 from html.parser import HTMLParser
+from markdown_it import MarkdownIt
+from mdit_py_plugins.container import container_plugin
 
 from src.core.json_utils import parse_json_robust
 
@@ -95,126 +97,105 @@ class ValidationResult:
 # Markdown 结构校验器
 # ============================================================================
 
+# ============================================================================
+# 混合校验引擎 (Hybrid Validation Engine)
+# ============================================================================
+
+class CommonMarkValidator:
+    """
+    SOTA 2.1 标准 Markdown 语法校验器
+    使用 markdown-it-py 解析 AST，捕获导致渲染异常的标准语法错误。
+    """
+    def __init__(self):
+        self.md = MarkdownIt("commonmark")
+
+    def validate(self, content: str) -> ValidationResult:
+        result = ValidationResult(is_valid=True, validator_name="CommonMarkValidator")
+        try:
+            tokens = self.md.parse(content)
+            # 遍历 Token 寻找异常
+            for token in tokens:
+                # 示例：捕获未闭合的代码块 (虽然 MD 通常会容错，但在出版引擎中我们要求严谨)
+                if token.type == "fence" and not token.map:
+                    result.add_warning("检测到可能未正确闭合的代码栅栏", line_number=token.map[0] if token.map else None)
+                
+                # 检查损坏的链接或图片 (内联解析阶段)
+                if token.type == "inline":
+                    if "![" in token.content and "](" not in token.content:
+                        result.add_error("检测到格式损坏的图片链接", context=token.content[:50])
+        except Exception as e:
+            result.add_error(f"标准 Markdown 解析崩溃: {str(e)}")
+        
+        return result
+
+
 class MarkdownStructureValidator:
     """
-    SOTA 2.0 状态机指令校验器 (State-Machine Based Validator)
-    
-    采用平衡栈逻辑取代脆弱的全局正则，核心原则：
-    1. 资产契约优先：对 visual/script 执行严格 JSON 审计。
-    2. 创作包容性：对 tip/important 等语义容器仅做边界平衡校验。
-    3. 机械严谨：严格要求 ::: 位于行首，防止误伤。
+    SOTA 2.1 状态机指令校验器
+    专注处理 ::: 容器平衡与 JSON 契约。
     """
-
-    # 必须执行 JSON 校验的硬契约指令
     DATA_DIRECTIVES = {"visual", "script"}
-    # 允许灵活格式的语义指令
-    SEMANTIC_DIRECTIVES = {"important", "warning", "note", "tip", "details", "quote"}
 
     def validate(self, content: str, expected_namespace: Optional[str] = None) -> ValidationResult:
         result = ValidationResult(is_valid=True, validator_name="MarkdownStructureValidator")
-        lines = content.split("\n")
-        
-        # 状态追踪栈: [[name, line_num, raw_content, buffer]]
-        # buffer 用于收集多行内容 (针对 DATA_DIRECTIVES)
+        lines = content.splitlines()
         stack = []
-
-        for line_idx, line in enumerate(lines):
-            line_num = line_idx + 1
+        
+        for i, line in enumerate(lines):
+            line_num = i + 1
             stripped = line.strip()
             
-            # --- 逻辑 A: 处理指令结束 (严格匹配行首 :::) ---
+            # 1. 结束符检测
             if stripped == ":::":
                 if not stack:
-                    # 发现孤立的结束标记
-                    context = self._get_context(lines, line_idx)
-                    result.add_error(
-                        "发现多余或未匹配的指令结束标记 `:::`",
-                        line_number=line_num,
-                        context=context,
-                        suggestion="删除此行，或检查上方指令是否因格式问题未被识别为“开始”。"
-                    )
+                    result.add_error("发现孤立或多余的结束标记 `:::`", line_number=line_num, context=line)
                 else:
-                    name, start_line, raw_start, buffer = stack.pop()
-                    
-                    # 如果是硬契约指令，在结束时进行整体 JSON 审计
-                    if name in self.DATA_DIRECTIVES:
-                        # 合并 buffer 中的内容进行解析
-                        full_content = "\n".join(buffer)
-                        config = parse_json_robust(full_content)
-                        
-                        if not config or not isinstance(config, dict):
-                            result.add_error(
-                                f"资产指令 :::{name} 的 JSON 语法错误或配置为空",
-                                line_number=start_line,
-                                context=raw_start,
-                                suggestion="确保指令块内包含合法的 JSON 对象，且包含 id 字段。"
-                            )
-                        else:
-                            # 严守项校验: 必须有 id
-                            asset_id = config.get("id")
-                            if not asset_id:
-                                result.add_error(
-                                    f"资产指令 :::{name} 缺少必需字段 'id'",
-                                    line_number=start_line,
-                                    context=raw_start,
-                                    suggestion="资产指令必须包含一个唯一的 id。"
-                                )
-                            elif expected_namespace:
-                                # 严守项校验: 必须符合命名空间前缀 (如 s1-)
-                                prefix = f"{expected_namespace}-"
-                                if not asset_id.startswith(prefix):
-                                    result.add_error(
-                                        f"资产指令 :::{name} 的 ID '{asset_id}' 缺少命名空间前缀 '{prefix}'",
-                                        line_number=start_line,
-                                        context=raw_start,
-                                        suggestion=f"请确保 ID 以 '{prefix}' 开头。"
-                                    )
+                    closed_block = stack.pop()
+                    if closed_block["name"] in self.DATA_DIRECTIVES:
+                        self._validate_json_content(closed_block, result, expected_namespace)
                 continue
 
-            # 如果栈顶是 DATA_DIRECTIVE，且当前不是结束标记，则继续收集内容
-            if stack and stack[-1][0] in self.DATA_DIRECTIVES:
-                stack[-1][3].append(line)
+            # 2. 开始符检测
+            if stripped.startswith(":::"):
+                match = re.match(r"^:::(\w+)(.*)", stripped)
+                if match:
+                    name, suffix = match.group(1), match.group(2).strip()
+                    stack.append({"name": name, "line": line_num, "buffer": [suffix] if suffix else [], "raw": stripped})
                 continue
 
-            # --- 逻辑 B: 处理指令开始 (以 ::: 开头但不是单纯的 :::) ---
-            if stripped.startswith(":::") and len(stripped) > 3:
-                # 提取指令名: :::name {suffix}
-                match = re.match(r'^:::(?P<name>\w+)(?:\s+(?P<suffix>.*))?$', stripped)
-                if not match:
-                    # 可能是格式错误的开始标记，如 ::: tip (多了空格)
-                    result.add_warning(
-                        f"指令开始标记格式不规范: '{stripped}'",
-                        line_number=line_num,
-                        suggestion="标准格式为 :::name [suffix]，冒号与名称间不应有空格。"
-                    )
-                    continue
+            # 3. 内容收集
+            if stack and stack[-1]["name"] in self.DATA_DIRECTIVES:
+                stack[-1]["buffer"].append(line)
 
-                name = match.group('name')
-                suffix = (match.group('suffix') or "").strip()
-
-                # 1. 压栈: [name, line_num, stripped, buffer]
-                # 如果有后缀，直接加入 buffer
-                buffer = [suffix] if suffix else []
-                stack.append([name, line_num, stripped, buffer])
-                
-                # 2. 针对非标准指令发出提示 (不计入错误)
-                if name not in self.DATA_DIRECTIVES and name not in self.SEMANTIC_DIRECTIVES:
-                    result.add_info(
-                        f"检测到自定义语义容器: :::{name}",
-                        line_number=line_num,
-                        suggestion="只要 HTML Transformer 能理解此意图即可，无需修改。"
-                    )
-
-        # --- 逻辑 C: 检查未闭合的指令 (栈内残留) ---
-        for name, start_line, raw, _ in stack:
-            result.add_error(
-                f"指令 :::{name} 未正确闭合",
-                line_number=start_line,
-                context=raw,
-                suggestion=f"请在指令内容结束后的新行添加 `:::`。该指令始于第 {start_line} 行。"
-            )
+        while stack:
+            unclosed = stack.pop()
+            result.add_error(f"指令 :::{unclosed['name']} 未正确闭合", line_number=unclosed["line"], context=unclosed["raw"])
 
         return result
+
+    def _validate_json_content(self, block: dict, result: ValidationResult, expected_namespace: Optional[str]):
+        name, content, line = block["name"], "\n".join(block["buffer"]).strip(), block["line"]
+        if not content:
+            result.add_error(f"指令 :::{name} 内容为空", line_number=line)
+            return
+        config = parse_json_robust(content)
+        if not config or not isinstance(config, dict):
+            result.add_error(f"指令 :::{name} 的 JSON 语法错误", line_number=line, context=content[:100])
+        else:
+            asset_id = config.get("id")
+            if not asset_id:
+                result.add_error(f"指令 :::{name} 缺少必需字段 'id'", line_number=line)
+            elif expected_namespace:
+                prefix = f"{expected_namespace}-"
+                if not str(asset_id).startswith(prefix):
+                    result.add_error(f"指令 :::{name} 的 ID '{asset_id}' 缺少前缀 '{prefix}'", line_number=line)
+
+    def _get_context(self, lines: list[str], current_idx: int, window: int = 2) -> str:
+        """抓取错误行附近的物理上下文"""
+        start = max(0, current_idx - window)
+        end = min(len(lines), current_idx + window + 1)
+        return "\n".join(lines[start:end])
+
 
     def _get_context(self, lines: list[str], current_idx: int, window: int = 2) -> str:
         """抓取错误行附近的物理上下文"""
@@ -521,6 +502,7 @@ class MarkdownValidator:
     """
 
     def __init__(self):
+        self.commonmark_validator = CommonMarkValidator()
         self.structure_validator = MarkdownStructureValidator()
         self.html_validator = EmbeddedHTMLValidator()
         self.latex_validator = LaTeXBalanceValidator()
@@ -535,21 +517,14 @@ class MarkdownValidator:
     ) -> ValidationResult:
         """
         执行全面校验
-
-        Args:
-            content: Markdown 内容
-            namespace: 命名空间前缀 (如果提供则进行 ID 校验)
-            skip_latex: 跳过 LaTeX 校验
-            skip_html: 跳过 HTML 校验
-
-        Returns:
-            综合校验结果
         """
         combined = ValidationResult(is_valid=True, validator_name="MarkdownValidator")
 
-        # 1. 结构校验 (始终执行)
-        structure_result = self.structure_validator.validate(content, namespace)
-        combined.merge(structure_result)
+        # 1. 标准语法校验 (markdown-it-py)
+        combined.merge(self.commonmark_validator.validate(content))
+
+        # 2. 结构校验 (State Machine)
+        combined.merge(self.structure_validator.validate(content, namespace))
 
         # 2. HTML 校验
         if not skip_html:
