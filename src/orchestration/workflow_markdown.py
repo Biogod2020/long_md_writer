@@ -26,6 +26,8 @@ from ..agents.markdown_sanity_agent import MarkdownSanityAgent
 from ..agents.markdown_qa_agent import MarkdownQAAgent
 
 
+from ..core.config import HEADLESS_MODE
+
 class SOTA2NodeFactory:
     """
     SOTA 2.0 节点工厂
@@ -51,9 +53,16 @@ class SOTA2NodeFactory:
         self.techspec = TechSpecAgent(self.client)
         self.writer = WriterAgent(self.client)
         self.sanity_fixer = MarkdownSanityAgent(self.client)
-        # SOTA: 开启搜图功能 (skip_search=False)
-        self.fulfillment = AssetFulfillmentAgent(client=self.client, skip_generation=False, skip_search=False)
+        # SOTA: Fulfillment agent now handles headless flag propagation internally
+        self.fulfillment = AssetFulfillmentAgent(
+            client=self.client, 
+            skip_generation=False, 
+            skip_search=False, 
+            headless=HEADLESS_MODE
+        )
         self.markdown_qa = MarkdownQAAgent(self.client)
+        from ..agents.editorial_qa_agent import EditorialQAAgent
+        self.editorial_qa = EditorialQAAgent(client=self.client)
 
     async def asset_indexer_node(self, state: AgentState) -> AgentState:
         print("\n[SOTA2] 📦 Phase 0: Asset Indexing")
@@ -131,7 +140,7 @@ class SOTA2NodeFactory:
         return state
 
     async def batch_fulfillment_node(self, state: AgentState) -> AgentState:
-        print("\n[SOTA2] 🎨 Phase 4.1: Parallel Asset Fulfillment")
+        print("\n[SOTA2] 🎨 Phase 4.2: Parallel Asset Fulfillment")
         state = await self.fulfillment.run_parallel_async(state)
         
         from .breakpoint_manager import SnapshotManager
@@ -139,11 +148,8 @@ class SOTA2NodeFactory:
         return state
 
     async def global_markdown_qa_node(self, state: AgentState) -> AgentState:
-        print("\n[SOTA2] 🛡️ Phase 4.2: Global Markdown QA (Merged Gatekeeper)")
-        from ..agents.editorial_qa_agent import EditorialQAAgent
-        agent = EditorialQAAgent(client=self.client)
-        state = await agent.run_async(state)
-        return state
+        print("\n[SOTA2] 🛡️ Phase 4.1: Global Markdown QA (Merged Gatekeeper)")
+        return await self.editorial_qa.run_async(state)
 
     def batch_asset_review_node(self, state: AgentState) -> AgentState: 
         return state
@@ -197,20 +203,27 @@ def create_sota2_workflow(
             return "markdown_sanity"
         return "markdown_review"
 
-    def should_advance_to_fulfillment(state: AgentState) -> Literal["writer", "batch_fulfillment", "markdown_sanity"]:
+    def should_advance_to_global_qa(state: AgentState) -> Literal["writer", "global_markdown_qa", "markdown_sanity"]:
         if not state.markdown_approved or state.md_qa_needs_revision:
             return "markdown_sanity"
         if state.all_sections_written():
-            return "batch_fulfillment"
+            return "global_markdown_qa"
         return "writer"
 
+    def should_finish_global_qa(state: AgentState) -> Literal["batch_fulfillment", "markdown_sanity"]:
+        # If global QA passed, move to fulfillment
+        if state.markdown_approved:
+            return "batch_fulfillment"
+        # If it failed structural/logical checks, go back to fix
+        return "markdown_sanity"
+
     def should_finish_fulfillment(state: AgentState) -> Literal["batch_asset_review", "end"]:
-        # 如果已经手动批准，或者没有需要修复的资产，且全局 MD QA 通过，则结束
+        # 如果已经手动批准，或者没有需要修复的资产，则结束
         if state.asset_approved:
             return "end"
         
-        # SOTA: 如果资产需要修复，或者全局 Markdown 审核未通过，则进入人工审核节点
-        if state.asset_revision_needed or not state.markdown_approved:
+        # SOTA: 如果资产需要修复，则进入人工审核节点
+        if state.asset_revision_needed:
             return "batch_asset_review"
             
         return "end"
@@ -229,16 +242,16 @@ def create_sota2_workflow(
     workflow.add_edge("markdown_sanity", "markdown_qa")
     
     workflow.add_conditional_edges("markdown_qa", should_continue_section_loop, {"markdown_sanity": "markdown_sanity", "markdown_review": "markdown_review", "writer": "writer"})
-    workflow.add_conditional_edges("markdown_review", should_advance_to_fulfillment, {"writer": "writer", "batch_fulfillment": "batch_fulfillment", "markdown_sanity": "markdown_sanity"})
     
-    # --- SOTA 2.0 Global Gatekeeper Flow ---
-    # 1. First fulfill all assets (Images, SVGs)
-    workflow.add_edge("batch_fulfillment", "global_markdown_qa")
+    # SHIFT-LEFT: Global QA before Fulfillment
+    workflow.add_conditional_edges("markdown_review", should_advance_to_global_qa, {"writer": "writer", "global_markdown_qa": "global_markdown_qa", "markdown_sanity": "markdown_sanity"})
     
-    # 2. Then run global audit on the merged fully-fulfilled document
-    workflow.add_conditional_edges("global_markdown_qa", should_finish_fulfillment, {"batch_asset_review": "batch_asset_review", "end": END})
+    workflow.add_conditional_edges("global_markdown_qa", should_finish_global_qa, {"batch_fulfillment": "batch_fulfillment", "markdown_sanity": "markdown_sanity"})
     
-    # 3. If human review is needed, loop back to fulfillment (if assets need fix) or logic fix
+    # Fulfillment happens on a conceptually "finalized" manuscript
+    workflow.add_conditional_edges("batch_fulfillment", should_finish_fulfillment, {"batch_asset_review": "batch_asset_review", "end": END})
+    
+    # If human review is needed for assets, loop back to fulfillment
     workflow.add_edge("batch_asset_review", "batch_fulfillment")
 
     # Compile with persistence

@@ -105,4 +105,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: Upgrade MarkdownStructureValidator to be block-aware and robust against multi-line JSON configurations.**
 *Link: [./tracks/validator_robustness_20260225/](./tracks/validator_robustness_20260225/)*
-\n---\n\n- [ ] **Track: Magnum Opus 2.1 - Robustness hardening via pre-fulfillment layered editorial QA and ID-based anchor matching.**\n*Link: [./tracks/robustness_hardening_20260226/](./tracks/robustness_hardening_20260226/)*
+
+---
+
+- [x] **Track: Magnum Opus 2.1 - Robustness hardening via pre-fulfillment layered editorial QA and ID-based anchor matching.**
+*Link: [./tracks/robustness_hardening_20260226/](./tracks/robustness_hardening_20260226/)*
