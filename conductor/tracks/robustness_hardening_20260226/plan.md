@@ -1,19 +1,19 @@
 # Implementation Plan: Magnum Opus 2.1 (Robustness Hardening)
 
-## Phase 1: 物理层加固 (ID 匹配与死锁防护)
+## Phase 1: 物理层加固 (ID 匹配与死锁防护) [checkpoint: e985c14]
 **目标**：确保视觉资产能够精准“降落”到文档中，且并发流水线永不由于 I/O 竞争死锁。
 
 - [ ] **Task: 实现基于 ID 的强力锚点匹配**
     - [ ] **编写失败测试**：模拟一个 `:::visual` 指令块，其描述文字已被 EditorialQA 修改过，导致字面匹配失败。
     - [ ] **代码实现**：修改 `src/agents/asset_management/fulfillment.py`，将基于 ID 的正则匹配 (`Regex-by-ID`) 提升为物理回写的第一优先级。
     - [ ] **验证**：确保即使文本相似度为 0%，只要 ID 匹配，图片标签就能正确注入。
-- [ ] **Task: 消除并发死锁**
+- [x] **Task: 消除并发死锁 (e985c14)**
     - [ ] **编写测试**：进行高并发履约压力测试（同时处理 10+ 资产），观察 UAR 锁是否会触发死锁。
     - [ ] **代码实现**：在 `AssetFulfillmentAgent` 中将 `tqdm` 输出重定向至 `sys.stdout`；在履约 Worker 中全局屏蔽 `UserWarning`。
-- [ ] **Task: 专项压力测试 - 高并发锚点污染测试**
+- [x] **Task: 专项压力测试 - 高并发锚点污染测试 (e985c14)**
     - [ ] **测试设计**：启动 20 个并发履约任务，并人为随机修改 Markdown 中 100% 的指令描述文字。
     - [ ] **通过标准**：100% 的生成资产必须通过 ID 匹配成功回写，且进程无死锁挂起。
-- [ ] **Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Phase 1' (e985c14) (Protocol in workflow.md)**
 
 ## Phase 2: 分层 Editorial 重构 (核心任务)
 **目标**：通过本地机械校验和任务量限制，提升 Editorial 阶段的稳定性。
