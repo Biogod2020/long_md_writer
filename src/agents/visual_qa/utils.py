@@ -49,6 +49,10 @@ def draw_bounding_boxes(image_path: Path, issues: list, output_path: Path):
     try:
         from PIL import Image, ImageDraw
         with Image.open(image_path) as img:
+            # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            
             draw = ImageDraw.Draw(img)
             width, height = img.size
             

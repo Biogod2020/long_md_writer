@@ -78,13 +78,25 @@ class MarkdownQAAgent:
             
         print("  [MarkdownQA] 🛠️ Proceeding to Modification (Patching) Phase...")
         
-        # 4. ADVICER Phase (Now correctly indented)
-        file_list = [Path(p).name for p in state.completed_md_sections]
+        # 4. ADVICER Phase
+        # SOTA FIX: Extract section-specific feedback
+        section_feedback = critique.get("section_feedback", {})
+        
+        # Determine which files to fix: prioritize those with explicit feedback
+        if section_feedback:
+            # ONLY audit files that the critic explicitly identified
+            file_list = list(section_feedback.keys())
+            print(f"  [MarkdownQA] Critic identified {len(file_list)} files for modification: {file_list}")
+        else:
+            # Fallback: all files (legacy behavior)
+            file_list = [Path(p).name for p in state.completed_md_sections]
+            
         advice_map = await run_markdown_advicer(
             self.client, 
             merged_content, 
             file_list, 
             feedback, 
+            section_feedback=section_feedback,
             debug=state.debug_mode
         )
         
@@ -107,10 +119,10 @@ class MarkdownQAAgent:
             
         print(f"  [MarkdownQA] Advicer produced plan for {len(advice_map)} files.")
         
-        # 5. FIXER Phase (Parallel with max 1 concurrent tasks for stability)
+        # 5. FIXER Phase (Parallel with max 3 concurrent tasks for stability)
         import asyncio
         
-        semaphore = asyncio.Semaphore(1)
+        semaphore = asyncio.Semaphore(3)
         fixes_applied = 0
         fix_results = []
         
@@ -154,7 +166,7 @@ class MarkdownQAAgent:
                 new_content = apply_patches(res["current_content"], fix_result)
                 
                 if new_content != res["current_content"]:
-                    # SOTA: 执行校验仅用于日志和审计，不再阻断写入
+                    # SOTA: 执行校验仅用于日志 and 审计，不再阻断写入
                     validation = self.validator.validate_all(new_content)
                     
                     # 无论校验是否通过，都物理写入文件 (信任 AI 的渐进式改进)
@@ -184,9 +196,10 @@ class MarkdownQAAgent:
         return state
 
     def _merge_content(self, state: AgentState) -> str:
-        """Helper to merge content for the prompt"""
+        """Helper to merge content for the prompt using standard SOTA markers"""
         merged = []
         for path in state.completed_md_sections:
             p = Path(path)
-            merged.append(f"## File: {p.name}\n\n{p.read_text()}")
+            # Use standard SOTA markers expected by the Critic prompt
+            merged.append(f"<!-- [SOURCE:md/{p.name}] -->\n{p.read_text(encoding='utf-8')}\n<!-- [/SOURCE:md/{p.name}] -->")
         return "\n\n".join(merged)

@@ -1,150 +1,88 @@
 import asyncio
-import os
-import shutil
-import time
-import hashlib
+import sys
+import random
 from pathlib import Path
-from src.agents.image_sourcing.agent import ImageSourcingAgent
-from src.agents.image_sourcing.browser import BrowserManager
-from src.agents.image_sourcing.strategy import StrategyGenerator
-from src.agents.image_sourcing.search import GoogleImageSearcher
-from src.agents.image_sourcing.downloader import ImageDownloader
-from src.agents.image_sourcing.vision import VisionSelector
+from typing import List
+
+# Add project root to sys.path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from src.core.gemini_client import GeminiClient
-from src.core.types import AgentState, Manifest, SectionInfo, AssetEntry, AssetSource, AssetVQAStatus
+from src.agents.asset_management.fulfillment import AssetFulfillmentAgent
+from src.agents.asset_management.models import VisualDirective
+from src.core.types import AgentState, AssetEntry
 
-def sync_process_task(client, task, ws_path):
-    img_id = task["id"]
-    description = task["desc"]
-    print(f"\n🚀 [THREAD] Starting Task: {img_id} ({description})")
+async def run_sourcing_stress_test():
+    print("🚀 [STRESS TEST] Starting Real Web Sourcing Concurrency Test...")
+    print("🎯 Goal: Verify that search_semaphore prevents Google Captcha under load.")
     
-    task_start = time.time()
-    
-    # 1. 策略生成
-    strategy_gen = StrategyGenerator(client)
-    strategy = strategy_gen.generate(description, f"A document about {description}")
-    queries = strategy.get("queries", [description])[:2]
-    print(f"  [{img_id}] Queries: {queries}")
-
-    # 2. 搜索与下载
-    all_candidates = []
-    with BrowserManager(headless=True, block_resources=True) as bm:
-        searcher = GoogleImageSearcher(bm)
-        downloader = ImageDownloader(bm)
-        
-        for q_idx, query in enumerate(queries):
-            print(f"  [{img_id}] Searching Query {q_idx+1}: {query}...")
-            search_results = searcher.search([query])
-            all_candidates.extend(search_results[:20])
-        
-        seen_urls = set()
-        unique_candidates = []
-        for c in all_candidates:
-            if c['url'] not in seen_urls:
-                unique_candidates.append(c)
-                seen_urls.add(c['url'])
-        
-        print(f"  [{img_id}] Unique candidates: {len(unique_candidates)}. Downloading...")
-        
-        temp_dir = ws_path / f"candidates_{img_id}"
-        temp_dir.mkdir(exist_ok=True)
-        local_images = downloader.download_candidates(unique_candidates, temp_dir)
-        
-        # 3. 视觉审计 (TRUE ASYNC inside)
-        print(f"  [{img_id}] VLM Audit (Batch 20): Analyzing {len(local_images)} images...")
-        vision_selector = VisionSelector(client, debug=True)
-        
-        descriptions_map = {}
-        for img_path in local_images:
-            txt_path = img_path.with_suffix('.txt')
-            if txt_path.exists():
-                descriptions_map[img_path.name] = txt_path.read_text(encoding='utf-8')
-        
-        guidance = strategy.get("guidance", "Accurate image.")
-        
-        # 既然我们在线程中，我们还是需要一个事件循环来运行 vision_selector 的异步方法
-        async def run_audit():
-            return await vision_selector.select_best_async(local_images, description, guidance, descriptions_map)
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            ranked_winners = loop.run_until_complete(run_audit())
-        finally:
-            loop.close()
-
-        # 保存详细审计结果供用户查看
-        audit_log = ws_path / f"audit_details_{img_id}.json"
-        log_data = {
-            "intent": description,
-            "candidates_count": len(local_images),
-            "results": [
-                {
-                    "path": str(r["path"]), 
-                    "reason": r["reason"], 
-                    "vlm_description": r["description"],
-                    "score": r["score"],
-                    "full_metadata": r["metadata"]
-                } 
-                for r in ranked_winners
-            ]
-        }
-        audit_log.write_text(json.dumps(log_data, indent=2, ensure_ascii=False), encoding="utf-8")
-        
-        task_duration = time.time() - task_start
-        
-        if ranked_winners:
-            # 取得分最高的那张（如果有多个 batch）
-            best_res = max(ranked_winners, key=lambda x: x["score"])
-            best_path = best_res["path"]
-            final_ext = best_path.suffix
-            final_path = ws_path / f"{img_id}{final_ext}"
-            shutil.copy2(best_path, final_path)
-            print(f"  [{img_id}] ✅ SUCCESS: Found best match (Score: {best_res['score']}) in {task_duration:.2f}s")
-            return {"id": img_id, "status": "PASS", "time": task_duration, "score": best_res['score']}
-        else:
-            print(f"  [{img_id}] ❌ FAIL: No suitable image found in {task_duration:.2f}s")
-            return {"id": img_id, "status": "FAIL", "time": task_duration}
-
-async def process_task_wrapper(client, task, ws_path, delay):
-    if delay > 0:
-        await asyncio.sleep(delay)
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, sync_process_task, client, task, ws_path)
-
-async def run_stress_test_v6():
-    print("🔥 [STRESS TEST V6] Starting TRUE Staggered Parallel Sourcing (Executor Mode)...")
-    
+    # 1. Setup Environment
     client = GeminiClient()
-    ws_id = f"stress_sourcing_v6_{int(time.time())}"
-    ws_path = Path(f"workspaces/workspace/{ws_id}")
-    ws_path.mkdir(parents=True, exist_ok=True)
+    # High concurrency fulfillment but throttled search
+    fulfillment = AssetFulfillmentAgent(client=client, debug=True, max_concurrency=5)
     
-    test_tasks = [
-        {"id": "gz2hs-logo", "desc": "广州市第二中学的校徽"},
-        {"id": "gz2hs-uniform", "desc": "广州市第二中学的校服"},
-        {"id": "person-yujintai", "desc": "复旦大学研究员郁金泰的照片"},
-        {"id": "fig-transformer", "desc": "Transformer 论文 'Attention Is All You Need' 的 Figure 1 架构图"}
+    test_ws = Path("workspace/stress_sourcing")
+    if test_ws.exists():
+        import shutil
+        shutil.rmtree(test_ws)
+    test_ws.mkdir(parents=True)
+    
+    state = AgentState(job_id="stress_sourcing", workspace_path=str(test_ws))
+    
+    # 2. Define 5 Parallel Search Directives
+    intents = [
+        "Einthoven triangle classical physics diagram",
+        "Willem Einthoven historical portrait 1920s",
+        "Modern 12-lead ECG machine electrodes on patient",
+        "Galvanometer antique medical instrument photo",
+        "Augustus Waller capillary electrometer experiment"
     ]
-
-    start_total = time.time()
     
-    # 真正的并发启动
-    tasks = []
-    for i, task in enumerate(test_tasks):
-        tasks.append(process_task_wrapper(client, task, ws_path, delay=i*2))
+    directives = []
+    for i, intent in enumerate(intents):
+        directives.append(VisualDirective(
+            id=f"s1-fig-stress-{i+1}",
+            description=intent,
+            raw_block=f":::visual stress {i+1}:::",
+            start_pos=0,
+            end_pos=0
+        ))
 
-    print(f"🚀 Launching {len(test_tasks)} threads with 2s intervals...")
-    results = await asyncio.gather(*tasks)
+    # 3. Launch Parallel Tasks
+    print(f"\n🔥 Launching {len(directives)} parallel search tasks (Fulfillment concurrency: 5)...")
+    
+    async def task_wrapper(d):
+        ns = "s1"
+        trace = {"id": d.id, "steps": []}
+        src_path = test_ws / "agent_sourced"
+        src_path.mkdir(exist_ok=True)
+        
+        # Use the real fulfillment internal method which has the semaphore
+        result_d, asset = await fulfillment._fulfill_search_step(
+            d, state.get_uar(), src_path, ns, state, trace
+        )
+        return (d.id, result_d.fulfilled, asset is not None)
 
-    total_duration = time.time() - start_total
+    start_time = asyncio.get_event_loop().time()
+    results = await asyncio.gather(*(task_wrapper(d) for d in directives))
+    end_time = asyncio.get_event_loop().time()
+
+    # 4. Reporting
     print("\n" + "="*50)
-    print(f"📊 TRUE PARALLEL STRESS TEST COMPLETE (Total: {total_duration:.2f}s)")
-    for res in results:
-        if res:
-            print(f"- {res['id']}: {res['status']} ({res['time']:.2f}s)")
-    print(f"Artifacts: {ws_path}")
+    print("📊 STRESS TEST RESULTS")
     print("="*50)
+    success_count = sum(1 for r in results if r[2])
+    for r in results:
+        status = "✅ SUCCESS" if r[2] else "❌ FAILED"
+        print(f"  - {r[0]}: {status}")
+    
+    print(f"\n⏱️ Total Time: {end_time - start_time:.2f}s")
+    print(f"📈 Success Rate: {success_count}/{len(intents)}")
+    
+    if success_count == len(intents):
+        print("\n🏆 SUCCESS: Throttled search strategy successfully bypassed Captchas!")
+    else:
+        print("\n⚠️ WARNING: Some searches failed. Check logs for '[!] Google Captcha' markers.")
 
 if __name__ == "__main__":
-    asyncio.run(run_stress_test_v6())
+    asyncio.run(run_sourcing_stress_test())

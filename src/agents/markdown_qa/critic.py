@@ -25,25 +25,24 @@ You have access to the complete document history to ensure seamless transitions 
 - **Cross-Domain Accuracy**: Ensure the core mechanisms and concepts are described with pedagogical clarity.
 - **Terminology Consistency**: Ensure specialized terms are used consistently across all sections.
 
-### 2. The Stability Guardrail (Finalized History)
-Sections 1 through N-1 are considered **Finalized Canonical History**. 
-- **DO NOT** suggest modifications to finalized sections for stylistic polish.
-- **ONLY** trigger a modification for a finalized section if you identify a **Fatal Logical Contradiction** or a **Critical Technical Error**.
+### 2. The Stability Guardrail (Read-Only History)
+- **CANONICAL HISTORY**: All files except the VERY LAST one in the 'Available Files' list are considered Finalized Canonical History. 
+- **STRICT PROHIBITION**: You are **FORBIDDEN** from suggesting ANY modifications, fixes, or polishes to these historical files. They are provided solely for context and terminology alignment.
+- **TARGETED ACTION**: Your 'verdict' and 'section_feedback' must focus **EXCLUSIVELY** on the **last file** in the list (the current section being written).
 
 ### Verdicts:
-- **APPROVE**: Coherent and rigorous. Minor stylistic nitpicks are ignored to protect stability.
-- **MODIFY**: Technical gaps exist, or visual descriptions are insufficient/incorrect in the CURRENT section.
-- **REWRITE**: Fundamental failures (wrong language, total hallucination, catastrophic logic collapse).
+- **APPROVE**: The CURRENT section is coherent and rigorous.
+- **MODIFY**: Technical gaps or visual issues exist in the CURRENT section.
+- **REWRITE**: The CURRENT section fundamentally fails (wrong language, total hallucination).
 
 ### Output Format (JSON):
 ```json
 {
   "verdict": "APPROVE" | "MODIFY" | "REWRITE",
-  "thought": "Strategic reasoning, specifically addressing 'Visual Logic' and 'History Protection'.",
-  "feedback": "Actionable executive summary of issues.",
+  "thought": "Focus exclusively on the quality of the last file in the list.",
+  "feedback": "Actionable instructions for the CURRENT section.",
   "section_feedback": {
-      "current_filename.md": "Precise, actionable instructions for the current work.",
-      "previous_filename.md": "ONLY provide this for Fatal/Critical errors."
+      "current_filename.md": "Precise, actionable instructions for the newest file ONLY."
   }
 }
 ```
@@ -139,13 +138,20 @@ If perfect, "APPROVE".
         # Normalize verdict keys
         result["verdict"] = result["verdict"].upper()
         
-        # SOTA: Filter out hallucinations in section_feedback
+        # SOTA 2.1: Hard-Lock to CURRENT section only
+        # We only accept feedback for the VERY LAST file in the list.
+        current_file = file_list[-1] if file_list else None
+        
         if "section_feedback" in result and isinstance(result["section_feedback"], dict):
-            original_keys = list(result["section_feedback"].keys())
-            filtered_feedback = {k: v for k, v in result["section_feedback"].items() if k in file_list}
-            result["section_feedback"] = filtered_feedback
-            if len(filtered_feedback) < len(original_keys):
-                print(f"    [Critic] 🛡️ Filtered out section_feedback for missing files: {set(original_keys) - set(file_list)}")
+            # Programmatically discard anything that isn't the current file
+            locked_feedback = {}
+            if current_file and current_file in result["section_feedback"]:
+                locked_feedback[current_file] = result["section_feedback"][current_file]
+            
+            result["section_feedback"] = locked_feedback
+            
+            if len(locked_feedback) < len(result.get("section_feedback", {})):
+                print(f"    [Critic] 🛡️ Stability Guardrail: Discarded edits for historical sections.")
                 
         return result
     else:

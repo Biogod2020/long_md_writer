@@ -7,6 +7,7 @@ import re
 import shutil
 from pathlib import Path
 from typing import List, Optional, Any
+from bs4 import BeautifulSoup
 
 def merge_markdown_sections(
     section_paths: List[str],
@@ -28,6 +29,7 @@ def merge_markdown_sections(
         # 确定导出目录和资源子目录
         final_file_path = Path(output_path)
         if not final_file_path.is_absolute() and workspace_path:
+            # SOTA Fix: Only join if it's not already pointing to something inside ws
             final_file_path = ws / final_file_path
             
         export_dir = final_file_path.parent
@@ -36,41 +38,59 @@ def merge_markdown_sections(
 
         for i, path_str in enumerate(section_paths):
             p = Path(path_str)
+            # SOTA Fix: Only join with ws if p is relative AND doesn't already look like it's inside ws
             if not p.is_absolute():
                 p = ws / p
-                
+            
             if not p.exists():
-                print(f"  [Merger] ⚠️ File not found: {p}")
-                continue
+                # Try one more fallback: relative to current working directory
+                if Path(path_str).exists():
+                    p = Path(path_str).absolute()
+                else:
+                    print(f"  [Merger] ⚠️ File not found: {p}")
+                    continue
                 
             content = p.read_text(encoding="utf-8")
             
-            # --- SOTA: 资源重定向与物理导出 ---
+            # --- SOTA: 资源重定向与物理导出 (Using Robust HTML Parser) ---
             if asset_registry:
                 def redirect_asset(match):
                     full_tag = match.group(0)
-                    asset_id_match = re.search(r'data-asset-id="([^"]+)"', full_tag)
-                    if asset_id_match:
-                        asset_id = asset_id_match.group(1)
-                        asset = asset_registry.get_asset(asset_id)
-                        if asset:
-                            # 获取原物理路径
-                            abs_src = asset.get_absolute_path(workspace_path=workspace_path)
-                            if abs_src and abs_src.exists():
-                                # 物理拷贝到 resource 文件夹
-                                target_name = abs_src.name
-                                dst_path = resource_dir / target_name
-                                if not dst_path.exists():
-                                    shutil.copy2(abs_src, dst_path)
-                                
-                                # 改写路径为扁平化的资源路径
-                                # 替换 src="..." 里的内容
-                                new_tag = re.sub(r'src="[^"]+"', f'src="resource/{target_name}"', full_tag)
-                                return new_tag
+                    try:
+                        # Use BeautifulSoup to parse the isolated tag
+                        # We use 'lxml' as specified in requirements
+                        soup = BeautifulSoup(full_tag, "lxml").find("img")
+                        if not soup:
+                            # Try uppercase or other variations if find("img") fails
+                            soup = BeautifulSoup(full_tag, "lxml").find(re.compile(r'^img$', re.I))
+                            
+                        if not soup:
+                            return full_tag
+                        
+                        asset_id = soup.get("data-asset-id")
+                        if asset_id:
+                            asset = asset_registry.get_asset(asset_id)
+                            if asset:
+                                # 获取原物理路径
+                                abs_src = asset.get_absolute_path(workspace_path=workspace_path)
+                                if abs_src and abs_src.exists():
+                                    # 物理拷贝到 resource 文件夹
+                                    target_name = abs_src.name
+                                    dst_path = resource_dir / target_name
+                                    if not dst_path.exists():
+                                        shutil.copy2(abs_src, dst_path)
+                                    
+                                    # 鲁棒地修改属性
+                                    soup["src"] = f"resource/{target_name}"
+                                    # 强制转换为字符串，BS4 会处理属性引号和顺序
+                                    return str(soup)
+                    except Exception as e:
+                        print(f"  [Merger] ⚠️ Tag parse error: {e}")
+                    
                     return full_tag
 
-                # 匹配所有 <img> 标签
-                content = re.sub(r'<img[^>]+>', redirect_asset, content)
+                # 匹配所有 <img> 标签 (正则仅用于定位单元，解析交给 BS4)
+                content = re.sub(r'<img[^>]+>', redirect_asset, content, flags=re.I)
 
             section_id = p.stem
             marker = f"<!-- SECTION: {section_id} -->"
@@ -121,7 +141,8 @@ def split_merged_document(
             if section_id:
                 # SOTA: 如果是在子目录下（如 audited_md），将资源路径重锚为 ../resource/
                 # 这样分章节文稿也能正常预览根目录下的资源
-                section_content = re.sub(r'src="resource/', 'src="../resource/', section_content)
+                # 兼容单双引号、等号空格及大小写
+                section_content = re.sub(r'src\s*=\s*(["\'])resource/', r'src=\1../resource/', section_content, flags=re.IGNORECASE)
                 
                 file_path = out_path / f"{section_id}.md"
                 file_path.write_text(section_content, encoding="utf-8")

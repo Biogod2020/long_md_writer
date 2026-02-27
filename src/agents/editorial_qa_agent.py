@@ -113,7 +113,8 @@ class EditorialQAAgent:
         max_iterations: int = 3,
         renderer: Optional[Any] = None,
         skip_llm_review: bool = False,
-        strict_mode: bool = True
+        strict_mode: bool = True,
+        nitpick_threshold: int = 3
     ):
         self.client = client or GeminiClient()
         self.max_iterations = max_iterations
@@ -122,6 +123,7 @@ class EditorialQAAgent:
         self.strict_mode = strict_mode
         self.validator = MarkdownValidator()
         self.stuck_detector = StuckDetector()
+        self.nitpick_threshold = nitpick_threshold
 
     async def run_async(
         self, 
@@ -211,10 +213,20 @@ class EditorialQAAgent:
 
             verdict = critique.get("verdict", "MODIFY").upper()
             feedback = critique.get("feedback", "")
+            issues = critique.get("issues", [])
+            
+            # SOTA 2.1: 'Good Enough' Objective Upper Bound
+            # Early exit if no ERRORS remain and total issues are within nitpick_threshold
+            error_issues = [i for i in issues if str(i.get("severity", "")).lower() == "error"]
+            if verdict == "APPROVE":
+                print(f"    [EditorialQA] ✅ Merged document APPROVED by LLM at iteration {iteration}.")
+                state.markdown_approved = True
+            elif not error_issues and len(issues) <= self.nitpick_threshold:
+                print(f"    [EditorialQA] ⚖️  GOOD ENOUGH: Found {len(issues)} minor issues (threshold: {self.nitpick_threshold}) but no ERRORS. Approving.")
+                state.markdown_approved = True
+                verdict = "APPROVE"
             
             if verdict == "APPROVE":
-                print(f"    [EditorialQA] ✅ Merged document approved at iteration {iteration}.")
-                state.markdown_approved = True
                 # ... (Splitting logic remains same)
                 audited_dir = workspace / "audited_md"
                 audited_dir.mkdir(exist_ok=True)

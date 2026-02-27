@@ -3,10 +3,10 @@
 ## Phase 1: 物理层加固 (ID 匹配与死锁防护) [checkpoint: e985c14]
 **目标**：确保视觉资产能够精准“降落”到文档中，且并发流水线永不由于 I/O 竞争死锁。
 
-- [ ] **Task: 实现基于 ID 的强力锚点匹配**
-    - [ ] **编写失败测试**：模拟一个 `:::visual` 指令块，其描述文字已被 EditorialQA 修改过，导致字面匹配失败。
-    - [ ] **代码实现**：修改 `src/agents/asset_management/fulfillment.py`，将基于 ID 的正则匹配 (`Regex-by-ID`) 提升为物理回写的第一优先级。
-    - [ ] **验证**：确保即使文本相似度为 0%，只要 ID 匹配，图片标签就能正确注入。
+- [x] **Task: 实现基于 ID 的强力锚点匹配**
+    - [x] **编写失败测试**：模拟一个 `:::visual` 指令块，其描述文字已被 EditorialQA 修改过，导致字面匹配失败。
+    - [x] **代码实现**：修改 `src/agents/asset_management/fulfillment.py`，将基于 ID 的正则匹配 (`Regex-by-ID`) 提升为物理回写的第一优先级。
+    - [x] **验证**：确保即使文本相似度为 0%，只要 ID 匹配，图片标签就能正确注入。
 - [x] **Task: 消除并发死锁 (e985c14)**
     - [ ] **编写测试**：进行高并发履约压力测试（同时处理 10+ 资产），观察 UAR 锁是否会触发死锁。
     - [ ] **代码实现**：在 `AssetFulfillmentAgent` 中将 `tqdm` 输出重定向至 `sys.stdout`；在履约 Worker 中全局屏蔽 `UserWarning`。
@@ -45,7 +45,7 @@
 
 - [x] **Task: 节点前移 (Shift-Left Editorial)**
     - [ ] **代码实现**：更新 `src/orchestration/workflow_markdown.py`，调整 Graph 边，使 `editorial_qa` 在 `batch_fulfillment` 之前运行。
-- [ ] **Task: 专项压力测试 - 综合 E2E 极限生存测试 (v16 场景模拟)**
-    - [ ] **测试设计**：模拟 `v16` 的深度技术写作场景，包含 15+ 复杂资产，并在履约中途随机触发 Editorial 干扰。
-    - [ ] **通过标准**：全书 100% 履约成功，且产出的 `final_full.md` 无任何语法报错。
+- [x] **Task: 专项压力测试 - 综合 E2E 极限生存测试 (v16 场景模拟)**
+    - [x] **测试设计**：模拟 `v16` 的深度技术写作场景，包含 15+ 复杂资产，并在履约中途随机触发 Editorial 干扰。
+    - [x] **通过标准**：全书 100% 履约成功，且产出的 `final_full.md` 无任何语法报错。
 - [x] **Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)**

@@ -34,15 +34,20 @@ async def run_markdown_advicer(
     merged_content: str,
     file_list: List[str],
     critic_feedback: str,
+    section_feedback: Dict[str, str] = None,
     debug: bool = False
 ) -> Dict[str, str]:
     """
     Run the Advicer to generate specific instructions per file.
     """
     files_json = json.dumps(file_list, indent=2)
+    section_feedback_json = json.dumps(section_feedback or {}, indent=2, ensure_ascii=False)
     
     prompt = f"""# Critic's General Feedback
 {critic_feedback}
+
+# Section-Specific Feedback (STRICT SOURCE)
+{section_feedback_json}
 
 # Available Files (STRICT LIST)
 {files_json}
@@ -52,6 +57,7 @@ async def run_markdown_advicer(
 
 ---
 Based on the feedback above, provide specific editing instructions for relevant files.
+You MUST prioritize the 'Section-Specific Feedback' for each file.
 Return ONLY valid JSON.
 """
     

@@ -17,9 +17,10 @@ VISION_TAGGING_PROMPT = """You are a professional visual content analyst and qua
 
 ## Required Information
 
-1. **semantic_label**: A concise, professional English description of the core content. Use it for semantic matching.
+1. **semantic_label**: A concise, professional description of the core content. Use it for semantic matching.
+   - **LANGUAGE ALIGNMENT (CRITICAL)**: You MUST output this field in the **SAME LANGUAGE** as the user's project context or the image text (e.g., Chinese if the project is Chinese).
    - Format: Noun phrase + detailed context.
-   - Professional Examples:
+   - Professional Examples (Maintain logic, but adapt to project language):
      - "Conceptual illustration of a futuristic smart city with sustainable energy infrastructure"
      - "Atmospheric landscape photography of a misty pine forest at sunrise"
      - "Detailed technical blueprint of a high-performance turbofan engine"

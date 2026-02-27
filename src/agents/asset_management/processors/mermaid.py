@@ -170,8 +170,9 @@ async def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> bool:
                 # 压缩为高质量 JPEG 以减少 API 负载
                 from PIL import Image
                 with Image.open(output_path) as img:
-                    if img.mode in ('RGBA', 'P'):
-                        img = img.convert('RGB')
+                    # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
                     img.save(output_path, format="JPEG", quality=90, optimize=True)
                     
                 return True

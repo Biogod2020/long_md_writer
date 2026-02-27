@@ -1,0 +1,3162 @@
+
+================================================================================
+TITLE: INITIAL MERGED CONTENT (PRE-IT1)
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/content_pre_it1.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+### 2.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="../assets/images/s1-fig-electrode-macro.jpg" alt="**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+### 2.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="../agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 2.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积和操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 2.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面（Horizontal Plane）的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="../agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="../agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="../agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="../assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面（Horizontal Plane）**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="../agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="../assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="../agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="../assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="../../../assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="../agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="../agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="../agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。
+
+</figcaption>
+</figure>
+
+
+
+
+================================================================================
+TITLE: ITERATION 1 - CRITIQUE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/critique_it1.json
+================================================================================
+
+{
+  "verdict": "MODIFY",
+  "thought": "The document exhibits high intellectual depth and successfully implements the 'First-Principles' scaffold requested in the manifest. The transition from hardware constraints (10 electrodes) to mathematical constructs (WCT) and clinical application (ST-elevation) is logically sound and authoritative. However, the merged document contains structural artifacts—specifically duplicate titles and inconsistent heading numbering—that disrupt the 'High-End Medical Workstation' professionalism. The visual descriptions are excellent, but asset path depths are inconsistent.",
+  "feedback": "The technical content and narrative flow are publication-ready, but the structural hierarchy requires normalization. Specifically, redundant headers in Sections 2 and 3 must be removed, and the sub-heading numbering (2.1, 3.1, 4.1) should be reconciled to follow a continuous or section-relative sequence.",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "type": "structural",
+      "severity": "error",
+      "priority": "P0",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Start of Section 2 and Section 3",
+      "problem": "Redundant H1 headers. Both sections repeat their titles twice (e.g., '# The Frontal Plane...' followed immediately by '# The Frontal Plane...').",
+      "suggestion": "Remove the duplicate H1 title in the second instance for both sections."
+    },
+    {
+      "id": "ISSUE-002",
+      "type": "structural",
+      "severity": "error",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Sub-heading numbering (H2/H3)",
+      "problem": "Numbering logic is fragmented. Section 1 starts with '### 2.1', Section 2 uses '## 2.1', Section 3 uses '## 3.1', and Section 4 uses '## 4.1'.",
+      "suggestion": "Standardize numbering. If Section 1 is '1. Hardware', subheadings should be '1.1, 1.2'. Ensure H-levels are consistent (e.g., H1 for Section Title, H2 for Major Sub-points)."
+    },
+    {
+      "id": "ISSUE-003",
+      "type": "technical",
+      "severity": "warning",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Image source paths",
+      "problem": "Inconsistent directory depth in asset paths. Section 1 uses '../assets/', Section 4 uses '../../../assets/'.",
+      "suggestion": "Unify the relative path depth for all assets to ensure build-system compatibility."
+    },
+    {
+      "id": "ISSUE-004",
+      "type": "visual",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 4 visuals",
+      "problem": "Redundancy between 's4-fig-clinical-ecg' and 's4-fig-panorama-summary'. Both cover the mapping of leads to coronary arteries.",
+      "suggestion": "Merge the captions or ensure one is strictly anatomical and the other is strictly schematic to provide unique value."
+    },
+    {
+      "id": "ISSUE-005",
+      "type": "syntax",
+      "severity": "error",
+      "priority": "P1",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Section 3.1.1",
+      "problem": "The phrase '参考参考点' (reference reference point) is a lexical redundancy.",
+      "suggestion": "Change to '稳定的零电位参考点' (stable zero-potential reference point)."
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 1 - ADVICE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/advice_it1.json
+================================================================================
+
+{
+  "final_full.md": [
+    {
+      "issue_ref": "ISSUE-001",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "<!-- SECTION: s2-sec-02 -->\n# The Frontal Plane: Einthoven’s Geometric Elegance\n\n# The Frontal Plane: Einthoven’s Geometric Elegance",
+        "replace": "<!-- SECTION: s2-sec-02 -->\n# The Frontal Plane: Einthoven’s Geometric Elegance"
+      }
+    },
+    {
+      "issue_ref": "ISSUE-001",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "<!-- SECTION: s3-sec-03 -->\n# The Horizontal Plane: Wilson’s Virtual Zero\n\n# The Horizontal Plane: Wilson’s Virtual Zero",
+        "replace": "<!-- SECTION: s3-sec-03 -->\n# The Horizontal Plane: Wilson’s Virtual Zero"
+      }
+    },
+    {
+      "issue_ref": "ISSUE-001",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "<!-- SECTION: s4-sec-04 -->\n# Clinical Synthesis: The 12-Lead Panorama\n\n# Clinical Synthesis: The 12-Lead Panorama",
+        "replace": "<!-- SECTION: s4-sec-04 -->\n# Clinical Synthesis: The 12-Lead Panorama"
+      }
+    },
+    {
+      "issue_ref": "ISSUE-002",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "差分信号处理器。\n\n### 2.1 硬件：作为换能器的电极（Electrode）\n\n物理意义上的**电极**是硬件实体。",
+        "replace": "差分信号处理器。\n\n## 1.1 硬件：作为换能器的电极（Electrode）\n\n物理意义上的**电极**是硬件实体。"
+      }
+    },
+    {
+      "issue_ref": "ISSUE-002",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "环境噪声引入大地。\n\n### 2.2 软件：作为数学视角的导联（Lead）\n\n如果说电极是摄像机的“镜头”",
+        "replace": "环境噪声引入大地。\n\n## 1.2 软件：作为数学视角的导联（Lead）\n\n如果说电极是摄像机的“镜头”"
+      }
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 1 - FIX RESULT
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/fix_result_it1.json
+================================================================================
+
+{
+  "status": "FIXED",
+  "patches": [
+    {
+      "scope": "TARGETED",
+      "search": "<!-- SECTION: s2-sec-02 -->\n# The Frontal Plane: Einthoven’s Geometric Elegance\n\n# The Frontal Plane: Einthoven’s Geometric Elegance",
+      "replace": "<!-- SECTION: s2-sec-02 -->\n# The Frontal Plane: Einthoven’s Geometric Elegance"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "<!-- SECTION: s3-sec-03 -->\n# The Horizontal Plane: Wilson’s Virtual Zero\n\n# The Horizontal Plane: Wilson’s Virtual Zero",
+      "replace": "<!-- SECTION: s3-sec-03 -->\n# The Horizontal Plane: Wilson’s Virtual Zero"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "<!-- SECTION: s4-sec-04 -->\n# Clinical Synthesis: The 12-Lead Panorama\n\n# Clinical Synthesis: The 12-Lead Panorama",
+      "replace": "<!-- SECTION: s4-sec-04 -->\n# Clinical Synthesis: The 12-Lead Panorama"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "**差分信号处理器**。\n\n### 2.1 硬件：作为换能器的电极（Electrode）\n\n物理意义上的**电极**是硬件实体。",
+      "replace": "**差分信号处理器**。\n\n## 1.1 硬件：作为换能器的电极（Electrode）\n\n物理意义上的**电极**是硬件实体。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "环境噪声引入大地。\n\n### 2.2 软件：作为数学视角的导联（Lead）\n\n如果说电极是摄像机的“镜头”",
+      "replace": "环境噪声引入大地。\n\n## 1.2 软件：作为数学视角的导联（Lead）\n\n如果说电极是摄像机的“镜头”"
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: CONTENT PRE-IT2
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/content_pre_it2.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+## 1.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="../assets/images/s1-fig-electrode-macro.jpg" alt="**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+## 1.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="../agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 2.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积和操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 2.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面（Horizontal Plane）的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="../agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="../agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="../agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="../assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面（Horizontal Plane）**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="../agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="../assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="../agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="../assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="../../../assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="../agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="../agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="../agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。
+
+</figcaption>
+</figure>
+
+
+
+
+================================================================================
+TITLE: ITERATION 2 - CRITIQUE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/critique_it2.json
+================================================================================
+
+{
+  "verdict": "MODIFY",
+  "thought": "The document displays high intellectual depth and technical accuracy, successfully bridging the gap between hardware physics and clinical application. The narrative arc—from the '10-electrode paradox' to the '12-lead panorama'—is logically sound and follows the 'First-Principles Scaffold' requested in the brief. However, there are significant structural numbering errors in Chapter 1 and internal reference inconsistencies in Figure captions that must be corrected to reach the SOTA publication standard. Terminology is consistent, and visual directives are high-fidelity, though file paths for assets require standardization.",
+  "feedback": "The document is technically excellent but requires a targeted patch to fix heading numbering (Section 1.2 jumps to 2.3) and to reconcile internal figure numbering (captions refer to Fig 30.1, which does not exist in this volume's context). Visual asset paths also need normalization to ensure build-pipeline stability.",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "type": "structural",
+      "severity": "error",
+      "priority": "P0",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Section 1.2 to 2.3",
+      "problem": "Heading numbering jump: Section 1.2 is immediately followed by '2.3 导联的分类逻辑'. This breaks the logical hierarchy and clashes with Chapter 2's numbering.",
+      "suggestion": "Renumber '2.3 导联的分类逻辑' to '1.3' and '2.4 临床意义' to '1.4'."
+    },
+    {
+      "id": "ISSUE-002",
+      "type": "technical",
+      "severity": "warning",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Figure 1.1 Caption (s1-fig-electrode-macro)",
+      "problem": "The caption text refers to '图 30.1', '图 30.2', etc. These are likely legacy references from a parent volume and do not match the [REF:xxx] system or the current section's numbering.",
+      "suggestion": "Revise caption text to refer to the sub-elements of the current figure or use the correct local IDs (e.g., '如图 1.1 所示')."
+    },
+    {
+      "id": "ISSUE-003",
+      "type": "syntax",
+      "severity": "error",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Figure s4-fig-clinical-ecg",
+      "problem": "Path inconsistency: The image path is listed as '../../../assets/images/s4-fig-clinical-ecg.png', whereas all other assets use '../assets/images/' or '../agent_generated/'.",
+      "suggestion": "Normalize the path to '../assets/images/s4-fig-clinical-ecg.png' to ensure consistency across the project structure."
+    },
+    {
+      "id": "ISSUE-004",
+      "type": "terminology",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.1.1",
+      "problem": "Use of '参考参考点' (reference reference point).",
+      "suggestion": "Remove the redundant word to read '稳定的参考点'."
+    },
+    {
+      "id": "ISSUE-005",
+      "type": "visual",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Chapter 2 and Chapter 4",
+      "problem": "Redundant use of high-level summary ECG strips (s2-fig-normal-ecg-strip and s4-fig-clinical-ecg) without distinct clinical differentiation in the visual prompt.",
+      "suggestion": "Ensure the Section 4 visual explicitly highlights the 'ST-segment' area mentioned in text to differentiate it from the 'Normal' strip in Section 2."
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 2 - ADVICE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/advice_it2.json
+================================================================================
+
+{
+  "final_full.md": [
+    {
+      "issue_ref": "ASSET-PATH-NORM-01",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "../../../assets/images/",
+        "replace": "assets/images/"
+      }
+    },
+    {
+      "issue_ref": "ASSET-PATH-NORM-02",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "../assets/images/",
+        "replace": "assets/images/"
+      }
+    },
+    {
+      "issue_ref": "ASSET-PATH-NORM-03",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "../agent_generated/",
+        "replace": "agent_generated/"
+      }
+    },
+    {
+      "issue_ref": "HEADING-NUMBER-ERROR",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\n\n</figcaption>\n</figure>\n\n### 2.3 导联的分类逻辑\n\n为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：\n\n1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。\n2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。\n3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。\n\n:::important\n**核心认知：** \n电极是**物理输入**，其数量受限于人体解剖表面积和操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。\n:::\n\n### 2.4 临床意义：超越导线的思考",
+        "replace": "基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\n\n</figcaption>\n</figure>\n\n### 1.3 导联的分类逻辑\n\n为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：\n\n1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。\n2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。\n3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。\n\n:::important\n**核心认知：** \n电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。\n:::\n\n### 1.4 临床意义：超越导线的思考"
+      }
+    },
+    {
+      "issue_ref": "FIG-NUMBER-ERROR",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。",
+        "replace": "<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。"
+      }
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 2 - FIX RESULT
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/fix_result_it2.json
+================================================================================
+
+{
+  "status": "FIXED",
+  "patches": [
+    {
+      "scope": "GLOBAL",
+      "search": "../../../assets/images/",
+      "replace": "assets/images/"
+    },
+    {
+      "scope": "GLOBAL",
+      "search": "../assets/images/",
+      "replace": "assets/images/"
+    },
+    {
+      "scope": "GLOBAL",
+      "search": "../agent_generated/",
+      "replace": "agent_generated/"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\n\n</figcaption>\n</figure>\n\n### 2.3 导联的分类逻辑\n\n为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：\n\n1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。\n2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。\n3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。\n\n:::important\n**核心认知：** \n电极是**物理输入**，其数量受限于人体解剖表面积和操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。\n:::\n\n### 2.4 临床意义：超越导线的思考",
+      "replace": "基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\n\n</figcaption>\n</figure>\n\n### 1.3 导联的分类逻辑\n\n为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：\n\n1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。\n2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。\n3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。\n\n:::important\n**核心认知：** \n电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。\n:::\n\n### 1.4 临床意义：超越导线的思考"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 30.1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 30.2** 与 **30.3**）。最终，**图 30.4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。",
+      "replace": "<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。"
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: CONTENT PRE-IT3
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/content_pre_it3.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+## 1.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="assets/images/s1-fig-electrode-macro.jpg" alt="**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+## 1.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 1.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 1.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面（Horizontal Plane）的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面（Horizontal Plane）**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面（Horizontal Plane）的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面（Horizontal Plane）**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在水平面上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面（Horizontal Plane）的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。
+
+</figcaption>
+</figure>
+
+
+
+
+================================================================================
+TITLE: ITERATION 3 - CRITIQUE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/critique_it3.json
+================================================================================
+
+{
+  "verdict": "MODIFY",
+  "thought": "The document exhibits exceptional technical depth and narrative cohesion, successfully bridging electromagnetic physics with clinical diagnostic logic. The transition from physical electrodes to the mathematical derivation of the Wilson Central Terminal (WCT) is handled with 'SOTA' pedagogical clarity. However, minor inconsistencies in terminology (specifically relating to the planes of the body) and potential confusion in figure labeling within the integrated view in Section 1 require adjustment to meet publication-grade rigor.",
+  "feedback": "The manuscript is structurally sound and visually ambitious. To reach final approval, unify the naming of the 'Horizontal Plane' across all descriptions, resolve the internal figure numbering confusion in the first chapter's caption, and slightly differentiate the redundant visual summaries in Section 4 to better serve distinct pedagogical purposes (Reality vs. Model).",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "type": "terminology",
+      "severity": "error",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.3 and Section 3.4 figure descriptions",
+      "problem": "Inconsistent naming of the 'Horizontal Plane'. The text primarily uses '横面' (Transverse/Horizontal), but several figure descriptions (e.g., s3-fig-r-wave-progression-physics.svg) switch to '水平面'.",
+      "suggestion": "Standardize all instances to '横面' to maintain clinical terminology consistency throughout the volume."
+    },
+    {
+      "id": "ISSUE-002",
+      "type": "structural",
+      "severity": "warning",
+      "priority": "P2",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Section 1, Figure 1-1 (s1-fig-electrode-macro.jpg) caption",
+      "problem": "The caption references '图 1-1' through '图 1-4' within a single integrated figure. This conflicts with the document's global numbering scheme where the next figure is s1-fig-hardware-software-mapping.",
+      "suggestion": "Revise the caption to use 'Panel A/B/C/D' or '图 1-1a/b/c/d' to avoid confusion with the main document's figure count."
+    },
+    {
+      "id": "ISSUE-003",
+      "type": "visual",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 4 (s4-fig-clinical-ecg.png and s4-fig-panorama-summary.svg)",
+      "problem": "High visual redundancy. Both figures serve nearly identical purposes (mapping 12 leads to anatomical territories).",
+      "suggestion": "Refine the visual directive for s4-fig-panorama-summary.svg to focus specifically on the 'Vector Summation' or 'Reciprocal Change' logic, rather than just repeating the anatomical map shown in the realistic clinical strip image."
+    },
+    {
+      "id": "ISSUE-004",
+      "type": "technical",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.1.1",
+      "problem": "The LaTeX derivation for WCT is clear, but the term '参考参考点' (reference reference point) contains a redundant word.",
+      "suggestion": "Change '参考参考点' to '参考基准点' or simply '参考点'."
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 3 - ADVICE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/advice_it3.json
+================================================================================
+
+{
+  "final_full.md": [
+    {
+      "issue_ref": "Critic Feedback: Horizontal Plane Unification",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "横面（Horizontal Plane）",
+        "replace": "横面 (Horizontal Plane)"
+      }
+    },
+    {
+      "issue_ref": "Critic Feedback: Horizontal Plane Unification",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "水平面",
+        "replace": "横面 (Horizontal Plane)"
+      }
+    },
+    {
+      "issue_ref": "Critic Feedback: Chapter 1 Figure Numbering Confusion",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\n\n</figcaption>",
+        "replace": "data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**图 1-1 12导联心电图系统的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**左侧区域**定义了 10 个物理**电极**（硬件端）的标准解剖定位；**中心区域**展示了硬件输入如何通过算法转换为 12 路**导联**视角；**右侧区域**则揭示了导联分组的临床本质：不同导联组合构成了观察特定解剖区域与冠脉状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\n\n</figcaption>"
+      }
+    },
+    {
+      "issue_ref": "Critic Feedback: Redundant Visual Summaries (Reality vs. Model)",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "data-asset-id=\"s4-fig-clinical-ecg\">\n<figcaption>\n\n**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。\n\n</figcaption>",
+        "replace": "data-asset-id=\"s4-fig-clinical-ecg\">\n<figcaption>\n\n**图 4-1 临床全景：真实心电图纸上的解剖映射**：本图以临床标准报告单为背景，展示了“多机位”观测视角的分布逻辑。通过色彩编码，将抽象的**电向量投影**与具体的**临床波形**结合，直观呈现了**下壁（RCA）**、**前壁（LAD）**及**侧壁（LCx）**在心电图纸上的对应位置，旨在培养医生的第一眼临床直觉。\n\n</figcaption>"
+      }
+    },
+    {
+      "issue_ref": "Critic Feedback: Redundant Visual Summaries (Reality vs. Model)",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "data-asset-id=\"s4-fig-panorama-summary\">\n<figcaption>\n\n**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。\n\n</figcaption>",
+        "replace": "data-asset-id=\"s4-fig-panorama-summary\">\n<figcaption>\n\n**图 4-2 理论模型：12 导联空间投影的几何解析图**：本图总结了 12 个导联在心脏三维空间中的几何映射关系。除了界定各导联组与**责任血管**的关联，本模型重点突出了**镜像改变（Reciprocal Changes）**的物理本质，即通过同一个**损伤向量**在对称空间导联轴上的负向投影，为临床精准定位冠脉闭塞提供数学逻辑验证。\n\n</figcaption>"
+      }
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 3 - FIX RESULT
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/fix_result_it3.json
+================================================================================
+
+{
+  "status": "FIXED",
+  "patches": [
+    {
+      "scope": "GLOBAL",
+      "search": "横面（Horizontal Plane）",
+      "replace": "横面 (Horizontal Plane)"
+    },
+    {
+      "scope": "GLOBAL",
+      "search": "水平面",
+      "replace": "横面 (Horizontal Plane)"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\n\n</figcaption>",
+      "replace": "data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>\n\n**图 1-1 12导联心电图系统的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**左侧区域**定义了 10 个物理**电极**（硬件端）的标准解剖定位；**中心区域**展示了硬件输入如何通过算法转换为 12 路**导联**视角；**右侧区域**则揭示了导联分组的临床本质：不同导联组合构成了观察特定解剖区域与冠脉状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\n\n</figcaption>"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "data-asset-id=\"s4-fig-clinical-ecg\">\n<figcaption>\n\n**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。\n\n</figcaption>",
+      "replace": "data-asset-id=\"s4-fig-clinical-ecg\">\n<figcaption>\n\n**图 4-1 临床全景：真实心电图纸上的解剖映射**：本图以临床标准报告单为背景，展示了“多机位”观测视角的分布逻辑。通过色彩编码，将抽象的**电向量投影**与具体的**临床波形**结合，直观呈现了**下壁（RCA）**、**前壁（LAD）**及**侧壁（LCx）**在心电图纸上的对应位置，旨在培养医生的第一眼临床直觉。\n\n</figcaption>"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "data-asset-id=\"s4-fig-panorama-summary\">\n<figcaption>\n\n**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。\n\n</figcaption>",
+      "replace": "data-asset-id=\"s4-fig-panorama-summary\">\n<figcaption>\n\n**图 4-2 理论模型：12 导联空间投影的几何解析图**：本图总结了 12 个导联在心脏三维空间中的几何映射关系。除了界定各导联组与**责任血管**的关联，本模型重点突出了**镜像改变（Reciprocal Changes）**的物理本质，即通过同一个**损伤向量**在对称空间导联轴上的负向投影，为临床精准定位冠脉闭塞提供数学逻辑验证。\n\n</figcaption>"
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: CONTENT PRE-IT4
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/content_pre_it4.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+## 1.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="assets/images/s1-fig-electrode-macro.jpg" alt="**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**图 1-1 12导联心电图系统的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**左侧区域**定义了 10 个物理**电极**（硬件端）的标准解剖定位；**中心区域**展示了硬件输入如何通过算法转换为 12 路**导联**视角；**右侧区域**则揭示了导联分组的临床本质：不同导联组合构成了观察特定解剖区域与冠脉状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+## 1.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 1.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 1.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面 (Horizontal Plane)的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面 (Horizontal Plane)**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**图 4-1 临床全景：真实心电图纸上的解剖映射**：本图以临床标准报告单为背景，展示了“多机位”观测视角的分布逻辑。通过色彩编码，将抽象的**电向量投影**与具体的**临床波形**结合，直观呈现了**下壁（RCA）**、**前壁（LAD）**及**侧壁（LCx）**在心电图纸上的对应位置，旨在培养医生的第一眼临床直觉。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**图 4-2 理论模型：12 导联空间投影的几何解析图**：本图总结了 12 个导联在心脏三维空间中的几何映射关系。除了界定各导联组与**责任血管**的关联，本模型重点突出了**镜像改变（Reciprocal Changes）**的物理本质，即通过同一个**损伤向量**在对称空间导联轴上的负向投影，为临床精准定位冠脉闭塞提供数学逻辑验证。
+
+</figcaption>
+</figure>
+
+
+
+
+================================================================================
+TITLE: ITERATION 4 - CRITIQUE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/critique_it4.json
+================================================================================
+
+{
+  "verdict": "MODIFY",
+  "thought": "The document demonstrates exceptional logical cohesion, successfully bridging the gap between hardware engineering (electrodes), mathematical abstraction (vectors/WCT), and clinical application (STEMI diagnosis). The narrative flow follows a strict first-principles derivation that is both pedagogically sound and technically rigorous. However, a final editorial pass is required to resolve minor terminology redundancies, caption-to-asset naming discrepancies, and typographic inconsistencies in alphanumeric spacing.",
+  "feedback": "The manuscript is of high intellectual quality. To reach publication standard, you must synchronize the internal references within complex figure captions, remove duplicated technical terms in Section 3, and ensure consistent spacing between Latin characters and Hanzi throughout all chapters.",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "type": "terminology",
+      "severity": "error",
+      "priority": "P0",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.1.1, Paragraph 3",
+      "problem": "Redundant term: '参考参考点' (Double reference point).",
+      "suggestion": "Change to '参考点'."
+    },
+    {
+      "id": "ISSUE-002",
+      "type": "visual",
+      "severity": "warning",
+      "priority": "P1",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Figure 1-1 Caption",
+      "problem": "The caption references sub-figures '图 1-2', '图 1-3', and '图 1-4', but the document only contains a single asset ID 's1-fig-electrode-macro'. This creates cognitive friction for the reader looking for separate panels.",
+      "suggestion": "Rewrite the caption to refer to 'left, center, and right panels' of Figure 1-1, or split the asset into the referenced sub-figures."
+    },
+    {
+      "id": "ISSUE-003",
+      "type": "terminology",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Figure 2-3 Title",
+      "problem": "Introduces the term 'Cabrera 环' (Cabrera Circle) which is never mentioned or defined in the main text of Section 2.",
+      "suggestion": "Add a brief parenthetical explanation in Section 2.3 noting that the Hexaxial Reference System is also known as the Cabrera system."
+    },
+    {
+      "id": "ISSUE-004",
+      "type": "technical",
+      "severity": "warning",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.3 vs Section 4.2",
+      "problem": "Inconsistent alphanumeric spacing. Section 3.3 uses 'R波' and 'S波' (no space), while Section 4.2 uses 'ST 段' (with space).",
+      "suggestion": "Standardize all instances to use a space between Latin/Alphanumeric strings and Chinese characters (e.g., 'R 波', 'ST 段', '12 导联') as per SOTA typesetting standards."
+    },
+    {
+      "id": "ISSUE-005",
+      "type": "syntax",
+      "severity": "info",
+      "priority": "P2",
+      "category": "LOCAL_STRUCTURAL",
+      "location": "Section 3.1.1 LaTeX block",
+      "problem": "Formula for WCT uses \\phi while previous sections use \\Phi.",
+      "suggestion": "Unify case for the Greek letter Phi representing potential. Upper case \\Phi is standard for macroscopic potential, lower case \\phi for localized or instantaneous potential. Ensure consistency across Section 2 and 3."
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 4 - ADVICE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/advice_it4.json
+================================================================================
+
+{
+  "final_full.md": [
+    {
+      "issue_ref": "FEEDBACK-SPACING",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "10个",
+        "replace": "10 个"
+      }
+    },
+    {
+      "issue_ref": "FEEDBACK-SPACING",
+      "scope": "GLOBAL",
+      "instruction": {
+        "search": "横面(Horizontal Plane)",
+        "replace": "横面 (Horizontal Plane)"
+      }
+    },
+    {
+      "issue_ref": "FEEDBACK-CAPTION-SYNC",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "<figure>\n<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>",
+        "replace": "<figure>\n<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12 导联心电图系统的集成视图**：本图系统性地展示了解决“10 电极悖论”的完整逻辑。图中定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变。最终，视图展示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>"
+      }
+    },
+    {
+      "issue_ref": "FEEDBACK-DUPLICATE-S3",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近 zero 电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。",
+        "replace": "在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。"
+      }
+    },
+    {
+      "issue_ref": "FEEDBACK-SPACING",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "## 3.3 R波递增：向量在横面的时空旅行\n\n在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。",
+        "replace": "## 3.3 R 波递增：向量在横面的时空旅行\n\n在横面导联中，最核心的物理现象是**R 波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。"
+      }
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 4 - FIX RESULT
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/fix_result_it4.json
+================================================================================
+
+{
+  "status": "FIXED",
+  "patches": [
+    {
+      "scope": "GLOBAL",
+      "search": "10个",
+      "replace": "10 个"
+    },
+    {
+      "scope": "GLOBAL",
+      "search": "横面(Horizontal Plane)",
+      "replace": "横面 (Horizontal Plane)"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "<figure>\n<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12导联心电图系统的从物理电极到解剖映射的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**图 1-1** 定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变（**图 1-2** 与 **1-3**）。最终，**图 1-4** 揭示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF** 或**前壁导联 V3, V4**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>",
+      "replace": "<figure>\n<img src=\"assets/images/s1-fig-electrode-macro.jpg\" alt=\"**12 导联心电图系统的集成视图**：本图系统性地展示了解决“10 电极悖论”的完整逻辑。图中定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变. 最终，视图展示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s1-fig-electrode-macro\">\n<figcaption>"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近 zero 电位的参考参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。",
+      "replace": "在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "## 3.3 R波递增：向量在横面的时空旅行\n\n在横面导联中，最核心的物理现象是**R波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。",
+      "replace": "## 3.3 R 波递增：向量在横面的时空旅行\n\n在横面导联中，最核心的物理现象是**R 波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。"
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: CONTENT PRE-IT5
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/content_pre_it5.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+## 1.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="assets/images/s1-fig-electrode-macro.jpg" alt="**12 导联心电图系统的集成视图**：本图系统性地展示了解决“10 电极悖论”的完整逻辑。图中定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变. 最终，视图展示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**图 1-1 12导联心电图系统的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**左侧区域**定义了 10 个物理**电极**（硬件端）的标准解剖定位；**中心区域**展示了硬件输入如何通过算法转换为 12 路**导联**视角；**右侧区域**则揭示了导联分组的临床本质：不同导联组合构成了观察特定解剖区域与冠脉状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+## 1.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 1.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 1.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面 (Horizontal Plane)的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面 (Horizontal Plane)**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R 波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R 波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**图 4-1 临床全景：真实心电图纸上的解剖映射**：本图以临床标准报告单为背景，展示了“多机位”观测视角的分布逻辑。通过色彩编码，将抽象的**电向量投影**与具体的**临床波形**结合，直观呈现了**下壁（RCA）**、**前壁（LAD）**及**侧壁（LCx）**在心电图纸上的对应位置，旨在培养医生的第一眼临床直觉。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**图 4-2 理论模型：12 导联空间投影的几何解析图**：本图总结了 12 个导联在心脏三维空间中的几何映射关系。除了界定各导联组与**责任血管**的关联，本模型重点突出了**镜像改变（Reciprocal Changes）**的物理本质，即通过同一个**损伤向量**在对称空间导联轴上的负向投影，为临床精准定位冠脉闭塞提供数学逻辑验证。
+
+</figcaption>
+</figure>
+
+
+
+
+================================================================================
+TITLE: ITERATION 5 - CRITIQUE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/critique_it5.json
+================================================================================
+
+{
+  "verdict": "MODIFY",
+  "thought": "The document exhibits high intellectual depth and successfully bridges the gap between hardware engineering and clinical pathophysiology. The narrative arc—moving from physical electrodes to mathematical vectors, then to virtual reference points (WCT), and finally to clinical ischemia—is logically sound. However, there are minor structural inconsistencies in figure labeling and a need for slight technical clarification in the derivation of augmented leads to meet the SOTA standard of a 'High-End Medical Workstation Interface'.",
+  "feedback": "The technical content is excellent, particularly the explanation of Wilson Central Terminal and the 'Injury Vector'. To reach publication readiness, ensure all figures follow a uniform '图 X-Y' numbering format and provide a slightly more explicit explanation of the 50% amplitude gain in Goldberger's leads.",
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "type": "structural",
+      "severity": "warning",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Figure Captions across Sections 2 and 3",
+      "problem": "Inconsistent figure numbering. Section 1 uses '图 1-1', Section 2 uses '图 2-3' but leaves earlier figures unnumbered, and Section 4 uses '图 4-1'.",
+      "suggestion": "Standardize all figure captions to begin with '图 [Section]-[Number]'. For example, label the Einthoven Triangle as '图 2-1' and the Augmented Circuit as '图 2-2'."
+    },
+    {
+      "id": "ISSUE-002",
+      "type": "technical",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 2.2.2 - 'Why Augmented?'",
+      "problem": "The explanation for the 50% amplitude increase in Goldberger's leads is conceptually correct but lacks the specific circuit logic (disconnecting the resistors from the node of the lead being measured).",
+      "suggestion": "Briefly mention that the 50% increase occurs because the explored electrode is no longer part of the central terminal calculation, effectively reducing the 'resistance' and preventing signal attenuation compared to the standard Wilson terminal."
+    },
+    {
+      "id": "ISSUE-003",
+      "type": "terminology",
+      "severity": "error",
+      "priority": "P1",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 4.1.2 vs 4.3",
+      "problem": "In 4.1.2, V1-V2 is labeled 'Septal' (前间壁), and V3-V4 is 'Anterior' (前壁). In the summary table (4.3), V1-V4 are grouped together. While clinically acceptable, the naming should remain consistent with the 'four anatomical territories' mentioned in the narrative.",
+      "suggestion": "Ensure the table in 4.3 maintains the distinction between 'Septal (V1-V2)' and 'Anterior (V3-V4)' to match the text in 4.1.2."
+    },
+    {
+      "id": "ISSUE-004",
+      "type": "visual",
+      "severity": "info",
+      "priority": "P2",
+      "category": "GLOBAL_CONSISTENCY",
+      "location": "Section 3.3 Figure (s3-fig-chest-placement)",
+      "problem": "The text describes R-wave progression from V1 to V6, but the figure description mentions $V_M$ shifting left-posterior. Ensure the visual directive explicitly requests a top-down transverse view of the heart to illustrate this 3D depth.",
+      "suggestion": "Update the SVG/Search directive for s3-fig-chest-placement to explicitly specify 'Transverse/Cross-sectional view showing the chest wall and heart' to distinguish it from the frontal plane diagrams."
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 5 - ADVICE
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/advice_it5.json
+================================================================================
+
+{
+  "final_full.md": [
+    {
+      "issue_ref": "FIGURE-NUM-001",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s1-fig-hardware-software-mapping\">\n<figcaption>\n\n从物理换能到数学视角的映射架构：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。",
+        "replace": "与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s1-fig-hardware-software-mapping\">\n<figcaption>\n\n**图 1-2 从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。"
+      }
+    },
+    {
+      "issue_ref": "FIGURE-NUM-002",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-einthoven-triangle\">\n<figcaption>\n\n爱因托芬三角：双极肢体导联的几何映射与物理基石：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。",
+        "replace": "即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-einthoven-triangle\">\n<figcaption>\n\n**图 2-1 爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。"
+      }
+    },
+    {
+      "issue_ref": "FIGURE-NUM-003",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-augmented-circuit\">\n<figcaption>\n\n加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。",
+        "replace": "从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-augmented-circuit\">\n<figcaption>\n\n**图 2-2 加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。"
+      }
+    },
+    {
+      "issue_ref": "AMPLITUDE-GAIN-EXPLICIT",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "### 2.2.2 为什么叫“加压”（Augmented）？\n\n早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。",
+        "replace": "### 2.2.2 为什么叫“加压”（Augmented）？\n\n早期的单极导联使用 WCT 作为参考点，信号极其微弱。以 aVF 为例，若使用 WCT，信号强度为 $V_F = \\Phi_{LL} - \\frac{\\Phi_{RA} + \\Phi_{LA} + \\Phi_{LL}}{3} = \\frac{2\\Phi_{LL} - \\Phi_{RA} - \\Phi_{LA}}{3}$。\n\n戈德伯格发现，如果在测量某肢体电极时，从中心端电阻网络中**断开**该电极本身，参考点（戈德伯格中心端）变为另两个电极的平均值（如 $\\frac{\\Phi_{RA} + \\Phi_{LA}}{2}$）。此时：\n$$V_{aVF} = \\Phi_{LL} - \\frac{\\Phi_{RA} + \\Phi_{LA}}{2} = \\frac{2\\Phi_{LL} - \\Phi_{RA} - \\Phi_{LA}}{2}$$\n对比分母可见，有效电压从原来的 $1/3$ 提升至 $1/2$，振幅整整增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。"
+      }
+    },
+    {
+      "issue_ref": "FIGURE-NUM-004",
+      "scope": "TARGETED",
+      "instruction": {
+        "search": "由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s2-fig-normal-ecg-strip\">\n<figcaption>\n\n六轴参考系统：额面电活动的几何导航全景：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系",
+        "replace": "由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s2-fig-normal-ecg-strip\">\n<figcaption>\n\n**图 2-4 六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系"
+      }
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: ITERATION 5 - FIX RESULT
+PATH: workspace/v16_editorial_stress_rerun/editorial_qa_logs/fix_result_it5.json
+================================================================================
+
+{
+  "status": "FIXED",
+  "patches": [
+    {
+      "scope": "TARGETED",
+      "search": "与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s1-fig-hardware-software-mapping\">\n<figcaption>\n\n**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。",
+      "replace": "与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s1-fig-hardware-software-mapping\">\n<figcaption>\n\n**图 1-2 从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-einthoven-triangle\">\n<figcaption>\n\n**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。",
+      "replace": "即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-einthoven-triangle\">\n<figcaption>\n\n**图 2-1 爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-augmented-circuit\">\n<figcaption>\n\n**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。",
+      "replace": "从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。\" style=\"object-position: 50% 50%; object-fit: contain\" data-asset-id=\"s2-fig-augmented-circuit\">\n<figcaption>\n\n**图 2-2 加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "### 2.2.2 为什么叫“加压”（Augmented）？\n\n早期的单极导联信号极其微弱，因为参考点的电位抵消了大部分信号强度。戈德伯格通过断开中心端与被测电极之间的连接（即不使用 WCT 而是使用修正后的中心端），使得信号振幅增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。",
+      "replace": "### 2.2.2 为什么叫“加压”（Augmented）？\n\n早期的单极导联使用 WCT 作为参考点，信号极其微弱。以 aVF 为例，若使用 WCT，信号强度为 $V_F = \\Phi_{LL} - \\frac{\\Phi_{RA} + \\Phi_{LA} + \\Phi_{LL}}{3} = \\frac{2\\Phi_{LL} - \\Phi_{RA} - \\Phi_{LA}}{3}$。\n\n戈德伯格发现，如果在测量某肢体电极时，从中心端电阻网络中**断开**该电极本身，参考点（戈德伯格中心端）变为另两个电极的平均值（如 $\\frac{\\Phi_{RA} + \\Phi_{LA}}{2}$）。此时：\n$$V_{aVF} = \\Phi_{LL} - \\frac{\\Phi_{RA} + \\Phi_{LA}}{2} = \\frac{2\\Phi_{LL} - \\Phi_{RA} - \\Phi_{LA}}{2}$$\n对比分母可见，有效电压从原来的 $1/3$ 提升至 $1/2$，振幅整整增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。"
+    },
+    {
+      "scope": "TARGETED",
+      "search": "由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s2-fig-normal-ecg-strip\">\n<figcaption>\n\n**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系",
+      "replace": "由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。\" style=\"object-position: 50% 50%; object-fit: cover\" data-asset-id=\"s2-fig-normal-ecg-strip\">\n<figcaption>\n\n**图 2-4 六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系"
+    }
+  ]
+}
+
+
+================================================================================
+TITLE: FINAL MERGED CONTENT
+PATH: workspace/v16_editorial_stress_rerun/final_full.md
+================================================================================
+
+<!-- SECTION: s1-sec-01 -->
+# Hardware vs. Software: The 10-Electrode Paradox
+
+在进入心电图（ECG）的几何推导与临床判读之前，我们必须首先解决一个困扰无数初学者的底层逻辑悖论：**为什么我们明明在患者身上贴了 10 个电极（Electrode），最终得到的却是 12 份导联（Lead）报告？**
+
+这个问题的答案隐藏在“物理传感器”与“数学视角”的本质区别中。在临床工程学的视角下，心电图机不仅仅是一台电压表，它是一台高度集成的**差分信号处理器**。
+
+## 1.1 硬件：作为换能器的电极（Electrode）
+
+物理意义上的**电极**是硬件实体。它们是粘附在皮肤上的银/氯化银（Ag/AgCl）贴片，充当着生物电信号与电子电路之间的“换能器”（Transducer）。
+
+<figure>
+<img src="assets/images/s1-fig-electrode-macro.jpg" alt="**12 导联心电图系统的集成视图**：本图系统性地展示了解决“10 电极悖论”的完整逻辑。图中定义了 10 个物理**电极**（硬件端）的标准解剖定位，包括 4 个**肢体电极**（**RA, LA, LL, RL**）与 6 个**胸前电极**（**V1-V6**）。通过数学算法，这些硬件输入被转换为 12 路**导联**视角，捕捉心脏除极与复极的电矢量演变. 最终，视图展示了导联分组的临床本质：不同导联组合（如**下壁导联 II, III, aVF**）构成了观察特定解剖区域与冠脉供血状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s1-fig-electrode-macro">
+<figcaption>
+
+**图 1-1 12导联心电图系统的集成视图**：本图系统性地展示了解决“10电极悖论”的完整逻辑。**左侧区域**定义了 10 个物理**电极**（硬件端）的标准解剖定位；**中心区域**展示了硬件输入如何通过算法转换为 12 路**导联**视角；**右侧区域**则揭示了导联分组的临床本质：不同导联组合构成了观察特定解剖区域与冠脉状态的虚拟视窗，实现了从物理电信号到解剖学洞察的跨越。
+
+</figcaption>
+</figure>
+
+从电化学的角度看，心肌除极产生的离子流（Ion flow）无法直接进入铜导线。Ag/AgCl 电极的作用是利用氧化还原反应，将体液中的离子电荷转换为导线中的电子电流。
+
+在标准的“12 导联心电图”系统中，我们共部署 10 个物理触点：
+1.  **肢体电极（4个）**：分别位于左臂（LA）、右臂（RA）、左腿（LL）和右腿（RL）。
+2.  **胸前电极（6个）**：标记为 $V_1$ 至 $V_6$。
+
+这里需要注意那个特殊的 **RL 电极**（通常为黑色）。在电路逻辑中，它不参与任何电位的测量。它被定义为“等电位参考点”或“右腿驱动电路”（Right Leg Drive），主要用于消除人体的共模干扰（Common Mode Rejection），将人体这个“天线”吸收的 50/60Hz 环境噪声引入大地。
+
+## 1.2 软件：作为数学视角的导联（Lead）
+
+如果说电极是摄像机的“镜头”，那么**导联**就是最终冲洗出来的“照片”。在物理学定义中，导联是一个**标量函数**，代表两个特定空间点之间的电势差（Potential Difference）。
+
+$$ V_{Lead} = \phi_{Positive} - \phi_{Negative} $$
+
+其中 $\phi$ 代表某一电极检测到的瞬时电位。这意味着，一个导联的形成至少需要两个参考点。心电图机的软件算法正是通过对 9 个有效电极信号（除 RL 外）进行不同的排列组合，才“虚拟”出了 12 个观察角度。
+
+<figure>
+<img src="agent_generated/s1-fig-hardware-software-mapping.svg" alt="**从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s1-fig-hardware-software-mapping">
+<figcaption>
+
+**图 1-2 从物理换能到数学视角的映射架构**：本图可视化了文中提出的“10电极-12导联悖论”的底层实现逻辑。左侧 **PHYSICAL INPUTS (10)** 代表硬件层面的物理触点，其中 **RL (Ref)** 作为右腿驱动参考点，不参与电位差计算；中间的 **DSP ENGINE**（数字信号处理引擎）承担了文中提到的“算法映射”职能，通过对 **RA**、**LA**、**LL** 及 **V1-V6** 信号进行线性组合与差分运算，最终在右侧生成 12 组 **VIRTUAL LEADS**（虚拟导联）。这一过程印证了导联并非单纯的硬件连线，而是基于 9 个有效物理传感器数据构建出的 12 个独立数学观测维度。
+
+</figcaption>
+</figure>
+
+### 1.3 导联的分类逻辑
+
+为了理解 10 到 12 的跨越，我们需要拆解这 12 个视角的生成逻辑：
+
+1.  **双极肢体导联（I, II, III）**：这是最原始的逻辑。它直接取两个肢体电极之间的差值。例如，导联 I 就是左臂与右臂的电位差（$I = LA - RA$）。此时，10 个电极中的 2 个被消耗以产生 1 个导联。
+2.  **加压单极肢体导联（aVR, aVL, aVF）**：这里引入了“虚拟负极”的概念。机器将两个肢体电极通过电阻并联，取其中点作为负极，去测量第三个肢体电极的电位。
+3.  **胸前导联（V1-V6）**：这 6 个导联共享同一个极其复杂的虚拟参考点——**Wilson 中心电端（WCT）**。WCT 是由 RA、LA、LL 三个电极通过电阻网络合成的“心脏中心零电位点”。
+
+:::important
+**核心认知：** 
+电极是**物理输入**，其数量受限于人体解剖表面积 and 操作便捷性；导联是**数学输出**，其数量取决于我们想要从多少个几何维度去观察心脏向量。
+:::
+
+### 1.4 临床意义：超越导线的思考
+
+这种“硬件与软件分离”的设计思路，使得心电图机能够利用有限的物理触点，构建出一个覆盖额面（Frontal Plane）和横面 (Horizontal Plane)的全方位观测网。
+
+当我们审视一份 12 导联心电图报告时，我们实际上是在阅读 12 组由不同电极组合计算出的差分数据。如果 $V_1$ 导联出现 ST 段抬高，并不意味着 $V_1$ 电极本身坏了，而是意味着在 $V_1$ 电极所代表的那个空间坐标轴上，心脏产生的电场向量发生了病理性的偏移。
+
+这种从“线缆”到“洞察”的转变，正是临床工程学的魅力所在。在下一节中，我们将深入研究这 12 个视角中最为经典的几何模型：爱因托芬三角。
+
+<!-- SECTION: s2-sec-02 -->
+# The Frontal Plane: Einthoven’s Geometric Elegance
+
+如果说第一章解决的是“信号如何产生”的微观物理问题，那么本章将带你进入心电图学中最具美感的几何殿堂：**额面导联系统（The Frontal Plane Leads）**。
+
+在临床实践中，我们通过 6 个导联来观察心脏在额面（即人体正前方投影面）的电活动。这 6 个视角并非随意设定，而是通过威廉·爱因托芬（Willem Einthoven）的几何构想与后期电路补偿技术的完美融合。我们将从第一性原理出发，推导出这一套能够提供 60 度空间分辨率的“环绕摄影系统”。
+
+## 2.1 爱因托芬三角：双极肢体导联的基石
+
+19 世纪末，爱因托芬提出了一个天才的假设：将人体视为一个均匀的球形导体，而心脏位于其几何中心。为了测量心脏产生的电偶极子向量，他在左臂（LA）、右臂（RA）和左腿（LL）三个顶点构建了一个等边三角形。
+
+这三个顶点构成了心电图中最基础的 **双极肢体导联（Bipolar Limb Leads）**。之所以称为“双极”，是因为每一个导联都明确定义了一个正极和一个负极。
+
+<figure>
+<img src="agent_generated/s2-fig-einthoven-triangle.svg" alt="**爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-einthoven-triangle">
+<figcaption>
+
+**图 2-1 爱因托芬三角：双极肢体导联的几何映射与物理基石**：该图展示了在额面（Frontal Plane）构建的等边三角形模型，其顶点分别为右臂 (**RA**)、左臂 (**LA**) 和左腿 (**LL**)。通过明确定义三个**双极肢体导联（Lead I, II, III）**的正负极性指向（青色轴线），该系统将中心的心脏除极向量（红色箭头）投影为可测量的电势差。右下角的公式直观体现了**爱因托芬定律（Einthoven's Law）**，即 $I + III = II$，这不仅是几何对称性的体现，更是临床校验心电图连接准确性的物理准则。
+
+</figcaption>
+</figure>
+
+### 2.1.1 向量定义的物理本质
+
+根据基尔霍夫电压定律，我们可以定义这三个导联的电势差关系：
+
+$$
+\begin{aligned}
+V_I &= \Phi_{LA} - \Phi_{RA} \\
+V_{II} &= \Phi_{LL} - \Phi_{RA} \\
+V_{III} &= \Phi_{LL} - \Phi_{LA}
+\end{aligned}
+$$
+
+这里隐藏着心电图学中最著名的数学约束——**爱因托芬定律（Einthoven's Law）**。通过简单的代数代换，你会发现：
+
+:::important
+$$ V_I + V_{III} = (\Phi_{LA} - \Phi_{RA}) + (\Phi_{LL} - \Phi_{LA}) = \Phi_{LL} - \Phi_{RA} = V_{II} $$
+即：**导联 I 的振幅加上导联 III 的振幅，在任何瞬间都等于导联 II 的振幅。**
+:::
+
+这不仅是一个数学游戏，它是临床判读中校验心电图机是否连接错误的“物理防火墙”。
+
+## 2.2 加压单极导联：视角的填补与电路的权衡
+
+爱因托芬三角虽然优雅，但它在空间分布上存在巨大的“盲区”：三个导联轴之间的夹角均为 60 度。为了实现更精密的诊断（例如定位心肌梗死的确切部位），我们需要在这些间隙中插入更多的“摄像头”。
+
+1942 年，伊曼纽尔·戈德伯格（Emanuel Goldberger）提出了 **加压单极肢体导联（Augmented Unipolar Limb Leads）**。这些导联（aVR, aVL, aVF）的本质是寻找一个“零电势点”作为共同负极。
+
+### 2.2.1 寻找“零点”：戈德伯格中心端
+
+要测量一个点的“绝对电位”，我们需要一个稳定的参考点。戈德伯格发现，如果将另外两个肢体电极通过电阻并联，其中心点的电位可以作为第三个电极的参考。
+
+以 **aVF** 为例，其正极位于左腿（LL），而负极则是 RA 与 LA 的中点。
+
+$$ V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} $$
+
+<figure>
+<img src="agent_generated/s2-fig-augmented-circuit.svg" alt="**加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-augmented-circuit">
+<figcaption>
+
+**图 2-2 加压单极导联 aVF 的电路架构：戈德伯格中心端的物理实现**：该原理图揭示了 **aVF** 导联如何通过电路合成“虚拟负极”的原理。左腿 (**LL**) 作为正极直接连接至电压表，而右臂 (**RA**) 与左臂 (**LA**) 则各通过一个等值电阻 (**R**) 桥接在一起，其中心交汇点即为**戈德伯格中心端 (CT)**，作为电压表的负极参考。正如**aVF 电位公式**所示，这种配置通过对上肢电位求平均值，成功在额面坐标系的正下方（+90°）建立了一个探测轴，从而填补了爱因托芬三角在垂直方向上的视角盲区，为临床观察心脏下壁电活动提供了物理基础。
+
+</figcaption>
+</figure>
+
+### 2.2.2 为什么叫“加压”（Augmented）？
+
+早期的单极导联使用 WCT 作为参考点，信号极其微弱。以 aVF 为例，若使用 WCT，信号强度为 $V_F = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA} + \Phi_{LL}}{3} = \frac{2\Phi_{LL} - \Phi_{RA} - \Phi_{LA}}{3}$。
+
+戈德伯格发现，如果在测量某肢体电极时，从中心端电阻网络中**断开**该电极本身，参考点（戈德伯格中心端）变为另两个电极的平均值（如 $\frac{\Phi_{RA} + \Phi_{LA}}{2}$）。此时：
+$$V_{aVF} = \Phi_{LL} - \frac{\Phi_{RA} + \Phi_{LA}}{2} = \frac{2\Phi_{LL} - \Phi_{RA} - \Phi_{LA}}{2}$$
+对比分母可见，有效电压从原来的 $1/3$ 提升至 $1/2$，振幅整整增加了 50%。这就是前缀 **'a' (Augmented)** 的来源。
+
+## 2.3 六轴参考系统：额面的全景视图
+
+当我们把 I, II, III 与 aVR, aVL, aVF 这六个向量平移到同一个圆心时，便诞生了心电图学中的导航罗盘——**六轴参考系统（Hexaxial Reference System）**。
+
+<figure>
+<img src="agent_generated/s2-fig-hexaxial-system.svg" alt="**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s2-fig-hexaxial-system">
+<figcaption>
+
+**图 2-3 六轴参考系统（Cabrera 环）：额面导联的几何全景**：本图将双极肢体导联与加压单极导联整合于统一的极坐标系中，构成了心电学中的“导航罗盘”。系统以 **Lead I** 为 0° 基准，每 **30°** 划分一个观测维度，形成了覆盖 360° 空间的精密视域。图中深蓝色箭头代表各导联的**正向轴（Positive Axis）**，而浅蓝色阴影区域直观展示了**正常电轴（Normal Axis）**的范围（-30° 至 +90°）。这一几何模型解释了为何轴向指向 +60° 的 **Lead II** 最能对齐心脏的主除极向量，从而在临床中产生振幅最高、最易观察的波形信号。
+
+</figcaption>
+</figure>
+
+在这个系统中，每相邻两个导联轴之间仅相差 30 度。这种高密度的覆盖使得我们能够精确计算心脏的**平均电轴（Mean Electrical Axis）**。
+
+### 2.3.1 为什么导联 II 是“节奏导联”？
+
+在临床上，护士通常会拉长导联 II 的记录来观察心律。这背后的物理逻辑非常直观：正常心脏的除极向量方向（从窦房结指向心尖）大约在 +60 度左右，这与导联 II 的轴向几乎完美重合。
+
+根据投影定律 $V = |\vec{P}| \cos \theta$，当夹角 $\theta$ 趋近于 0 时，投影值最大。因此，导联 II 捕捉到的 P 波和 R 波通常最为清晰、振幅最高，是识别心律失常的最佳视角。
+
+<figure>
+<img src="assets/images/s2-fig-normal-ecg-strip.png" alt="**六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s2-fig-normal-ecg-strip">
+<figcaption>
+
+**图 2-4 六轴参考系统：额面电活动的几何导航全景**：本图展示了如何将 3 个双极肢体导联与 3 个加压单极导联整合进统一的极坐标系，为临床诊断提供了 30° 的高空间分辨率。图中蓝色弧线标注了**正常额面电轴**（Normal frontal axis）的生理波动区间（通常在 -30° 至 +90° 之间）。这种几何分布直观地解释了投影定律：由于心脏除极的总向量通常指向 **Lead II (+60°)** 轴向，其 R 波最为清晰高耸；而 **aVR (-150°)** 因与总向量方向几乎完全背离，在正常生理状态下呈现特征性的全波群倒置。
+
+</figcaption>
+</figure>
+
+## 2.4 临床映射：从几何到解剖
+
+额面导联的几何分布直接对应了心脏的解剖分区。这使得物理上的电势变化能够转化为临床上的定位诊断：
+
+*   **下壁（Inferior Wall）**：由 **II, III, aVF** 监控。它们“站在脚下”向上看。如果这三个导联同时出现 ST 段抬高，物理学告诉我们电流正异常地指向下方，临床上则意味着右冠状动脉（RCA）可能发生了闭塞。
+*   **高侧壁（High Lateral Wall）**：由 **I, aVL** 监控。它们从左上方观察心脏。
+
+:::tip
+**物理学家的诊断直觉：**
+当你看到 aVR 的所有波形都是正向时，不要先怀疑心脏病，先检查是不是左右手电极贴反了。因为在物理上，除非心脏长在右边，否则总向量不可能长期指向 -150 度的 aVR。
+:::
+
+通过这一套精密设计的额面系统，我们已经完成了一次对心脏的“环绕扫描”。然而，心脏是一个三维实体，额面只能告诉我们“上下左右”，却无法告诉我们“前后”。为了补全最后一块拼图，我们需要引入威尔逊中心电端，开启横面的探索。
+
+<!-- SECTION: s3-sec-03 -->
+# The Horizontal Plane: Wilson’s Virtual Zero
+
+在完成了额面（Frontal Plane）的几何推导后，我们的“心脏摄像系统”仍然存在一个致命的视觉盲区：深度。额面导联只能告诉我们电向量是在向上、向下、向左还是向右运动，却无法捕捉电信号是在向胸前推进还是向背部深处退缩。
+
+为了补全这最后的三维拼图，我们需要建立**横面 (Horizontal Plane)**导联系统。然而，这里存在一个物理学上的悖论：在额面，我们利用肢体间的电势差（I, II, III）进行测量；但在横面，我们需要一种“单极”视角，即测量胸前某一点相对于“心脏中心”的绝对电位。
+
+问题在于，我们无法物理性地将一根电极插入活体心脏的几何中心。为了解决这个物理约束，我们必须诉诸于基尔霍夫电路定律，创造一个虚拟的“零点”。
+
+## 3.1 威尔逊中心电端：数学创造的物理零点
+
+1934年，法兰克·威尔逊（Frank Wilson）提出了一个天才的设想：如果我们把三个肢体电极（RA, LA, LL）通过三个等值电阻连接到一个公共节点上，这个节点的电位会发生什么？
+
+这个节点被称为**威尔逊中心电端（Wilson Central Terminal, WCT）**。从电路分析的角度看，它是一个精密的平衡网络。
+
+<figure>
+<img src="agent_generated/s3-fig-wct-circuit.svg" alt="**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-wct-circuit">
+<figcaption>
+
+**威尔逊中心电端 (WCT) 的电路物理模型**：本图可视化了如何利用**基尔霍夫电流定律 (KCL)** 在人体内部创造一个**虚拟零点 (Virtual Zero)**。通过将三个肢体电极（**RA**、**LA**、**LL**）连接至等值电阻（$R=5k\Omega$），各支路电流（由 **Signal Amber** 箭头标示）在中心节点 **WCT** 汇聚并达到电学平衡。该模型证明了公式 $\Phi_{WCT} = (\Phi_{RA} + \Phi_{LA} + \Phi_{LL}) / 3 \approx 0$ 的物理本质，从而为横面 (Horizontal Plane)的单极胸前导联提供了一个稳定的“心脏中心”参考电位。
+
+</figcaption>
+</figure>
+
+### 3.1.1 基尔霍夫定律的优雅证明
+
+根据基尔霍夫电流定律（KCL），在任何电路节点上，流入电流之和等于流出电流之和。对于WCT节点，假设其电位为 $\phi_{WCT}$，根据欧姆定律：
+
+$$ \frac{\phi_{RA} - \phi_{WCT}}{R} + \frac{\phi_{LA} - \phi_{WCT}}{R} + \frac{\phi_{LL} - \phi_{WCT}}{R} = 0 $$
+
+由于三个电阻 $R$ 相等，我们可以消去 $R$ 并重组方程：
+
+$$ (\phi_{RA} + \phi_{LA} + \phi_{LL}) - 3\phi_{WCT} = 0 $$
+
+从而得到 WCT 的电位公式：
+
+:::important
+$$ \phi_{WCT} = \frac{\phi_{RA} + \phi_{LA} + \phi_{LL}}{3} $$
+:::
+
+在爱因托芬的假设中，心脏产生的电偶极子位于一个等边三角形的中心，这意味着在任何瞬时，三个顶点的电位代数和近似为零。因此，**WCT 成功地在人体内部创造了一个稳定的、接近零电位的参考点**。它就像是摄影棚中心的一个固定支架，让胸前导联能够以“绝对视角”观察心脏。
+
+## 3.2 胸前导联：横面的六台“单极相机”
+
+有了 WCT 作为虚拟负极，我们就可以在胸前放置 6 个电极（$V_1$ 到 $V_6$），测量它们相对于心脏中心的电势差。
+
+$$ V_n = \phi_{V_n} - \phi_{WCT} $$
+
+这 6 个导联在解剖学上呈半环形分布，从右胸骨缘一直延伸到左侧腋中线。
+
+<figure>
+<img src="assets/images/s3-fig-chest-placement.png" alt="**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-chest-placement">
+<figcaption>
+
+**横面向量轨迹与R波递增规律**：本图通过**横面 (Horizontal Plane)**的解剖投影，直观展示了**胸前导联 V1-V6** 如何捕捉心脏除极的时空轨迹。以**威尔逊中心电端（WCT）**为虚拟参考零点，强大的左心室除极向量 **$V_M$** 猛烈向左后方偏移：对于右侧的 **V1**，主向量背离而去形成深大的 **S波**；而对于左侧的 **V6**，向量迎面而来产生高耸的 **R波**。这种从右向左的投影演变，正是临床上**R波递增（R-wave Progression）**现象的物理本质。
+
+</figcaption>
+</figure>
+
+## 3.3 R 波递增：向量在横面的时空旅行
+
+在横面导联中，最核心的物理现象是**R 波递增（R-wave Progression）**。当我们观察从 $V_1$ 到 $V_6$ 的波形时，会发现 QRS 波群从以负向为主（深 S 波）逐渐演变为以正向为主（高 R 波）。
+
+这并非偶然，而是心脏除极向量在横面运动的物理轨迹：
+
+1.  **室间隔除极（初始向量）**：电信号首先从左向右穿过室间隔。由于 $V_1$ 位于右侧，它会捕捉到一个微小的正向波（r 波）；而左侧的 $V_6$ 则看到信号远离，记录到一个小负波（q 波）。
+2.  **心室主向量（主导向量）**：随后，强大的左心室开始除极。由于左室位于左后方，总向量猛烈地向左后方偏移。
+    *   对于 **$V_1$**：主向量背离它而去，产生巨大的负向 **S 波**。
+    *   对于 **$V_6$**：主向量迎面而来，产生高耸的正向 **R 波**。
+3.  **移行区（Transition Zone）**：通常在 $V_3$ 或 $V_4$ 附近，R 波与 S 波的振幅大致相等。这代表此时向量正好运动到与该导联轴垂直的位置。
+
+<figure>
+<img src="agent_generated/s3-fig-r-wave-progression-physics.svg" alt="**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s3-fig-r-wave-progression-physics">
+<figcaption>
+
+**横面R波递增：主QRS向量的时空投影**：该示意图揭示了心脏除极主向量（**Signal Amber**）在横面 (Horizontal Plane)上的物理轨迹。由于左心室（**LV**）的质量优势，除极总向量猛烈地向左后方偏移，导致位于右侧的 **V1** 导联因向量背离而产生深邃的 **S波**，而左侧的 **V6** 导联则因迎向向量捕捉到高耸的 **R波**。图中位于 **V3-V4** 之间的**移行区（Transition Zone）**标志着向量与导联轴处于垂直状态（R≈S），直观展示了胸前导联如何通过几何投影原理，将心脏的解剖动态转化为连续演变的电信号波形。
+
+</figcaption>
+</figure>
+
+## 3.4 临床洞察：横面的解剖映射
+
+通过 WCT 构建的这六个视角，我们实现了对心脏解剖区域的精确扫描：
+
+*   **$V_1, V_2$（前间壁视角）**：紧贴胸骨，专门盯着室间隔。如果这里的 R 波异常高耸，物理学告诉我们，要么是右心室变厚了（右室肥大），产生的向右力量抵消了左室的优势；要么是后壁发生了心梗，导致“背离”的力量消失。
+*   **$V_3, V_4$（前壁视角）**：正对着左心室的前壁。这里是前降支（LAD）的领地，也是心电图中能量最充沛、波形最敏感的区域。
+*   **$V_5, V_6$（侧壁视角）**：从左侧观察心室。它们与额面的 I 和 aVL 共同构成了左心室侧壁的防护网。
+
+<figure>
+<img src="assets/images/s3-fig-normal-12-lead-strip.png" alt="**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s3-fig-normal-12-lead-strip">
+<figcaption>
+
+**横面除极向量与 R 波递增的物理映射**：本图直观展示了心脏在横面 (Horizontal Plane)的电轴扫描轨迹。以**威尔逊中心电端 (WCT)** 为虚拟零点，胸前导联 **$V_1$ 至 $V_6$** 呈半环形排列。初始的室间隔除极向量（蓝色箭头 $V_S$）指向右前方，在 **$V_1$** 形成小 r 波；随后的左心室**主除极向量 ($V_M$, 红色箭头)** 猛烈向左后方偏移，导致 **$V_1$** 记录到深邃的 S 波，而 **$V_6$** 则记录到高耸的 R 波。这一空间向量的移动完美解释了下方波形图中 **R 波递增（R-wave Progression）** 的物理本质，证明了横面导联捕捉心脏“深度”信息的能力。
+
+</figcaption>
+</figure>
+
+:::tip
+**物理学家的思考：**
+WCT 的存在让我们意识到，心电图不仅仅是导线的连接，它更是一场关于**参考系**的博弈。没有 WCT 这个虚拟的“零点”，我们就无法在混乱的体表电场中锚定心脏的中心。在下一章中，我们将把额面与横面合二为一，看这 12 个导联如何共同编织出一张覆盖全心的“全景网”。
+:::
+
+<!-- SECTION: s4-sec-04 -->
+# Clinical Synthesis: The 12-Lead Panorama
+
+在经历了硬件电极的部署、额面向量的投影以及横面中心电端的构建后，我们终于可以站在物理学与临床工程学的交汇点，审视这套系统的终极产物：**12 导联全景图 (The 12-Lead Panorama)**。
+
+临床医生手中的心电图纸，本质上是一份关于心脏电活动的“多机位纪录片”。12 个导联并非 12 个独立的信号源，而是同一个动态电向量 $\vec{P}(t)$ 在 12 个不同空间维度上的实时投影。这一章，我们将把抽象的物理推导转化为具体的解剖定位，揭示为什么纸上的折线能精准预报冠状动脉的阻塞。
+
+
+<figure>
+<img src="assets/images/s4-fig-clinical-ecg.png" alt="**12 导联解剖分区与冠脉供血关联全景图**：本图直观展示了文中第 4.1 节所述的“多机位”观测视角，通过色彩编码将 12 导联划分为互补的解剖区域。**红色区域（II、III、aVF）** 监控由 **RCA** 供血的**下壁**；**绿色区域（V1-V4）** 覆盖由 **LAD** 供血的**前间壁与前壁**；**蓝色/紫色区域（I、aVL、V5-V6）** 则负责由 **LCx** 或 LAD 对角支供血的**侧壁**。这种视觉映射将抽象的**电向量投影**转化为具象的临床诊断依据，使医生能够通过 **ST 段**的异常偏移精准回溯受损的**责任血管**及解剖方位。" style="object-position: 50% 50%; object-fit: cover" data-asset-id="s4-fig-clinical-ecg">
+<figcaption>
+
+**图 4-1 临床全景：真实心电图纸上的解剖映射**：本图以临床标准报告单为背景，展示了“多机位”观测视角的分布逻辑。通过色彩编码，将抽象的**电向量投影**与具体的**临床波形**结合，直观呈现了**下壁（RCA）**、**前壁（LAD）**及**侧壁（LCx）**在心电图纸上的对应位置，旨在培养医生的第一眼临床直觉。
+
+</figcaption>
+</figure>
+
+
+## 4.1 空间分区：12 导联的解剖地图
+
+为了在临床上快速定位病变，我们将 12 个导联根据其“观测视角”划分为四个解剖区域。这种分区逻辑直接对应了左心室的不同壁面及其供血动脉。
+
+### 4.1.1 下壁组 (Inferior Leads)：II, III, aVF
+这三个导联的探头（正极）均位于人体的下方（左腿）。从物理角度看，它们是“仰视”心脏的底部。
+*   **观测视角**：左心室下壁（Diaphragmatic Surface）。
+*   **责任血管**：通常由**右冠状动脉 (RCA)** 供血。
+
+### 4.1.2 前间壁与前壁组 (Septal & Anterior Leads)：V1 - V4
+这组导联横跨胸骨至心尖，属于横面系统的核心。
+*   **V1, V2 (Septal)**：正对室间隔。反映**前降支 (LAD) 近端**的状态。
+*   **V3, V4 (Anterior)**：正对左室前壁及心尖部。反映**前降支 (LAD)** 的主干状态。
+
+### 4.1.3 侧壁组 (Lateral Leads)：I, aVL, V5, V6
+这组导联从左侧“包抄”心脏。
+*   **I, aVL (High Lateral)**：从左上方俯视。
+*   **V5, V6 (Low Lateral)**：从左侧方平视。
+*   **责任血管**：通常由**回旋支 (LCX)** 或 LAD 的对角支供血。
+
+
+<figure>
+<img src="agent_generated/s4-fig-anatomical-mapping.svg" alt="**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-anatomical-mapping">
+<figcaption>
+
+**12 导联解剖映射与损伤向量定位**：本图将 12 导联的抽象物理投影转化为直观的心脏**空间分区地图**，建立了电信号与解剖结构的直接联系。通过 **Medical Cyan** 标注的导联组（如 **V1-V4**、**II, III, aVF**）分别监控特定的解剖壁面（间壁、前壁、下壁及侧壁）及其对应的**责任血管**（**LAD**、**RCA**、**LCX**）。图中红色的**损伤向量 (Injury Vector)** 揭示了第 4.2 节所述的诊断逻辑：当电向量指向受损的心肌区域时，对应的导联组将捕获到 **ST 段抬高**的信号，使临床医生能够通过“多机位”的心电图纸精准锁定冠状动脉的闭塞位置。
+
+</figcaption>
+</figure>
+
+
+## 4.2 损伤向量：ST 段抬高的物理本质
+
+在临床诊断中，**ST 段抬高 (ST-segment Elevation)** 是心肌梗死（STEMI）最具有杀伤力的信号。从物理学第一性原理出发，我们如何解释这一现象？
+
+当某一部分心肌发生透壁性缺血或损伤时，该区域的细胞膜电位在静息状态下会比健康区域更“负”。这在心脏内部产生了一个持续存在的**损伤向量 (Injury Vector)**。
+
+### 4.2.1 投影逻辑的逆推
+根据投影定律 $V = |\vec{P}| \cos \theta$，如果损伤向量 $\vec{P}_{injury}$ 的方向指向某个导联的正极，那么该导联记录到的电压就会发生正向偏移。
+
+1.  **静息期偏移**：由于损伤区的电位差异，基线（TQ 段）实际上发生了下移。
+2.  **视觉错觉**：由于心电图机自动将 TQ 段校准为零电平，在除极后的 ST 段（此时全心处于等电位），原本正常的电位反而显得“抬高”了。
+
+:::important
+**物理直觉：**
+损伤向量永远**指向受损的区域**。因此，哪组导联看到 ST 段抬高，就意味着损伤发生在该组导联探头所指向的解剖位置。
+:::
+
+
+<figure>
+<img src="agent_generated/s4-fig-injury-vector-logic.svg" alt="**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-injury-vector-logic">
+<figcaption>
+
+**损伤向量与 ST 段抬高的物理投影机制**：本图揭示了临床诊断 STEMI 的电生理底层逻辑。当心肌局部出现**损伤区 (Injury Zone)** 时，会产生一个持续指向受损部位的**损伤向量 (Injury Vector $\vec{P}$)**。根据投影定律 $V = |\vec{P}| \cdot \cos(\theta)$，当该向量与**导联轴 (Lead Axis)** 的夹角 $\theta < 90^\circ$ 时，其正向投影分量会导致心电图在除极后的 **ST 段** 发生相对于**基线 (Baseline TQ)** 的明显抬高（**ST Elevation**）。这一物理过程直观地展示了第 4.2 节所述的诊断原理：通过观察特定导联组的电压正向偏移，临床医生可以利用向量投影逆推，精准锁定心肌损伤的解剖方位及责任血管。
+
+</figcaption>
+</figure>
+
+
+## 4.3 冠脉地图：从电信号到血流动力学
+
+将 12 导联的物理信息与冠状动脉解剖学结合，我们就得到了一张完整的“心脏战略地图”。
+
+| 导联组 | 空间名称 | 监控区域 | 典型责任血管 |
+| :--- | :--- | :--- | :--- |
+| **V1, V2** | 前间壁 (Septal) | 室间隔 | LAD (前降支) |
+| **V3, V4** | 前壁 (Anterior) | 左室前壁、心尖 | LAD (前降支) |
+| **V5, V6, I, aVL** | 侧壁 (Lateral) | 左室侧壁 | LCX (回旋支) |
+| **II, III, aVF** | 下壁 (Inferior) | 左室底部 | RCA (右冠状动脉) |
+
+### 4.3.1 镜像改变 (Reciprocal Changes)
+物理对称性在心电图中表现为“镜像改变”。例如，当下壁（II, III, aVF）发生 ST 段抬高时，对侧的高侧壁（I, aVL）往往会出现 ST 段压低。这并非两处都有病变，而是同一个损伤向量在相反方向导联上的**负向投影**。
+
+:::tip
+**临床判读的“物理视角”：**
+不要孤立地看每一个导联。如果 V1-V4 出现 ST 抬高，而 II, III, aVF 正常，这不仅是前壁梗死，它在物理上排除了下壁梗死的可能。这种“空间排他性”是减少误诊的关键。
+:::
+
+## 4.4 结语：观心如画
+
+至此，我们完成了从导线到导联的全部推导。心电图不再是纸上跳动的杂乱线条，而是一场精密编排的几何实验。每一个波形的起伏，都是心脏这个电磁源在空间中投下的影子。
+
+理解了这些物理原理，你便不再是规则的背诵者，而是信号的解码者。当你看到 V1 导联那高耸的 R 波或 V3 导联那抬高的 ST 段时，你的大脑中应当浮现出那个在三维空间中剧烈偏移的向量，以及它背后所代表的、正在经历电化学风暴的生命实体。
+
+
+<figure>
+<img src="agent_generated/s4-fig-panorama-summary.svg" alt="**12 导联解剖定位与冠脉供血关联全景图**：本图直观总结了文中第 4.1 节所述的“空间分区”逻辑，将 12 个导联的电信号投影转化为精准的心脏解剖地图。通过色彩编码清晰界定了监控 **RCA（右冠状动脉）** 供血区域的**下壁组 (II, III, aVF)**、对应 **LAD（前降支）** 的**前间壁/前壁组 (V1-V4)** 以及负责 **LCX（回旋支）** 区域的**侧壁组 (I, aVL, V5, V6)**。这种映射关系不仅验证了“多机位纪录片”的观测视角，更通过底部标注的**镜像改变 (Reciprocal Changes)** 揭示了第 4.3.1 节中的物理本质：即同一个**损伤向量**在空间对侧导联轴上产生的负向投影，是临床定位冠脉闭塞位置的核心诊断依据。" style="object-position: 50% 50%; object-fit: contain" data-asset-id="s4-fig-panorama-summary">
+<figcaption>
+
+**图 4-2 理论模型：12 导联空间投影的几何解析图**：本图总结了 12 个导联在心脏三维空间中的几何映射关系。除了界定各导联组与**责任血管**的关联，本模型重点突出了**镜像改变（Reciprocal Changes）**的物理本质，即通过同一个**损伤向量**在对称空间导联轴上的负向投影，为临床精准定位冠脉闭塞提供数学逻辑验证。
+
+</figcaption>
+</figure>
+
+
+

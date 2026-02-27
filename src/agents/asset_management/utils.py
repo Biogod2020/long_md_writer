@@ -84,14 +84,8 @@ def generate_figure_html(
         workspace_path=workspace_path, 
         md_subdir=md_subdir
     )
-    return f'''<figure>
-{img_tag}
-<figcaption>
-
-{caption}
-
-</figcaption>
-</figure>'''
+    # SOTA Rendering: Ensure blank lines are NAKED (no indents) to trigger Markdown parsers
+    return f'<figure>\n{img_tag}\n<figcaption>\n\n{caption}\n\n</figcaption>\n</figure>'
 
 
 def generate_placeholder_html(directive_id: str, description: str, placeholder_type: str = "svg") -> str:

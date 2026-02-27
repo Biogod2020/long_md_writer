@@ -105,34 +105,31 @@ def fix_common_json_errors(json_str: str) -> str:
     
     json_str = re.sub(r'"([^"\\]|\\.)*"', replace_newlines, json_str)
     
-    # C. SOTA: Advanced LaTeX Backslash Cleaner
-    # Matches a backslash that is NOT part of a standard JSON escape sequence
-    # Standard: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+    # C. SOTA: Advanced LaTeX Backslash Cleaner (The 4-Step Protocol)
+    # This prevents malformed JSON caused by naked backslashes in math formulas.
     def safe_backslash_replace(match):
-        s = match.group(0)
-        inner = s[1:-1]
+        inner = match.group(0)[1:-1]
         
-        # 1. Protect existing double backslashes (the only way to have a literal backslash in valid JSON)
+        # 1. Protect existing double backslashes (physical backslash in JSON)
         step1 = inner.replace('\\\\', '\x01\x01')
         
-        # 2. Protect other valid escape sequences: \", \/, \b, \f, \n, \r, \t, \uXXXX
+        # 2. Protect valid JSON escape sequences: \", \/, \b, \f, \n, \r, \t, \uXXXX
         def protect_valid(m):
             return f"\x02{m.group(1)}"
         step2 = re.sub(r'\\(["/bfnrt]|u[0-9a-fA-F]{4})', protect_valid, step1)
         
-        # 3. Any remaining naked backslashes were NOT intended to be escaped (e.g. malformed LaTeX).
-        # Double them now.
+        # 3. Any remaining naked single backslashes are ILLEGAL in JSON. Double them.
         step3 = step2.replace('\\', '\\\\')
         
-        # 4. Restore placeholders to standard backslashes
+        # 4. Restore protected markers back to their single-backslash escaped forms
         fixed_inner = step3.replace('\x01', '\\').replace('\x02', '\\')
         
         return f'"{fixed_inner}"'
 
-    # Only apply to content inside double quotes
+    # Apply only to contents within double quotes
     json_str = re.sub(r'"[\s\S]*?"', safe_backslash_replace, json_str)
 
-    # D. Fix missing quotes around boolean values or nulls if they are capitalized
+    # D. Fix common boolean/null capitalization
     json_str = re.sub(r':\s*True\b', ': true', json_str)
     json_str = re.sub(r':\s*False\b', ': false', json_str)
     json_str = re.sub(r':\s*None\b', ': null', json_str)

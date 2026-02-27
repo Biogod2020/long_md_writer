@@ -175,7 +175,12 @@ class AssetEntry(BaseModel):
             if full.exists():
                 return full
 
-        # 2. Try relative to project root
+        # 2. Try relative to current working directory (SOTA Enhancement)
+        cwd_full = Path.cwd() / local_path
+        if cwd_full.exists():
+            return cwd_full
+
+        # 3. Try relative to project root
         root = project_root or get_project_root(start_path=ws_path)
         full = root / local_path
         if full.exists():
@@ -511,14 +516,14 @@ class UniversalAssetRegistry(BaseModel):
     def _persist(self) -> None:
         """持久化到 JSON 文件"""
         if not self.persist_path:
-            # SOTA Self-Healing: 如果路径丢失，尝试从当前环境找回
-            print("  [UAR] ⚠️ Warning: persist_path is missing. Attempting self-healing...")
-            # 这里的兜底逻辑通常应该指向工作区的 assets.json
+            # SOTA Self-Healing: 如果路径丢失，不应静默失败
+            print("  [UAR] ⚠️ Warning: persist_path is missing. Cannot persist registry.")
             return
 
         path = Path(self.persist_path)
         print(f"  [UAR] 💾 Attempting to persist {len(self.assets)} assets to {path.absolute()}")
         try:
+            # Ensure the directory exists
             path.parent.mkdir(parents=True, exist_ok=True)
             
             # SOTA: 动态刷新统计信息
@@ -537,12 +542,17 @@ class UniversalAssetRegistry(BaseModel):
                 "stats": self.stats
             }
 
-            with open(path, "w", encoding="utf-8") as f:
+            # SOTA Robustness: Write to temp first then rename to prevent corruption during crash
+            temp_path = path.with_suffix(".tmp")
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
+            os.replace(temp_path, path)
             print(f"  [UAR] ✅ 成功持久化 {len(self.assets)} 个资产至 {path.name}")
         except Exception as e:
             print(f"  [UAR] ❌ Persistence FAILED: {e}")
+            import traceback
+            traceback.print_exc()
 
     @classmethod
     def load_from_file(cls, path: str) -> "UniversalAssetRegistry":

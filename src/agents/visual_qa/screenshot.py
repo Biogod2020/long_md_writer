@@ -69,7 +69,9 @@ def take_screenshots(
             try:
                 from PIL import Image
                 with Image.open(screen_path) as img:
-                    img = img.convert('RGB')
+                    # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
                     img.save(screen_path, format="JPEG", quality=80, optimize=True)
             except: 
                 pass

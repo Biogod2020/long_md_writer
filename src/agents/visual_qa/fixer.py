@@ -102,8 +102,10 @@ def run_fixer(
             import io
             import base64
             with Image.open(debug_image_path) as img:
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
+                # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                
                 if img.width > 1200:
                     ratio = 1200 / img.width
                     img = img.resize((1200, int(img.height * ratio)), Image.Resampling.LANCZOS)

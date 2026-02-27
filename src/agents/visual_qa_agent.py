@@ -367,8 +367,9 @@ Please identify visual bugs in this section and suggest fixes for either the sec
             try:
                 # Resize and compress image
                 with Image.open(path) as img:
-                    # Convert to RGB (in case of PNG alpha channel)
-                    if img.mode in ('RGBA', 'P'): img = img.convert('RGB')
+                    # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
                     
                     # Resize if too large (max width 1200)
                     if img.width > 1200:
@@ -543,7 +544,9 @@ Please identify visual bugs in this section and suggest fixes for either the sec
                 try:
                      from PIL import Image
                      with Image.open(screen_path) as img:
-                         img = img.convert('RGB')
+                         # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                         if img.mode != "RGB":
+                             img = img.convert("RGB")
                          img.save(screen_path, format="JPEG", quality=80, optimize=True)
                 except: pass
                     
@@ -806,7 +809,10 @@ Analyze the attached {len(screenshot_paths)} screenshots and identify any visual
         for i, path in enumerate(screenshot_paths):
             try:
                 with Image.open(path) as img:
-                    if img.mode in ('RGBA', 'P'): img = img.convert('RGB')
+                    # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
                     if img.width > 1200:
                         ratio = 1200 / img.width
                         img = img.resize((1200, int(img.height * ratio)), Image.Resampling.LANCZOS)

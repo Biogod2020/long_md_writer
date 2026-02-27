@@ -23,6 +23,8 @@ from ..agents.assembler_agent import AssemblerAgent
 from ..agents.visual_qa_agent import VisualQAAgent
 
 
+from ..core.config import HEADLESS_MODE
+
 class NodeFactory:
     """
     Node Function Factory
@@ -43,8 +45,10 @@ class NodeFactory:
         self.css_generator = CSSGeneratorAgent(client)
         self.js_generator = JSGeneratorAgent(client)
         self.transformer = TransformerAgent(client)
-        self.image_sourcer = ImageSourcingAgent(client, debug=False, headless=True)
+        # SOTA: ImageSourcing honors global headless setting for manual bypass
+        self.image_sourcer = ImageSourcingAgent(client, debug=False, headless=HEADLESS_MODE)
         self.assembler = AssemblerAgent(client)
+        # SOTA: VisualQA is strictly headless as it doesn't face anti-bot barriers
         self.visual_qa = VisualQAAgent(client, debug=False, headless=True)
     
     # ================== Planning Nodes ==================

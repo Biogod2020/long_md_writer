@@ -45,7 +45,7 @@ SVG_CAPTION_REFINEMENT_PROMPT = """You are a Senior Technical Editor. Your task 
    - Specifically mentions key labels visible in the diagram to anchor the text to the visual.
    - Is concise (1-2 sentences) but high-value.
    - Avoids "Here is a diagram showing..." or "This image illustrates...". Start directly with the factual description.
-   - Match the language of the [ARTICLE CONTEXT].
+   - **LANGUAGE ALIGNMENT (CRITICAL)**: Always write the caption in the **SAME LANGUAGE** as the [ARTICLE CONTEXT] (e.g., Chinese if the section is Chinese).
 
 ### Input Data:
 - **Original Directive**: {original_directive}
