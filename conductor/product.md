@@ -21,7 +21,9 @@ The primary users are **Enterprise Content Teams** who need to automate large-sc
     - **High-Fidelity State Audit & Breakpoint Resume**: Native integration with LangGraph persistence (AsyncSqliteSaver) combined with a specialized SnapshotManager. Every critical node transition is logically persisted and physically snapshotted, enabling granular "Time Travel" debugging, seamless resumption from process failures, and transparent human-in-the-loop auditing of intermediate artifacts.
     - **Intelligent Sourcing Sub-Agent**: A specialized black-box engine for web-based image discovery. 
         - **Reflection & Self-Correction**: Features an autonomous reflection loop where audit rejections are fed back into query strategy generation to pivot search efforts.
-        - **Fidelity-First Pipeline**: Utilizes a "Shotgun" concurrency model (httpx + multi-tab browser) to guarantee 100% original binary quality while using optimized thumbnails for high-speed VLM evaluation.
+        - **Fidelity-First Pipeline**: Utilizes a "Shotgun" concurrency model (httpx + multi-tab browser) with a **First-Win Race Condition** logic to guarantee 100% original binary quality while using optimized thumbnails for high-speed VLM evaluation.
+        - **Hierarchical Audit & Selection**: Implements an "Elite-First" batching strategy followed by a multi-layered (10-to-2-to-1) VLM selection process to maximize visual relevance and technical accuracy.
+        - **Resilient Infrastructure**: Features "Proxy Armor" and manual port management to ensure stable browser connectivity in complex network environments (like VPN TUN mode).
         - **Atomic Lifecycle Management**: Ensures clean workspaces by automatically removing temporary sourcing fragments while preserving all canonical assets.
     - **Autonomous SVG Sub-Agent**: A dedicated black-box engine for technical illustration.
         - **Reflection Loop**: Implements a self-correcting logic where audit feedback is used to pivot repair strategies via high-precision patching.

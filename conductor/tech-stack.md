@@ -21,7 +21,9 @@
   - "Thinking" token (thoughts) capture and state integration.
   - Intelligent connection pooling and exponential backoff for network resilience.
   - High-concurrency parallel fulfillment with semaphore-based rate limiting.
-  - **Shotgun Sourcing Strategy**: Massive parallelism across multiple download methods (Direct, Browser-based, Clean Header) with winner-takes-all selection.
+  - **Shotgun Sourcing Strategy**: Massive parallelism (up to 30 concurrent tasks) across multiple download methods (Direct, Browser-based, JS Stealth Fetch) with **First-Win Race Condition** and winner-takes-all selection.
+  - **Hierarchical VLM Selection**: A multi-tiered competitive audit process (Elite Pass + 10-to-2-to-1 Fallback) to ensure the highest-fidelity asset capture.
+  - **Anti-Interference Browser Control**: Implementation of Proxy Armor (NO_PROXY enforcement) and Manual Port Cycling to bypass environment-level network interception.
   - **Fidelity-First Asset Pipeline**:
     - In-memory/On-disk hybrid processing for 100% original binary preservation.
     - Pre-generated VQA thumbnails for low-latency VLM transfer.
