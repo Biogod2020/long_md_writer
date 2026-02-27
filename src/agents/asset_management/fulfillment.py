@@ -30,7 +30,7 @@ from ...core.types import (
     AssetVQAStatus,
 )
 from ...core.patcher import StuckDetector, apply_smart_patch
-from ...core.json_utils import extract_json_from_text
+from ...core.json_utils import extract_json_from_text, parse_json_dict_robust
 from .models import VisualDirective
 from .processors.mermaid import (
     generate_mermaid_async,
@@ -74,8 +74,13 @@ class AssetFulfillmentAgent:
         self.uar_lock = asyncio.Lock() # SOTA: 用于确保 UAR 持久化线程安全
         self.stuck_detector = StuckDetector()
         
-        # SOTA: Defer agent creation to runtime to ensure unique PID-based profiles
+        # SOTA: Initialize sub-agents once to avoid browser profile collisions in parallel workers
         self._headless_setting = headless
+        self.sourcing_agent = ImageSourcingAgent(
+            client=self.client, 
+            debug=debug, 
+            headless=headless
+        )
         self.svg_agent = SVGAgent(client=self.client, debug=debug)
 
     async def run_parallel_async(self, state: AgentState) -> AgentState:
@@ -88,6 +93,10 @@ class AssetFulfillmentAgent:
             print(f"  [Fulfillment] 🔄 正在从物理磁盘同步资产注册表: {uar_path.name}")
             from ...core.types import UniversalAssetRegistry
             state.asset_registry = UniversalAssetRegistry.load_from_file(str(uar_path))
+        
+        # Ensure UAR knows where to save itself
+        uar = state.get_uar()
+        uar.set_persist_path(str(uar_path))
 
         # SOTA: 每次运行前重置失败状态，防止死循环
         state.failed_directives = []
@@ -150,10 +159,10 @@ class AssetFulfillmentAgent:
                                 target_file=task["original_path"],
                                 full_section_markdown=full_section_content
                             ),
-                            timeout=300 # 5 minutes per asset
+                            timeout=600 # 10 minutes per asset
                         )
                     except asyncio.TimeoutError:
-                        print(f"    [Fulfillment] ⏱️ TIMEOUT for {d.id} after 300s. Skipping.")
+                        print(f"    [Fulfillment] ⏱️ TIMEOUT for {d.id} after 600s. Skipping.")
                         d.error = "Task timed out"
                         return (task["original_path"], d, None)
                     
@@ -198,14 +207,14 @@ class AssetFulfillmentAgent:
                 if d.fulfilled and d.result_html:
                     # SOTA 2.1: Robust ID-Based Backfill (Primary Strategy)
                     # We look for any :::visual block containing this specific ID.
-                    # This makes the process immune to description edits by Editorial QA.
+                    # This new regex is highly permissive with whitespace and JSON internal structure.
                     import re
-                    id_pattern = rf':::visual\s*\{{[^}}]*?"id":\s*"{re.escape(d.id)}"[^}}]*?\}}[\s\S]*?:::'
+                    id_pattern = VisualDirective.get_anchor_regex(d.id)
                     
                     success = False
-                    if re.search(id_pattern, current_content):
+                    if re.search(id_pattern, current_content, re.IGNORECASE):
                         # Use lambda to avoid re.sub interpreting backslashes in result_html (e.g., LaTeX)
-                        current_content = re.sub(id_pattern, lambda _: d.result_html, current_content, count=1)
+                        current_content = re.sub(id_pattern, lambda _: d.result_html, current_content, count=1, flags=re.IGNORECASE)
                         success = True
                         if self.debug: print(f"    [Fulfillment] 🎯 通过 ID 锚点成功注入资产: {d.id}")
                     
@@ -235,6 +244,24 @@ class AssetFulfillmentAgent:
             # 写入并提交该文件的最终修改
             manager.working_path.write_text(current_content, encoding="utf-8")
             manager.commit()
+
+        # SOTA 2.1: Mirror write-back to final_full.md if it exists
+        # This is critical because the merged document is the ultimate output of the pipeline.
+        merged_path = workspace_path / "final_full.md"
+        if merged_path.exists():
+            print(f"  [Fulfillment] 🔄 Mirroring write-back to merged document: {merged_path.name}")
+            merged_content = merged_path.read_text(encoding="utf-8")
+            
+            # Use all results to backfill the merged document
+            for _, d, _ in results:
+                if d.fulfilled and d.result_html:
+                    import re
+                    # Using the same robust regex
+                    id_pattern = VisualDirective.get_anchor_regex(d.id)
+                    if re.search(id_pattern, merged_content, re.IGNORECASE):
+                        merged_content = re.sub(id_pattern, lambda _: d.result_html, merged_content, count=1, flags=re.IGNORECASE)
+            
+            merged_path.write_text(merged_content, encoding="utf-8")
 
         # SOTA: 最终强制物理持久化 UAR，确保磁盘 assets.json 与内存同步
         async with self.uar_lock:
@@ -400,15 +427,8 @@ class AssetFulfillmentAgent:
             
             print(f"    [Fulfillment] 🔍 Calling Sub-Agent for Search: {d.id}")
             
-            # SOTA: Create agent HERE to get unique PID-based profile path
-            sourcing_agent = ImageSourcingAgent(
-                client=self.client, 
-                debug=self.debug, 
-                headless=self._headless_setting
-            )
-            
-            # Directly await the high-performance async interface
-            success, asset, html = await sourcing_agent.fulfill_directive_async(
+            # Use the shared instance created in __init__
+            success, asset, html = await self.sourcing_agent.fulfill_directive_async(
                 d, state, target_file=target_file
             )
         
@@ -462,8 +482,11 @@ class AssetFulfillmentAgent:
                     raw_block = "".join(current_block_lines)
                     end_pos = current_global_pos + len(line)
                     
-                    from ...core.json_utils import extract_json_from_text, parse_json_dict_robust
-                    raw_json = extract_json_from_text(raw_block)
+                    # SOTA 2.1: Use a more robust multi-line JSON extraction
+                    # Look for the FIRST { and LAST } within the entire captured block
+                    import re
+                    json_match = re.search(r'\{[\s\S]*\}', raw_block)
+                    raw_json = json_match.group(0) if json_match else None
                     
                     if raw_json:
                         d = VisualDirective(raw_block=raw_block, start_pos=start_pos, end_pos=end_pos)

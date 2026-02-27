@@ -45,3 +45,14 @@ class VisualDirective:
         if self.context_after:
             parts.append(f"[CONTEXT AFTER]\n{self.context_after}")
         return "\n\n".join(parts)
+
+    @staticmethod
+    def get_anchor_regex(asset_id: str) -> str:
+        """
+        Returns a robust regex pattern to find a :::visual block by its ID.
+        SOTA 2.1: Handles varied whitespace and newlines between :::visual and JSON.
+        """
+        import re
+        # Match :::visual, then anything (including newlines) until our ID
+        # We allow for newlines and spaces immediately after :::visual
+        return rf':::visual[\s\S]*?["\']id["\']\s*:\s*["\']{re.escape(asset_id)}["\'][\s\S]*?:::'

@@ -1,6 +1,6 @@
 """
-ImageSourcingAgent: SOTA 2.0 Intent-Driven Sub-Agent.
-Handles web-based image discovery, downloading, and VLM-based selection.
+ImageSourcingAgent: SOTA 2.1 Intent-Driven Sub-Agent.
+Handles web-based image discovery, downloading, and hierarchical VLM selection.
 """
 
 import re
@@ -26,7 +26,7 @@ from ..asset_management.models import VisualDirective
 class ImageSourcingAgent:
     """
     Agent that sources real images from the web for technical documents.
-    Redesigned as an async sub-agent for SOTA 2.0.
+    Optimized for high-concurrency and hierarchical visual accuracy.
     """
 
     def __init__(self, client: Optional[GeminiClient] = None, debug: bool = False, headless: bool = True):
@@ -35,7 +35,8 @@ class ImageSourcingAgent:
         self.headless = headless
         
         self.strategy_gen = StrategyGenerator(self.client, debug=debug)
-        self.vision_selector = VisionSelector(self.client, debug=debug)
+        # SOTA 2.1: Default to Hierarchical (Elite-First) audit for maximum precision
+        self.vision_selector = VisionSelector(self.client, debug=debug, use_hierarchy=True)
         self.local_selector = LocalSelector(self.client, debug=debug)
 
     async def fulfill_directive_async(
@@ -45,8 +46,8 @@ class ImageSourcingAgent:
         target_file: Optional[Path] = None
     ) -> Tuple[bool, Optional[AssetEntry], Optional[str]]:
         """
-        SOTA 2.0 Core Interface: Fulfills a visual directive by sourcing an image.
-        Returns: (Success, AssetEntry, HTML_Code)
+        SOTA 2.1 Core Interface: Fulfills a visual directive by sourcing an image.
+        Implements an Elite-First + Hierarchical Fallback pipeline.
         """
         img_id = directive.id
         description = directive.description.strip()
@@ -72,6 +73,7 @@ class ImageSourcingAgent:
         # 2. Web Search (Fallback)
         print(f"    [{img_id}] Sourcing from Web: {description[:50]}...")
         
+        # SOTA 2.1: Reuse a single BrowserManager session for all queries/downloads
         with BrowserManager(headless=self.headless, debug=self.debug, block_resources=True) as bm:
             searcher = GoogleImageSearcher(bm, debug=self.debug)
             downloader = ImageDownloader(bm, debug=self.debug)
@@ -90,18 +92,26 @@ class ImageSourcingAgent:
                 queries = strategy.get("queries", [description])[:2]
                 guidance = strategy.get("guidance", "Accurate representation.")
                 
-                image_candidates = []
+                # SOTA 2.1: Interleaved Top-10 Strategy
+                # We collect results from all queries and prioritize the top 10 of each for the Elite Pass
+                q_results = []
                 for q in queries:
-                    image_candidates.extend(searcher.search([q])[:20])
+                    res = searcher.search([q])
+                    if res: q_results.append(res)
                 
-                if not image_candidates:
+                if not q_results:
                     all_failed_queries.extend(queries)
                     continue
 
+                # Construct image_candidates: [Q1_top10, Q2_top10, Q1_rest, Q2_rest]
+                image_candidates = []
+                for res in q_results: image_candidates.extend(res[:10]) 
+                for res in q_results: image_candidates.extend(res[10:30]) 
+                
                 temp_dir = ws_path / "assets" / "images" / f"candidates_{img_id}_v{attempt+1}"
                 temp_dir.mkdir(parents=True, exist_ok=True)
                 
-                # SOTA: Direct await on async downloader
+                # SOTA 2.1: Massive parallel competitive download
                 local_images = await downloader.download_candidates_async(image_candidates, temp_dir)
                 
                 if not local_images:
@@ -110,6 +120,7 @@ class ImageSourcingAgent:
 
                 descriptions_map = {p.name: p.with_suffix('.txt').read_text(encoding='utf-8') for p in local_images if p.with_suffix('.txt').exists()}
                 
+                # SOTA 2.1: Elite-First + Hierarchical Fallback selection
                 ranked_results = await self.vision_selector.select_best_async(local_images, description, guidance, descriptions_map)
 
                 if ranked_results:
@@ -149,42 +160,9 @@ class ImageSourcingAgent:
     def run(self, state: AgentState, preserve_candidates: bool = False) -> AgentState:
         """
         DEPRECATED: Legacy physical file replacement mode. 
-        Archived logic moved to legacy_runner.py.
         """
-        print("  [ImageSourcingAgent] ⚠️ Using DEPRECATED run() mode. Sourcing images for HTML sections...")
-        
-        async def _run_async_wrapper():
-            for html_path_str in state.completed_html_sections:
-                html_file = Path(html_path_str)
-                content = html_file.read_text(encoding="utf-8")
-                
-                # Simple regex to find placeholders
-                placeholder_regex = re.compile(r'(<div[^>]*class="img-placeholder"[^>]*data-img-id="([^"]+)"[^>]*>.*?<p[^>]*class="img-description">(.*?)</p>.*?</div>)', re.DOTALL | re.IGNORECASE)
-                matches = placeholder_regex.findall(content)
-                
-                if matches:
-                    tasks = []
-                    for full_tag, img_id, description in matches:
-                        d = VisualDirective(id=img_id, description=description, raw_block=full_tag, start_pos=0, end_pos=0)
-                        tasks.append(self.fulfill_directive_async(d, state, target_file=html_file))
-                    
-                    results = await asyncio.gather(*tasks)
-                    for i, (success, asset, html_code) in enumerate(results):
-                        if success and html_code:
-                            content = content.replace(matches[i][0], html_code)
-                    
-                    html_file.write_text(content, encoding="utf-8")
-            return state
-
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    return executor.submit(lambda: asyncio.run(_run_async_wrapper())).result()
-            return loop.run_until_complete(_run_async_wrapper())
-        except RuntimeError:
-            return asyncio.run(_run_async_wrapper())
+        print("  [ImageSourcingAgent] ⚠️ Using DEPRECATED run() mode. Please use fulfill_directive_async().")
+        return state
 
 
 def create_image_sourcing_agent(client: Optional[GeminiClient] = None) -> ImageSourcingAgent:

@@ -194,6 +194,7 @@ The caption MUST serve as a bridge between the visual evidence and the narrative
 - **Structure**: Use a "Title: Description" format.
 - **Emphasis**: **Bold** the core subject and key visual labels (e.g., **RA**, **Vector V**).
 - **Conciseness**: Every word must add analytical value to the reader's understanding.
+- **Language Alignment (CRITICAL)**: Always write the caption in the **SAME LANGUAGE** as the [FULL SECTION MARKDOWN] (e.g., Chinese if the section is Chinese).
 
 ### Instructions:
 1. **Analyze the Visual Evidence**: Identify specific labels, colors, and spatial arrangements.
@@ -305,6 +306,11 @@ def render_svg_to_png_base64(svg_code: str, width: int = 1200) -> Optional[str]:
 
 async def render_svg_with_playwright(svg_code: str, output_path: Path) -> bool:
     """使用 Playwright 渲染 SVG 为 PNG (高保真，支持中文字体)"""
+    # SOTA 2.1: Proxy Armor for Playwright
+    import os
+    os.environ['no_proxy'] = '*'
+    os.environ['NO_PROXY'] = '*'
+    
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -339,7 +345,9 @@ async def render_svg_with_playwright(svg_code: str, output_path: Path) -> bool:
             # Use a more reasonable viewport
             context = await browser.new_context(viewport={"width": 1000, "height": 800})
             page = await context.new_page()
-            await page.goto(f"file://{temp_html.absolute()}", wait_until="networkidle")
+            
+            # SOTA: Hard timeout for navigation
+            await page.goto(f"file://{temp_html.absolute()}", wait_until="networkidle", timeout=15000)
             await asyncio.sleep(0.5)
             
             # Take screenshot
@@ -348,8 +356,10 @@ async def render_svg_with_playwright(svg_code: str, output_path: Path) -> bool:
             # Post-process: Resize and compress using PIL to reduce payload
             from PIL import Image
             with Image.open(output_path) as img:
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
+                # SOTA Fix: Convert to RGB immediately to avoid Palette transparency warnings
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                
                 # If width > 1024, resize
                 if img.width > 1024:
                     ratio = 1024 / img.width
@@ -412,10 +422,14 @@ async def audit_svg_visual_async(
     ]
     
     try:
-        response = await client.generate_async(
-            parts=parts,
-            system_instruction="You are an SVG auditor. Analyze both code and rendered image. Output JSON only.",
-            stream=True
+        # SOTA 2.1: Add explicit timeout for VLM audit to avoid hangs
+        response = await asyncio.wait_for(
+            client.generate_async(
+                parts=parts,
+                system_instruction="You are an SVG auditor. Analyze both code and rendered image. Output JSON only.",
+                stream=True
+            ),
+            timeout=60.0
         )
         if not response.success:
             return None

@@ -44,30 +44,44 @@ class GoogleImageSearcher:
                 if self.debug:
                     print(f"      - Tab {q_idx+1}: Opened {url[:60]}...")
             
-            # 2. Wait for all tabs to load (smart waiting with 3s timeout)
+            # 2. Wait for all tabs to load (smart waiting with 8s timeout)
             for q_idx, tab in enumerate(tabs):
                 try:
-                    tab.wait.doc_loaded(timeout=3)
+                    tab.wait.doc_loaded(timeout=8)
                 except:
-                    time.sleep(1)  # Brief fallback if wait fails
+                    time.sleep(2)  # Brief fallback if wait fails
                 
                 if self.debug:
                     print(f"      - Tab {q_idx+1}: Loaded {tab.url[:60]}...")
             
             # 3. Process each tab
             for q_idx, tab in enumerate(tabs):
-                # Check for sorry page
+                # SOTA: Check for CAPTCHA and trigger Manual Rescue UI if needed
                 if "sorry/index" in tab.url:
                     print(f"      - [!] Google Captcha detected on Tab {q_idx+1}")
-                    continue
+                    target_url = tab.url
+                    # Trigger physical rescue
+                    if self.browser_manager.check_and_rescue(tab, target_url):
+                        print(f"      - [RESCUE] Session recovered. Re-extracting for Tab {q_idx+1}...")
+                        # RE-ACQUIRE: Rescue logic relaunches the browser. We MUST refresh our references.
+                        page = self.browser_manager.page
+                        # SOTA: Use get_tab() to acquire the newly opened tab in the headful instance
+                        tab = page.get_tab()
+                        if "google.com/search" not in tab.url:
+                            tab.get(target_url)
+                        
+                        # Give it time to render the results
+                        tab.wait.doc_loaded(timeout=5)
+                    else:
+                        continue
 
                 page_html = tab.html
                 tab_candidates = self._extract_candidates(page_html)
                 
                 if tab_candidates:
                     if self.debug:
-                        print(f"      - Tab {q_idx+1} found {len(tab_candidates)} raw candidates.")
-                    for c in tab_candidates[:20]:
+                        print(f"      - Found {len(tab_candidates)} raw candidates.")
+                    for c in tab_candidates:
                         if c['url'] not in [x['url'] for x in all_candidates]:
                             all_candidates.append(c)
                 else:

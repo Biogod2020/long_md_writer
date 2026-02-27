@@ -4,10 +4,10 @@ import httpx
 import asyncio
 import re
 import random
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 from dataclasses import dataclass
 
-from .config import DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_AUTH_PASSWORD, DEFAULT_THINKING_LEVEL
+from .config import DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_AUTH_PASSWORD, DEFAULT_THINKING_LEVEL, DEFAULT_PROVIDERS
 
 @dataclass
 class GeminiResponse:
@@ -32,7 +32,8 @@ class GeminiClient:
         api_base_url: str = DEFAULT_BASE_URL,
         auth_token: Optional[str] = None,
         model: Optional[str] = None,
-        timeout: float = 180.0
+        timeout: float = 180.0,
+        model_provider: Optional[Union[str, List[str]]] = None
     ):
         self.api_base_url = api_base_url.rstrip("/")
         # Auto-strip /v1 if present to target native endpoint
@@ -43,28 +44,78 @@ class GeminiClient:
         self.model = model or DEFAULT_MODEL
         self.timeout = timeout
         
-    def _get_headers(self) -> dict:
+        # SOTA 2.1: Multi-Provider Polling Support
+        if model_provider is None:
+            model_provider = DEFAULT_PROVIDERS
+            
+        if isinstance(model_provider, list):
+            self.model_providers = model_provider
+        elif model_provider:
+            self.model_providers = [model_provider]
+        else:
+            self.model_providers = []
+        self._provider_index = 0
+        
+    def _get_next_provider(self) -> Optional[str]:
+        if not self.model_providers:
+            return None
+        provider = self.model_providers[self._provider_index % len(self.model_providers)]
+        self._provider_index += 1
+        return provider
+
+    def _get_headers(self, model_provider: Optional[str] = None) -> dict:
         headers = {"Content-Type": "application/json"}
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
+        
+        # Priority: explicit override > default (if set)
+        provider = model_provider
+        if provider:
+            headers["Model-Provider"] = provider
         return headers
 
+    _client: Optional[httpx.AsyncClient] = None
+    _loop: Optional[asyncio.AbstractEventLoop] = None
+
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create a shared httpx.AsyncClient"""
-        if self._client is None or self._client.is_closed:
+        """Get or create a shared httpx.AsyncClient with loop validation."""
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        # SOTA 2.1: Loop alignment protection
+        if GeminiClient._client is not None:
+            if GeminiClient._loop != current_loop or GeminiClient._client.is_closed:
+                # Loop mismatch or closed - must reset
+                try:
+                    await GeminiClient._client.aclose()
+                except: pass
+                GeminiClient._client = None
+
+        if GeminiClient._client is None:
             limits = httpx.Limits(
                 max_keepalive_connections=5, 
                 max_connections=20,
                 keepalive_expiry=5.0
             )
             timeout = httpx.Timeout(self.timeout, connect=10.0, read=self.timeout)
-            self._client = httpx.AsyncClient(
+            
+            # SOTA 2.1: Local Proxy Protection
+            proxies = None
+            if "localhost" in self.api_base_url or "127.0.0.1" in self.api_base_url:
+                proxies = {} # Empty dict disables all proxies in httpx
+                
+            GeminiClient._client = httpx.AsyncClient(
                 timeout=timeout, 
                 limits=limits, 
                 http1=True, 
-                http2=False
+                http2=False,
+                proxy=proxies 
             )
-        return self._client
+            GeminiClient._loop = current_loop
+            
+        return GeminiClient._client
 
     async def reset_client(self):
         """Force close and recreate the client."""
@@ -106,6 +157,7 @@ class GeminiClient:
         model: Optional[str] = None,
         stream: bool = False,
         thinking_level: Optional[str] = None,
+        model_provider: Optional[str] = None,
         **kwargs
     ) -> GeminiResponse:
         """Native async generation with official Google thinking support."""
@@ -148,34 +200,43 @@ class GeminiClient:
         if "generation_config" in kwargs:
             payload["generationConfig"].update(kwargs["generation_config"])
 
-        max_retries = 5
+        max_retries = 10 # SOTA 2.1: Increased from 5 to handle heavy thinking model load
         for attempt in range(max_retries):
+            # SOTA 2.1: Dynamic Provider Selection
+            current_provider = self._get_next_provider()
+            
             try:
                 client = await self._get_client()
                 if stream:
-                    return await self._handle_native_stream(client, url, payload)
+                    resp = await self._handle_native_stream(client, url, payload, model_provider=current_provider)
                 else:
-                    resp = await client.post(url, json=payload, headers=self._get_headers())
-                    if resp.status_code != 200:
-                        if attempt < max_retries - 1 and resp.status_code in [400, 429, 500, 502, 503, 504]:
-                            wait_time = (2 ** attempt) + random.random()
-                            print(f"  [GeminiClient] ⚠️ API Error {resp.status_code}. Retrying in {wait_time:.2f}s...")
-                            await asyncio.sleep(wait_time)
-                            continue
-                        return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {resp.text}")
-                    
-                    return self._parse_native_response(resp.json())
-            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError, httpx.ConnectError) as e:
+                    http_resp = await client.post(url, json=payload, headers=self._get_headers(model_provider=current_provider))
+                    if http_resp.status_code != 200:
+                        # Convert to common failure for unified retry logic
+                        raise httpx.HTTPStatusError(f"HTTP {http_resp.status_code}", request=None, response=http_resp)
+                    resp = self._parse_native_response(http_resp.json())
+                
+                # SOTA: If the response indicates failure but we have retries left, treat as retryable
+                if not resp.success and attempt < max_retries - 1:
+                    # Check for typical retryable strings or codes
+                    err_msg = str(resp.error).lower()
+                    if any(x in err_msg for x in ["timeout", "500", "502", "503", "504", "429", "no healthy provider"]):
+                        wait_time = (1.5 ** attempt) + random.random()
+                        print(f"  [GeminiClient] ⚠️ Provider '{current_provider}' failed: {resp.error}. Retrying with next in {wait_time:.2f}s...")
+                        await asyncio.sleep(wait_time)
+                        continue
+                
+                return resp
+
+            except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError, httpx.ConnectError, httpx.HTTPStatusError, httpx.ReadTimeout) as e:
                 if attempt < max_retries - 1:
-                    wait_time = (2 ** attempt) + random.random()
-                    print(f"  [GeminiClient] ⚠️ Protocol/Streaming Error ({type(e).__name__}): {str(e)}. Resetting client and retrying in {wait_time:.2f}s...")
-                    await self.reset_client()
+                    # If it's a status error, extract the code
+                    status_code = e.response.status_code if isinstance(e, httpx.HTTPStatusError) else "Timeout/Proto"
+                    wait_time = (1.2 ** attempt) + random.random()
+                    print(f"  [GeminiClient] ⚠️ Attempt {attempt+1} failed ({status_code}) via '{current_provider}': {e}. Switching provider...")
+                    if isinstance(e, (httpx.RemoteProtocolError, httpx.ConnectError)):
+                        await self.reset_client()
                     await asyncio.sleep(wait_time)
-                    continue
-                return GeminiResponse(success=False, error=str(e))
-            except httpx.ReadTimeout as e:
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(1)
                     continue
                 return GeminiResponse(success=False, error=str(e))
             except Exception as e:
@@ -238,7 +299,7 @@ class GeminiClient:
         except Exception as e:
             return GeminiResponse(success=False, error=f"Parse failed: {e}", raw_response=data)
 
-    async def _handle_native_stream(self, client, url, payload) -> GeminiResponse:
+    async def _handle_native_stream(self, client, url, payload, model_provider: Optional[str] = None) -> GeminiResponse:
         """Handles Server-Sent Events for native stream with enhanced robustness."""
         full_text = []
         full_thoughts = []
@@ -246,7 +307,7 @@ class GeminiClient:
         
         try:
             # SOTA: Increase read timeout specifically for streaming to handle thinking latency
-            async with client.stream("POST", url, json=payload, headers=self._get_headers(), timeout=httpx.Timeout(self.timeout, read=300.0)) as resp:
+            async with client.stream("POST", url, json=payload, headers=self._get_headers(model_provider=model_provider), timeout=httpx.Timeout(self.timeout, read=300.0)) as resp:
                 if resp.status_code != 200:
                     err_body = await resp.aread()
                     return GeminiResponse(success=False, error=f"HTTP {resp.status_code}: {err_body.decode()}")
