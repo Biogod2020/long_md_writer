@@ -93,7 +93,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Automated CAPTCHA Rescue UI**
+- [x] **Track: Automated CAPTCHA Rescue UI**
 *Link: [./tracks/sourcing_rescue_20260223/](./tracks/sourcing_rescue_20260223/)*
 
 ---
