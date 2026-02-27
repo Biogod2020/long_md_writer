@@ -110,8 +110,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [~] **Track: Magnum Opus 2.1 - Robustness hardening via pre-fulfillment layered editorial QA and ID-based anchor matching.**
 *Link: [./tracks/robustness_hardening_20260226/](./tracks/robustness_hardening_20260226/)*
-
----
-
-- [x] **Track: WebSourcing Hierarchical Audit & Deadlock Prevention**
-*Link: [./tracks/sourcing_hierarchical_audit_20260227/](./tracks/sourcing_hierarchical_audit_20260227/)*
