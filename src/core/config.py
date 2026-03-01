@@ -4,14 +4,14 @@ import os
 # API & Provider Configuration
 # ============================================================================
 
-# Default proxy URL (AIClient-2-API defaults to 3000)
-DEFAULT_BASE_URL = os.getenv("API_URL", "http://localhost:3000")
+# Default proxy URL (geminicli2api-async defaults to 8888)
+DEFAULT_BASE_URL = os.getenv("API_URL", "http://localhost:8888")
 
 # Default authentication password/token
 DEFAULT_AUTH_PASSWORD = os.getenv("GEMINI_AUTH_PASSWORD", "123456")
 
-# SOTA 2.1: Default providers for polling
-DEFAULT_PROVIDERS = ["gemini-cli-oauth", "gemini-antigravity"]
+# SOTA 2.1: Default providers for polling (Adjusted for 1:2 ratio)
+DEFAULT_PROVIDERS = ["gemini-cli-oauth", "gemini-antigravity", "gemini-antigravity"]
 
 
 # ============================================================================
@@ -43,6 +43,26 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-3-flash-preview")
 # Default thinking level for Gemini 3 series models
 # Options: "HIGH", "MEDIUM", "LOW", "MINIMAL"
 DEFAULT_THINKING_LEVEL = "HIGH"
+
+# SOTA 2.1: Node-specific routing preferences
+# Heavy nodes: Prefer gemini-cli-oauth + HIGH thinking
+NODE_PREF_HEAVY = {
+    "model_provider": ["gemini-cli-oauth", "gemini-antigravity"],
+    "thinking_level": "HIGH"
+}
+
+# Pro nodes: Highest intelligence for top-level architecture (Architect)
+NODE_PREF_PRO = {
+    "model": "gemini-3.1-pro-preview",
+    "model_provider": ["gemini-cli-oauth", "gemini-antigravity"],
+    "thinking_level": "HIGH"
+}
+
+# Light nodes: Prefer gemini-antigravity + MEDIUM thinking for speed
+NODE_PREF_LIGHT = {
+    "model_provider": ["gemini-antigravity", "gemini-cli-oauth"],
+    "thinking_level": "MEDIUM"
+}
 
 
 # ============================================================================

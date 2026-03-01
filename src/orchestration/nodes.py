@@ -23,7 +23,7 @@ from ..agents.assembler_agent import AssemblerAgent
 from ..agents.visual_qa_agent import VisualQAAgent
 
 
-from ..core.config import HEADLESS_MODE
+from ..core.config import HEADLESS_MODE, NODE_PREF_HEAVY, NODE_PREF_LIGHT, NODE_PREF_PRO
 
 class NodeFactory:
     """
@@ -32,24 +32,73 @@ class NodeFactory:
     """
     
     def __init__(self, client: Optional[GeminiClient] = None):
-        self.client = client
+        # Base client used if nothing else specified
+        self.client = client or GeminiClient()
         
-        # Initialize all agents
-        self.clarifier = ClarifierAgent(client)
-        self.refiner = RefinerAgent(client)
-        self.architect = ArchitectAgent(client)
-        self.techspec = TechSpecAgent(client)
-        self.writer = WriterAgent(client)
-        self.markdown_qa = MarkdownQAAgent(client)
-        self.design_tokens = DesignTokensAgent(client)
-        self.css_generator = CSSGeneratorAgent(client)
-        self.js_generator = JSGeneratorAgent(client)
-        self.transformer = TransformerAgent(client)
-        # SOTA: ImageSourcing honors global headless setting for manual bypass
-        self.image_sourcer = ImageSourcingAgent(client, debug=False, headless=HEADLESS_MODE)
-        self.assembler = AssemblerAgent(client)
-        # SOTA: VisualQA is strictly headless as it doesn't face anti-bot barriers
-        self.visual_qa = VisualQAAgent(client, debug=False, headless=True)
+        # SOTA 2.1: Specialized Clients for different workloads
+        # Pro: Highest intelligence for Architecture (CLI First for large inputs)
+        self.pro_client = GeminiClient(
+            model=NODE_PREF_PRO["model"],
+            model_provider=NODE_PREF_PRO["model_provider"],
+            thinking_level=NODE_PREF_PRO["thinking_level"],
+            prefer_first_provider=True
+        )
+        
+        # SOTA 2.1: Pro client specialized for SVG creation (Polling enabled)
+        self.svg_pro_client = GeminiClient(
+            model=NODE_PREF_PRO["model"],
+            model_provider=NODE_PREF_PRO["model_provider"],
+            thinking_level=NODE_PREF_PRO["thinking_level"],
+            prefer_first_provider=False
+        )
+        
+        # Heavy: Dedicated to complex technical reasoning (Writer, editorial)
+        self.heavy_client = GeminiClient(
+            model_provider=NODE_PREF_HEAVY["model_provider"],
+            thinking_level=NODE_PREF_HEAVY["thinking_level"],
+            prefer_first_provider=True
+        )
+        
+        # Light: Dedicated to structural tasks and SVG Fulfillment
+        # prefer_first_provider=False allows natural load-balancing across accounts
+        # to spread the 40s thinking cooldown for SVG creation/auditing.
+        self.light_client = GeminiClient(
+            model_provider=NODE_PREF_LIGHT["model_provider"],
+            thinking_level=NODE_PREF_LIGHT["thinking_level"],
+            prefer_first_provider=False
+        )
+        
+        # Initialize all agents with appropriate client
+        self.clarifier = ClarifierAgent(self.light_client)
+        self.refiner = RefinerAgent(self.light_client)
+        
+        # Architect uses the Pro model for SOTA design
+        self.architect = ArchitectAgent(self.pro_client)
+        self.techspec = TechSpecAgent(self.light_client)
+        
+        # Writer and MarkdownQA require high intellectual depth
+        self.writer = WriterAgent(self.heavy_client)
+        self.markdown_qa = MarkdownQAAgent(self.heavy_client)
+        
+        self.design_tokens = DesignTokensAgent(self.light_client)
+        self.css_generator = CSSGeneratorAgent(self.light_client)
+        self.js_generator = JSGeneratorAgent(self.light_client)
+        self.transformer = TransformerAgent(self.light_client)
+        
+        # SOTA 2.1: ImageSourcing uses tiered routing
+        self.image_sourcer = ImageSourcingAgent(self.light_client, debug=False, headless=HEADLESS_MODE)
+        
+        from ..agents.asset_management.fulfillment import AssetFulfillmentAgent
+        self.fulfillment_agent = AssetFulfillmentAgent(
+            client=self.light_client, # Global ops use light
+            debug=False,
+            headless=HEADLESS_MODE,
+            svg_pro_client=self.svg_pro_client, # SVG creation uses dedicated Polling client
+            sourcing_client=self.light_client
+        )
+        
+        self.assembler = AssemblerAgent(self.light_client)
+        self.visual_qa = VisualQAAgent(self.client, debug=False, headless=True)
     
     # ================== Planning Nodes ==================
     
@@ -125,8 +174,10 @@ class NodeFactory:
         return self.transformer.run(state)
     
     def image_sourcer_node(self, state: AgentState) -> AgentState:
-        """图片采购节点"""
-        return self.image_sourcer.run(state)
+        """图片采购节点 (SOTA 2.1: Parallel Fulfillment)"""
+        # SOTA: Return the result of the parallel async fulfillment run
+        import asyncio
+        return asyncio.run(self.fulfillment_agent.run_parallel_async(state))
 
     # ================== Assembly Nodes ==================
     
