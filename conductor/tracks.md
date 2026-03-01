@@ -118,5 +118,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: API 架构归一化 - 迁移至 geminicli2api-async (8888 端口)**
+- [x] **Track: API 架构归一化 - 迁移至 geminicli2api-async (8888 端口)**
 *Link: [./tracks/api_normalization_8888_20260228/](./tracks/api_normalization_8888_20260228/)*
