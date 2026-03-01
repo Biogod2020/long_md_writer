@@ -9,7 +9,7 @@
 ## Agent Architecture
 - **Framework**: Custom multi-agent ecosystem utilizing specialized roles (Architect, SME Writer, Asset Critic, Editorial QA) and intent-driven sub-agents (Sourcing, SVG).
 - **Communication**: Asynchronous event-driven architecture using `asyncio`.
-- **Network Engine**: `httpx` (AsyncClient) for high-performance non-blocking I/O and intelligent connection pooling.
+- **Network Engine**: `httpx` (AsyncClient) for high-performance non-blocking I/O and intelligent connection pooling targeting `geminicli2api-async` (8888 port).
 - **LLM Protocol**: Google Native Gemini API Protocol (`/v1beta/models/...:generateContent`).
   - Native Multimodal `inline_data` support.
   - Native JSON Schema enforcement.
