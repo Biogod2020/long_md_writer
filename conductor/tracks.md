@@ -113,5 +113,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Fulfillment 并发加速与异步可靠性加固**
+- [~] **Track: Fulfillment 并发加速与异步可靠性加固**
 *Link: [./tracks/fulfillment_acceleration_20260228/](./tracks/fulfillment_acceleration_20260228/)*
+
+---
+
+- [ ] **Track: API 架构归一化 - 迁移至 geminicli2api-async (8888 端口)**
+*Link: [./tracks/api_normalization_8888_20260228/](./tracks/api_normalization_8888_20260228/)*
