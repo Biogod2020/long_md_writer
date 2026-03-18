@@ -111,8 +111,4 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [~] **Track: Magnum Opus 2.1 - Robustness hardening via pre-fulfillment layered editorial QA and ID-based anchor matching.**
 *Link: [./tracks/robustness_hardening_20260226/](./tracks/robustness_hardening_20260226/)*
 
----
-
-- [~] **Track: Fulfillment 并发加速与异步可靠性加固**
-*Link: [./tracks/fulfillment_acceleration_20260228/](./tracks/fulfillment_acceleration_20260228/)*
 

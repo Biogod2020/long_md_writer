@@ -52,37 +52,39 @@ htmlcov/
 
 # Project specific
 workspace/
+workspaces/
 workspace_test/
 data/
 .agent/
+.claude/
+.gemini/
+.gemini-clipboard/
 outputs/
 generated_assets/
 *.log
+log/
+.ruff_cache/
+.benchmarks/
 
-# Secrets and credentials
-.env.local
-.env.*.local
-credentials.json
-secrets.json
-*.pem
-*.key
-
-# Large files
-*.mp4
-*.mov
-*.avi
-*.zip
-*.tar.gz
-*.rar
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Profile data
-profiles/
-
-# Temporary/debug files
+# Temporary/debug files and assets in root
 dummy.md
 last_request_payload.json
 docs/NODES_INFO.md
+debug_fixer_fail_192206.txt
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+!assets/images/**
+!inputs/**
+!1-Figure1-1_1.png
+!1-Figure1-1.png
+!2-Figure1-1.png
+!3-Figure1-1_1.png
+!3-Figure1-1.png
+!3-Figure2-1.png
+!F1.png
+!ss3016-fig.1.jpg
+# Note: Root level assets are ignored except for whitelisted ones. 
+# assets/ and inputs/ are explicitly preserved.
 

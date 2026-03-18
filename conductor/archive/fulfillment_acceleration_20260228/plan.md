@@ -16,8 +16,11 @@
 - [ ] **Task: 升级全局信号量**
     - [ ] **代码实现**：将 `GeminiClient._heavy_thinking_semaphore` 提升至 3。
 - [ ] **Task: 实现 429 "Stay & Sleep" 逻辑**
-    - [ ] **代码实现**：在 `GeminiClient.generate_async` 中，解析 429 错误中的 `reset after XXs`。
-    - [ ] **逻辑实现**：如果检测到冷却期，直接 `await asyncio.sleep(XX + 2)`，随后原地重新发起请求，不计入重试损耗。
+    - [x] **代码实现**：在 `GeminiClient.generate_async` 中，解析 429 错误中的 `reset after XXs`。
+    - [x] **逻辑实现**：如果检测到冷却期，直接 `await asyncio.sleep(XX + 2)`，随后原地重新发起请求，不计入重试损耗。
+- [ ] **Task: 彻底修复 Provider 轮询失衡问题**
+    - [ ] **代码实现**：在 `GeminiClient` 中引入随机初始 `_provider_index`。
+    - [ ] **架构调整**：在 `NodeFactory` 中物理隔离 Architect (CLI-First) 与 SVG Creator (Polling-First)。
 - [ ] **Task: 任务分流微调**
     - [ ] **代码实现**：在 `src/agents/asset_management/fulfillment.py` 中，将 `refine_caption_async` 的 `thinking_level` 强制设为 `MEDIUM`。
 - [ ] **Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)**

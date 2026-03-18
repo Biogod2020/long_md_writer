@@ -18,9 +18,9 @@ async def run_verification_v18():
     workspace_base = "workspace"
     workspace_path = Path(workspace_base) / job_id
 
-    # SOTA: RESUME MODE ENABLED
+    # SOTA: RESUME MODE ENABLED (Keep existing checkpoints)
     if workspace_path.exists():
-        print(f"🔄 Workspace found. Resuming E2E Run: {job_id}")
+        print(f"🔄 Workspace found. Resuming E2E Run from checkpoint: {job_id}")
     else:
         print(f"🚀 [VERIFICATION v18] Starting FRESH E2E Run: {job_id}")
     
@@ -30,7 +30,7 @@ async def run_verification_v18():
         raw_materials_path = Path("inputs/combined_raw_materials.txt")
         
         user_intent = prompt_path.read_text(encoding="utf-8")
-        # SOTA: Force multi-section structure for extreme stress testing (Matches v16/v12 requirement)
+        # SOTA: Force multi-section structure for extreme stress testing
         user_intent += "\n\nCRITICAL REQUIREMENT: You MUST design a detailed, multi-section structure with at least 4 deep chapters to cover this topic comprehensively. Ensure high visual density with multiple :::visual directives per chapter."
         reference_materials = raw_materials_path.read_text(encoding="utf-8")
         print("✅ v12 Inputs loaded successfully.")
@@ -40,15 +40,19 @@ async def run_verification_v18():
     
     print(f"📍 Target Workspace: {workspace_path.absolute()}")
 
-    # 2. Execute Workflow in Auto-Mode
-    print("⚙️  Initiating SOTA 2.1 Pipeline (Shift-Left Editorial Mode + Multi-Provider Polling)...")
+    # 2. Execute Workflow in Auto-Mode with ENHANCED LOGGING
+    print("⚙️  Initiating SOTA 2.1 Pipeline (Resume Mode + Verbose Audit Trace)...")
+    # Setting an environment variable to force agents into super-verbose mode
+    os.environ["DEBUG_MODE"] = "true"
+    os.environ["PYTHONASYNCIODEBUG"] = "1"
+    
     state = await run_sota2_workflow(
         user_intent=user_intent,
         reference_materials=reference_materials,
         workspace_base=workspace_base,
         job_id=job_id,
         auto_mode=True,
-        debug_mode=True
+        debug_mode=True # Forces granular agent logs
     )
     
     # 3. Quality Audit Report
