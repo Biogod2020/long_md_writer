@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Live Bing Images smoke probe.
+"""Live Bing Images smoke probe with relevance and source constraints.
 
-This script is intentionally opt-in. It verifies that a runner can retrieve a Bing
-Images result page, parse original-image/source-page metadata, download one original
-image, and validate its physical bytes with Pillow. It is not run by unit tests.
+This script is intentionally opt-in. It verifies that a runner can retrieve Bing
+Images result pages, rank candidates against the requested subject, enforce any
+``site:`` restriction, download an original image, and validate its bytes with
+Pillow. A merely downloadable but irrelevant image is a failure.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import html as html_std
 from io import BytesIO
 import json
 from pathlib import Path
+import re
 from typing import Any
 import urllib.parse
 import urllib.request
@@ -30,6 +32,21 @@ USER_AGENT = (
 )
 MAX_PAGE_BYTES = 8 * 1024 * 1024
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
+SITE_PATTERN = re.compile(r"(?:^|\s)site:([^\s]+)", re.IGNORECASE)
+TOKEN_PATTERN = re.compile(r"[a-z0-9]+", re.IGNORECASE)
+GENERIC_TERMS = {
+    "a",
+    "an",
+    "and",
+    "diagram",
+    "figure",
+    "image",
+    "images",
+    "illustration",
+    "of",
+    "the",
+    "to",
+}
 
 
 @dataclass(frozen=True)
@@ -41,11 +58,24 @@ class BingCandidate:
 
 
 @dataclass(frozen=True)
+class RankedCandidate:
+    candidate: BingCandidate
+    relevance_score: int
+    matched_terms: tuple[str, ...]
+    query_used: str
+    search_url: str
+
+
+@dataclass(frozen=True)
 class SelectedImage:
     image_url: str
     source_url: str | None
     title: str | None
     thumbnail_url: str | None
+    query_used: str
+    search_url: str
+    relevance_score: int
+    matched_terms: tuple[str, ...]
     downloaded_path: str
     content_type: str
     byte_count: int
@@ -56,12 +86,16 @@ class SelectedImage:
 
 
 def build_search_url(query: str) -> str:
+    # Do not pass a ``form`` token: it can bind the request to stale UI state.
     return "https://www.bing.com/images/search?" + urllib.parse.urlencode(
         {
             "q": query,
-            "form": "HDRSC2",
             "first": "1",
-            "safeSearch": "Strict",
+            "count": "100",
+            "mkt": "en-US",
+            "setlang": "en-US",
+            "cc": "US",
+            "adlt": "strict",
         }
     )
 
@@ -71,6 +105,8 @@ def _open(url: str, *, accept: str, referer: str | None = None, timeout: int = 3
         "User-Agent": USER_AGENT,
         "Accept": accept,
         "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
     }
     if referer:
         headers["Referer"] = referer
@@ -123,6 +159,106 @@ def fetch_bing_candidates(query: str) -> tuple[str, bytes, list[BingCandidate], 
     return search_url, page_bytes, candidates, metadata
 
 
+def _site_constraint(query: str) -> str | None:
+    match = SITE_PATTERN.search(query)
+    return match.group(1).strip(".").casefold() if match else None
+
+
+def _base_query(query: str) -> str:
+    return " ".join(SITE_PATTERN.sub(" ", query).replace('"', " ").split())
+
+
+def _query_terms(query: str) -> tuple[str, ...]:
+    terms = {
+        token.casefold()
+        for token in TOKEN_PATTERN.findall(_base_query(query))
+        if len(token) >= 3 and token.casefold() not in GENERIC_TERMS
+    }
+    return tuple(sorted(terms))
+
+
+def _query_variants(query: str) -> list[str]:
+    base = _base_query(query)
+    site = _site_constraint(query)
+    variants = [query]
+    if site:
+        variants.append(f"{base} Wikimedia Commons")
+    variants.append(base)
+    if re.search(r"\bcardiac\b", base, re.IGNORECASE):
+        variants.append(
+            re.sub(r"\bcardiac\b", "heart", base, flags=re.IGNORECASE)
+            + " anatomy illustration Wikimedia Commons"
+        )
+    output: list[str] = []
+    for value in variants:
+        value = " ".join(value.split())
+        if value and value not in output:
+            output.append(value)
+    return output
+
+
+def _host(url: str | None) -> str:
+    if not url:
+        return ""
+    try:
+        return (urllib.parse.urlsplit(url).hostname or "").casefold().strip(".")
+    except ValueError:
+        return ""
+
+
+def _matches_site(candidate: BingCandidate, site: str | None) -> bool:
+    if not site:
+        return True
+    hosts = {_host(candidate.source_url), _host(candidate.image_url)}
+    accepted = {site}
+    if site == "commons.wikimedia.org":
+        accepted.update({"upload.wikimedia.org", "wikimedia.org"})
+    return any(
+        host == domain or host.endswith("." + domain)
+        for host in hosts
+        for domain in accepted
+        if host
+    )
+
+
+def rank_candidates(
+    candidates: list[BingCandidate],
+    *,
+    original_query: str,
+    query_used: str,
+    search_url: str,
+) -> list[RankedCandidate]:
+    terms = _query_terms(original_query)
+    site = _site_constraint(original_query)
+    minimum_overlap = min(2, len(terms))
+    ranked: list[RankedCandidate] = []
+    for candidate in candidates:
+        if not _matches_site(candidate, site):
+            continue
+        searchable = " ".join(
+            value for value in (candidate.title, candidate.source_url, candidate.image_url) if value
+        ).casefold()
+        matched = tuple(term for term in terms if term in searchable)
+        if len(matched) < minimum_overlap:
+            continue
+        score = len(matched) * 3
+        if site:
+            score += 10
+        if candidate.title:
+            title = candidate.title.casefold()
+            score += sum(1 for term in matched if term in title)
+        ranked.append(
+            RankedCandidate(
+                candidate=candidate,
+                relevance_score=score,
+                matched_terms=matched,
+                query_used=query_used,
+                search_url=search_url,
+            )
+        )
+    return sorted(ranked, key=lambda item: item.relevance_score, reverse=True)
+
+
 def _suffix_for(image_format: str) -> str:
     return {
         "JPEG": ".jpg",
@@ -134,21 +270,21 @@ def _suffix_for(image_format: str) -> str:
 
 
 def download_first_valid(
-    candidates: list[BingCandidate],
+    candidates: list[RankedCandidate],
     *,
-    search_url: str,
     output_dir: Path,
     max_candidates: int,
     min_width: int,
     min_height: int,
 ) -> tuple[SelectedImage | None, list[dict[str, str]]]:
     failures: list[dict[str, str]] = []
-    for candidate in candidates[:max_candidates]:
+    for ranked in candidates[:max_candidates]:
+        candidate = ranked.candidate
         try:
             with _open(
                 candidate.image_url,
                 accept="image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-                referer=search_url,
+                referer=ranked.search_url,
             ) as response:
                 content_type = (
                     response.headers.get("Content-Type", "")
@@ -182,6 +318,10 @@ def download_first_valid(
                     source_url=candidate.source_url,
                     title=candidate.title,
                     thumbnail_url=candidate.thumbnail_url,
+                    query_used=ranked.query_used,
+                    search_url=ranked.search_url,
+                    relevance_score=ranked.relevance_score,
+                    matched_terms=ranked.matched_terms,
                     downloaded_path=image_path.as_posix(),
                     content_type=content_type,
                     byte_count=len(data),
@@ -211,11 +351,53 @@ def run_probe(
     min_height: int = 250,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    search_url, page_bytes, candidates, page_metadata = fetch_bing_candidates(query)
-    (output_dir / "search-page.html").write_bytes(page_bytes)
+    attempts: list[dict[str, Any]] = []
+    combined: list[RankedCandidate] = []
+    for index, query_used in enumerate(_query_variants(query), start=1):
+        search_url, page_bytes, candidates, page_metadata = fetch_bing_candidates(query_used)
+        (output_dir / f"search-page-{index:02d}.html").write_bytes(page_bytes)
+        ranked = rank_candidates(
+            candidates,
+            original_query=query,
+            query_used=query_used,
+            search_url=search_url,
+        )
+        combined.extend(ranked)
+        attempts.append(
+            {
+                "query": query_used,
+                "search_url": search_url,
+                "status": page_metadata["status"],
+                "content_type": page_metadata["content_type"],
+                "page_bytes": len(page_bytes),
+                "candidate_count": len(candidates),
+                "relevant_candidate_count": len(ranked),
+                "top_relevant": [
+                    {
+                        "title": item.candidate.title,
+                        "source_url": item.candidate.source_url,
+                        "image_url": item.candidate.image_url,
+                        "score": item.relevance_score,
+                        "matched_terms": item.matched_terms,
+                    }
+                    for item in ranked[:5]
+                ],
+            }
+        )
+
+    deduplicated: dict[tuple[str, str | None], RankedCandidate] = {}
+    for item in combined:
+        key = (item.candidate.image_url, item.candidate.source_url)
+        previous = deduplicated.get(key)
+        if previous is None or item.relevance_score > previous.relevance_score:
+            deduplicated[key] = item
+    ranked_candidates = sorted(
+        deduplicated.values(),
+        key=lambda item: item.relevance_score,
+        reverse=True,
+    )
     selected, failures = download_first_valid(
-        candidates,
-        search_url=search_url,
+        ranked_candidates,
         output_dir=output_dir,
         max_candidates=max_candidates,
         min_width=min_width,
@@ -223,13 +405,12 @@ def run_probe(
     )
     result: dict[str, Any] = {
         "query": query,
-        "search_url": search_url,
-        "search_status": page_metadata["status"],
-        "search_content_type": page_metadata["content_type"],
-        "search_page_bytes": len(page_bytes),
-        "candidate_count": len(candidates),
+        "required_site": _site_constraint(query),
+        "query_terms": _query_terms(query),
+        "attempts": attempts,
+        "relevant_candidate_count": len(ranked_candidates),
         "selected": asdict(selected) if selected else None,
-        "first_failures": failures[:10],
+        "first_download_failures": failures[:10],
     }
     (output_dir / "result.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
