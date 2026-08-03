@@ -63,8 +63,11 @@ jobs:
           python-version: "3.12"
       - name: Install parser and image validator
         run: python -m pip install lxml Pillow
-      - name: Search Bing and validate a downloaded original image
-        run: python scripts/bing_image_smoke.py --output bing-smoke
+      - name: Search Bing, require query relevance, and validate an original image
+        run: >-
+          python scripts/bing_image_smoke.py
+          --query "cardiac conduction system diagram"
+          --output bing-smoke
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -91,7 +94,7 @@ jobs:
       - name: Install migrated runtime
         run: python -m pip install -r requirements.txt
       - name: Run network-enabled ASSETS task through Agents SDK and Codex
-        run: python scripts/codex_bing_image_smoke.py --output codex-bing-smoke
+        run: PYTHONPATH=. python scripts/codex_bing_image_smoke.py --output codex-bing-smoke
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
