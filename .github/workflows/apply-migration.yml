@@ -32,6 +32,15 @@ jobs:
           tar \
             --exclude='./.git' \
             --exclude='./.github' \
+            --exclude='./.agent' \
+            --exclude='./.claude' \
+            --exclude='./.gemini' \
+            --exclude='./.gemini-clipboard' \
+            --exclude='./temp_*_ms' \
+            --exclude='./workspaces/workspace_debug' \
+            --exclude='*/__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='*.pyo' \
             -czf /tmp/migration-runtime.tgz .
           test -s /tmp/migration-runtime.tgz
 
@@ -66,6 +75,13 @@ jobs:
 
           tar -xzf /tmp/migration-runtime.tgz
 
+          # Defence in depth: a stale migration snapshot must not resurrect caches.
+          rm -rf .agent .claude .gemini .gemini-clipboard log
+          find . -maxdepth 1 -type d -name 'temp_*_ms' -exec rm -rf -- {} +
+          find . -type d -name __pycache__ -print0 | xargs -0 -r rm -rf
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          rm -rf workspaces/workspace_debug
+
           python - <<'PY'
           from pathlib import Path
 
@@ -92,12 +108,10 @@ jobs:
 
           errors = []
           for raw in required_files:
-              path = Path(raw)
-              if not path.is_file():
+              if not Path(raw).is_file():
                   errors.append(f'missing required file: {raw}')
           for raw in required_dirs:
-              path = Path(raw)
-              if not path.is_dir():
+              if not Path(raw).is_dir():
                   errors.append(f'missing required directory: {raw}')
           for raw in forbidden_paths:
               if Path(raw).exists():
@@ -146,15 +160,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
 
-          # Validate only files authored by this migration. Preserved inputs and
-          # historical conductor records intentionally remain byte-identical to master.
           git diff --cached --check -- \
             .env.example .gitignore AGENTS.md CLAUDE.md GEMINI.md \
             README.md README_CN.md TODO.md app.py main.py main_markdown.py \
             pyproject.toml pytest.ini requirements.txt docs scripts src tests
 
-          # The bootstrap workflow must remain byte-identical in this bot commit;
-          # final workflow replacement is performed by the GitHub connector.
           git diff --cached --quiet -- .github/workflows || {
             echo 'workflow files changed unexpectedly' >&2
             exit 1
