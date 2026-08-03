@@ -1,0 +1,241 @@
+<section id="sec-7" class="content-section">
+<section id="sec-7" class="content-section">
+    <article class="technical-spec-chapter" id="sec-7-article">
+        <header class="chapter-header">
+            <h1 class="medical-heading-primary text-medical-900 font-inter font-bold text-3xl mb-2">
+                Anatomical Grouping and Coronary Correlation
+            </h1>
+            <h2 class="medical-heading-secondary text-medical-700 font-inter font-semibold text-xl mb-6">
+                解剖学分组与冠状动脉关联
+            </h2>
+        </header>
+
+        <section class="content-section" id="sec-7-intro">
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                在完成了从电偶极子到 12 导联系统的物理建模后，我们已经理解了导联轴作为“空间观测矢量”的本质 <a href="#sec-1" class="text-medical-600 hover:underline" title="Jump to Section 1: The Cardiac Dipole">[REF:sec-1]</a>。然而，心电图在临床医学中的真正威力，在于它能够将这些抽象的电信号记录还原为解剖学上的<strong class="font-bold">空间定位</strong>。
+            </p>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                本节是第二章的总结性合成。我们将应用点积投影原理 <a href="#sec-6" class="text-medical-600 hover:underline" title="Jump to Section 6: The Physics of Projection">[REF:sec-6]</a>，将 12 个导联重新划分为不同的<strong class="highlight-text text-medical-600">解剖领地（Anatomical Territories）</strong>，并将其与心脏的供血系统——<strong class="font-bold">冠状动脉（Coronary Arteries）</strong>进行精确映射。
+            </p>
+        </section>
+
+        <section class="content-section mt-8" id="sec-7-territories">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">空间合成：将 12 导联视为“解剖监控阵列”</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                临床上，我们不再孤立地看待每一个导联，而是将它们视为观察心脏特定区域的“摄像机组”。根据导联轴在额面 <a href="#sec-4" class="text-medical-600 hover:underline" title="Jump to Section 4: The Hexaxial Reference System">[REF:sec-4]</a> 和水平面 <a href="#sec-5" class="text-medical-600 hover:underline" title="Jump to Section 5: The Horizontal Plane">[REF:sec-5]</a> 的空间取向，我们可以将 12 导联系统划分为四大主要领地。
+            </p>
+
+            <aside class="important-card border-l-4 border-medical-500 bg-slate-50 p-4 my-6" id="sec-7-important-1">
+                <h4 class="font-inter font-bold text-medical-800 mb-2">解剖学分组的第一性原理</h4>
+                <p class="academic-body font-noto-serif text-slate-700 text-sm leading-relaxed">
+                    导联分组的逻辑并非基于电极在皮肤上的距离，而是基于其<strong class="font-bold">导联轴（观察矢量）</strong>所指向的心脏解剖壁面。当某一组导联同时出现波形异常（如 ST 段抬高）时，物理上意味着该特定空间区域的心肌发生了电生理改变。
+                </p>
+            </aside>
+        </section>
+
+        <section class="content-section mt-8" id="sec-7-inferior">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">1. 下壁领地 (The Inferior Territory)：II, III, aVF</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                下壁导联组是额面六轴系统中指向“下方”的矢量集合。
+            </p>
+            <ul class="list-disc list-inside academic-body font-noto-serif text-slate-800 mb-4 ml-4">
+                <li><strong class="font-bold">物理取向</strong>：导联 II ($+60^\circ$)、III ($+120^\circ$) 和 aVF ($+90^\circ$)。</li>
+                <li><strong class="font-bold">观测视角</strong>：从患者的足部向上仰视心脏。它们主要观察心脏的<strong class="font-bold">膈面（Diaphragmatic Surface）</strong>，即左心室的下壁。</li>
+                <li><strong class="font-bold">冠脉关联</strong>：在 85% 的人群（右优势型）中，下壁由<strong class="font-bold">右冠状动脉（RCA）</strong>的后降支（PDA）供血。</li>
+            </ul>
+
+            <div class="formula-block bg-slate-50 border border-slate-200 rounded-lg p-4 my-4" id="sec-7-formula-1">
+                <p class="font-mono text-xs text-slate-500 mb-2 uppercase tracking-wider">Vector Logic for Inferior MI</p>
+                <p class="academic-body font-noto-serif text-slate-800 leading-relaxed">
+                    当 RCA 闭塞导致下壁心肌受损时，损伤矢量 $\vec{P}_{injury}$ 指向下方。根据点积公式 $V = \vec{P} \cdot \vec{L}$，由于 $\vec{P}_{injury}$ 与 II、III、aVF 的导联轴夹角极小，这三个导联会同时记录到显著的 ST 段抬高。
+                </p>
+            </div>
+        </section>
+
+        <section class="content-section mt-8" id="sec-7-lateral">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">2. 侧壁领地 (The Lateral Territory)：I, aVL, V5, V6</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                侧壁导联组由额面和水平面中指向“左侧”的矢量组成。
+            </p>
+            <ul class="list-disc list-inside academic-body font-noto-serif text-slate-800 mb-4 ml-4">
+                <li><strong class="font-bold">物理取向</strong>：
+                    <ul class="list-circle list-inside ml-6 mt-2">
+                        <li><strong class="font-bold">高侧壁</strong>：I ($0^\circ$) 和 aVL ($-30^\circ$)，从左上方观察。</li>
+                        <li><strong class="font-bold">低侧壁</strong>：V5 和 V6，在水平面上从左侧方观察。</li>
+                    </ul>
+                </li>
+                <li><strong class="font-bold">观测视角</strong>：专注于左心室的游离壁（Free Wall）。</li>
+                <li><strong class="font-bold">冠脉关联</strong>：主要由<strong class="font-bold">左回旋支（LCx）</strong>供血，部分区域可能由左前降支（LAD）的对角支（Diagonal branch）支配。</li>
+            </ul>
+        </section>
+
+        <section class="content-section mt-8" id="sec-7-anterior">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">3. 前壁与间壁领地 (The Anterior & Septal Territory)：V1–V4</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                这是水平面导联的核心区域，直接对应左心室的最前方。
+            </p>
+            <ul class="list-disc list-inside academic-body font-noto-serif text-slate-800 mb-4 ml-4">
+                <li><strong class="font-bold">间壁组 (V1, V2)</strong>：正对室间隔。由于室间隔是心脏电传导的“高速公路”起点，这里的波形对传导阻滞极度敏感。</li>
+                <li><strong class="font-bold">前壁组 (V3, V4)</strong>：正对左心室前壁，这是心脏泵血功能最重要的区域。</li>
+                <li><strong class="font-bold">冠脉关联</strong>：这一区域几乎完全由<strong class="font-bold">左前降支（LAD）</strong>供血。LAD 被称为“寡妇制造者”（Widow Maker），因为其闭塞会导致 V1–V4 大面积心肌电活动消失。</li>
+            </ul>
+        </section>
+
+        <hr class="my-12 border-slate-200" />
+
+        <section class="content-section" id="sec-7-mapping-svg">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-6 text-center">交互式解剖映射图 (Anatomical-Coronary Mapping)</h3>
+            <figure class="svg-container mb-8">
+                <div class="flex justify-center bg-slate-50/50 rounded-xl p-8 border border-slate-200 shadow-sm">
+                    <svg viewBox="0 0 600 400" class="w-full max-w-3xl" role="img" aria-labelledby="svg-title-7 svg-desc-7">
+                        <title id="svg-title-7">Anatomical-Coronary Mapping Diagram</title>
+                        <desc id="svg-desc-7">A schematic showing the heart territories (Septal, Anterior, Inferior, Lateral) and their corresponding ECG leads and coronary arteries.</desc>
+                        
+                        <!-- Heart Schematic Outline -->
+                        <path d="M 300 80 C 150 80 100 230 300 350 C 500 230 450 80 300 80" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />
+                        
+                        <!-- Territory: Septal (V1, V2) -->
+                        <path d="M 300 80 C 260 80 250 180 300 350" fill="none" stroke="#f59e0b" stroke-width="12" stroke-opacity="0.2" />
+                        <text x="220" y="180" class="font-inter text-xs fill-orange-600 font-bold">Septal (V1-V2)</text>
+                        <text x="220" y="195" class="font-inter text-[10px] fill-slate-500">LAD Septal Branches</text>
+
+                        <!-- Territory: Anterior (V3, V4) -->
+                        <path d="M 300 80 C 350 100 380 230 300 350" fill="none" stroke="#e11d48" stroke-width="16" stroke-opacity="0.15" />
+                        <text x="350" y="160" class="font-inter text-xs fill-red-600 font-bold">Anterior (V3-V4)</text>
+                        <text x="350" y="175" class="font-inter text-[10px] fill-slate-500">LAD Main</text>
+
+                        <!-- Territory: Inferior (II, III, aVF) -->
+                        <path d="M 200 300 Q 300 380 400 300" fill="none" stroke="#0ea5e9" stroke-width="12" stroke-opacity="0.2" />
+                        <text x="300" y="375" class="font-inter text-xs fill-medical-700 font-bold" text-anchor="middle">Inferior (II, III, aVF)</text>
+                        <text x="300" y="390" class="font-inter text-[10px] fill-slate-500" text-anchor="middle">RCA (PDA)</text>
+
+                        <!-- Territory: Lateral (I, aVL, V5, V6) -->
+                        <path d="M 440 130 Q 500 200 440 320" fill="none" stroke="#8b5cf6" stroke-width="10" stroke-opacity="0.2" />
+                        <text x="470" y="220" class="font-inter text-xs fill-purple-600 font-bold">Lateral (I, aVL, V5-V6)</text>
+                        <text x="470" y="235" class="font-inter text-[10px] fill-slate-500">LCx / Diagonal LAD</text>
+
+                        <!-- Coronary Artery Placeholder (LAD) -->
+                        <path d="M 300 80 L 315 260" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4,2" />
+                        <text x="320" y="110" class="font-mono text-[10px] fill-red-500 font-bold">LAD</text>
+                        
+                        <!-- RCA Placeholder -->
+                        <path d="M 280 80 Q 200 150 220 300" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="4,2" />
+                        <text x="180" y="140" class="font-mono text-[10px] fill-medical-600 font-bold">RCA</text>
+                    </svg>
+                </div>
+                <figcaption class="text-center text-sm text-slate-500 mt-4 font-noto-serif italic">
+                    图 2-7: 12 导联的解剖领地与冠状动脉映射。每个色块代表一组导联的“空间势力范围”。
+                </figcaption>
+            </figure>
+        </section>
+
+        <section class="content-section mt-12" id="sec-7-matrix">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">冠脉-导联对照矩阵 (The Coronary-ECG Matrix)</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-6">
+                为了将物理原理转化为临床直觉，我们将上述关系总结为下表。这是每一位临床医生在面对心电图时必须在大脑中自动生成的“空间网格”。
+            </p>
+            
+            <div class="overflow-x-auto">
+                <table class="medical-table w-full text-left border-collapse mb-8">
+                    <thead>
+                        <tr class="bg-slate-100 border-b-2 border-slate-200">
+                            <th class="p-3 font-inter text-sm font-bold text-medical-900">解剖区域 (Territory)</th>
+                            <th class="p-3 font-inter text-sm font-bold text-medical-900">对应导联 (Leads)</th>
+                            <th class="p-3 font-inter text-sm font-bold text-medical-900">空间视角 (Vector View)</th>
+                            <th class="p-3 font-inter text-sm font-bold text-medical-900">典型受累血管 (Coronary)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-noto-serif text-sm text-slate-700">
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-bold">下壁 (Inferior)</td>
+                            <td class="p-3">II, III, aVF</td>
+                            <td class="p-3">额面：$+60^\circ$ 至 $+120^\circ$ (仰视)</td>
+                            <td class="p-3">右冠状动脉 (RCA)</td>
+                        </tr>
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-bold">间壁 (Septal)</td>
+                            <td class="p-3">V1, V2</td>
+                            <td class="p-3">水平面：右前侧 (近距离)</td>
+                            <td class="p-3">前降支 (LAD) 间隔支</td>
+                        </tr>
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-bold">前壁 (Anterior)</td>
+                            <td class="p-3">V3, V4</td>
+                            <td class="p-3">水平面：正前方</td>
+                            <td class="p-3">前降支 (LAD) 主体</td>
+                        </tr>
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-bold">侧壁 (Lateral)</td>
+                            <td class="p-3">I, aVL, V5, V6</td>
+                            <td class="p-3">额面：$0^\circ, -30^\circ$；水平面：左侧</td>
+                            <td class="p-3">回旋支 (LCx)</td>
+                        </tr>
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                            <td class="p-3 font-bold">后壁 (Posterior)</td>
+                            <td class="p-3">(V7-V9)*</td>
+                            <td class="p-3">水平面：正后方 (背离视角)</td>
+                            <td class="p-3">后降支 (PDA)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="academic-body font-noto-serif text-xs text-slate-500 italic mb-8">
+                *注：后壁通常通过 V1-V3 的镜像变化（R 波增高、ST 压低）间接诊断，物理上这属于反向投影 <a href="#sec-6" class="text-medical-600 hover:underline" title="Jump to Section 6: The Physics of Projection">[REF:sec-6]</a>。
+            </p>
+        </section>
+
+        <section class="content-section mt-8" id="sec-7-avr">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">演绎推理：aVR —— 被遗忘的“孤狼”</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-4">
+                在所有的导联分组中，aVR 往往不属于任何一个领地。从物理上讲，aVR 的导联轴指向 $-150^\circ$（右上方）。
+            </p>
+
+            <aside class="important-card border-l-4 border-medical-500 bg-slate-50 p-4 my-6" id="sec-7-important-2">
+                <h4 class="font-inter font-bold text-medical-800 mb-2">Goldberger 的最后一块拼图：aVR 的独特价值</h4>
+                <p class="academic-body font-noto-serif text-slate-700 text-sm leading-relaxed">
+                    由于 aVR 正对着心脏的<strong class="font-bold">基底部（Base）</strong>和<strong class="font-bold">大血管根部</strong>，它并不直接观察左心室的任何一个壁面。但在临床上，如果 aVR 出现异常抬高，往往提示<strong class="font-bold">左主干（LMCA）</strong>闭塞。物理逻辑是：左主干闭塞导致广泛的前侧壁缺血，产生的总损伤矢量背离所有左心室导联，反而指向了右上方的 aVR。
+                </p>
+            </aside>
+        </section>
+
+        <hr class="my-12 border-slate-200" />
+
+        <section class="content-section" id="sec-7-summary">
+            <h3 class="sub-heading text-medical-800 font-inter font-bold text-lg mb-4">总结：从空间物理到临床诊断</h3>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-6">
+                在本章中，我们完成了一次宏大的认知构建：
+            </p>
+            <ol class="list-decimal list-inside academic-body font-noto-serif text-slate-800 mb-8 ml-4 space-y-2">
+                <li>我们从<strong class="font-bold">电偶极子</strong>出发，理解了心脏电活动的物理源头 <a href="#sec-1" class="text-medical-600 hover:underline" title="Jump to Section 1: The Cardiac Dipole">[REF:sec-1]</a>。</li>
+                <li>我们通过<strong class="font-bold">爱因霍芬三角</strong>和<strong class="font-bold">威尔逊中心端</strong>，构建了额面与水平面的 12 个观测矢量 <a href="#sec-2" class="text-medical-600 hover:underline" title="Jump to Section 2: Einthoven's Triangle">[REF:sec-2]</a>, <a href="#sec-3" class="text-medical-600 hover:underline" title="Jump to Section 3: The Augmented Leads">[REF:sec-3]</a>。</li>
+                <li>我们利用<strong class="font-bold">点积公式</strong> $V = \vec{P} \cdot \vec{L}$，破解了波形形态变化的数学规律 <a href="#sec-6" class="text-medical-600 hover:underline" title="Jump to Section 6: The Physics of Projection">[REF:sec-6]</a>。</li>
+                <li>最后，我们将这些矢量归纳为<strong class="font-bold">解剖领地</strong>，实现了电信号与心脏结构的完美统一。</li>
+            </ol>
+
+            <div class="img-placeholder my-8" data-img-id="sec-7-img-placeholder">
+                <p class="img-description">
+                    A high-fidelity 3D medical visualization of the human heart positioned within a transparent torso. Twelve virtual "cameras" are positioned around the heart, representing the 12 ECG leads. The cameras are color-coded into groups: blue for inferior (II, III, aVF), red for anterior (V3, V4), orange for septal (V1, V2), and purple for lateral (I, aVL, V5, V6). Each camera projects a semi-transparent frustum (field of view) onto the specific anatomical wall it monitors. The coronary artery tree is visible on the heart's surface, showing the LAD, RCA, and LCx aligned with their respective lead territories.
+                </p>
+            </div>
+
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-8">
+                理解了“导联轴”这一物理本质，你将不再需要死记硬背心电图的诊断准则。因为当你看到纸上的波形时，你的大脑中已经自动浮现出了那 12 台摄像机在 3D 空间中的排布。
+            </p>
+            <p class="academic-body font-noto-serif text-slate-800 leading-relaxed mb-8">
+                在接下来的章节中，我们将离开正常的生理物理学，进入病理状态下的电场演变——探讨当传导系统发生故障或心肌发生坏死时，这些空间矢量将如何发生偏移和扭曲。
+            </p>
+        </section>
+
+        <aside class="warning-callout border-l-4 border-red-500 bg-red-50 p-4 my-8" id="sec-7-warning-1">
+            <h4 class="font-inter font-bold text-red-800 mb-2">物理笔记：互补与镜像</h4>
+            <p class="academic-body font-noto-serif text-red-900 text-sm leading-relaxed">
+                在分析解剖分组时，务必记住物理学上的“镜像关系”。例如，下壁（II, III, aVF）的 ST 段抬高，往往伴随着高侧壁（I, aVL）的镜像压低。这并非两处都有病变，而是同一个电矢量在相反方向导联轴上的数学投影。
+            </p>
+        </aside>
+
+        <footer class="mt-16 pt-8 border-t border-slate-200 text-center">
+            <p class="font-inter font-bold text-slate-400 tracking-widest uppercase text-sm">Chapter 2 结束</p>
+        </footer>
+    </article>
+</section>
+</section>

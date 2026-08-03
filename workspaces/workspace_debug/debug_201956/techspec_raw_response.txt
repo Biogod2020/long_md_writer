@@ -1,0 +1,41 @@
+# Technical Specification (SOTA Description): Chapter 2 - From Electrodes to Leads
+
+This specification defines the architectural and creative requirements for the interactive document "From Electrodes to Leads" (从电极到导联). The goal is to bridge the gap between abstract physics and clinical ECG interpretation using a "First-Principles" approach.
+
+### 1. Content Guidelines (For the Writer)
+*   **Reasoning Style:** Employ **deductive reasoning** starting from the electric dipole (Chapter 1) to derive the lead axis. Use the **"Camera Metaphor"** consistently: an electrode is not just a sensor; it is a lens with a specific spatial orientation.
+*   **Technical Rigor:** 
+    *   **Vector Physics:** Explicitly define the Lead Axis as a unit vector $\hat{L}$. Explain the ECG deflection as the dot product $\vec{P} \cdot \hat{L} = |\vec{P}| \cos \theta$.
+    *   **Geometric Derivation:** For Einthoven’s Triangle, prove $I + III = II$ using Kirchhoff’s Voltage Law.
+    *   **Wilson Central Terminal (WCT):** Explain the $5k\Omega$ resistor network as an averaging circuit that creates a "virtual zero" at the heart's center.
+*   **Tone:** Authoritative, academic, yet pedagogical. Avoid fluff; focus on the "why" behind lead placement.
+*   **Language:** Simplified Chinese (Medical terminology must follow standard GB practices).
+
+### 2. Visual Design System (For the Designer)
+*   **Color Palette:**
+    *   **Primary:** Medical Blue (`#0ea5e9`) for lead axes and stable structures.
+    *   **Accent:** Heart Red (`#e11d48`) for depolarization vectors and active signals.
+    *   **Neutral:** Slate Scale (`#0f172a` to `#f8fafc`) for typography and backgrounds.
+*   **Typography:**
+    *   **Headings:** *Noto Serif SC*, Bold.
+    *   **Body:** *Inter* or *System Sans-Serif* for readability.
+    *   **Math/Labels:** *Roboto Mono* for all vector labels (e.g., $aVR$, $V_1$).
+*   **Component Styles:**
+    *   **Formula Blocks:** Light slate background (`bg-slate-50`) with a left-accent border in Medical Blue.
+    *   **Anatomical Overlays:** Use semi-transparent SVG layers to show the heart behind the Hexaxial system.
+
+### 3. Interactive Element Specifications (For the Transformer)
+*   **Vector Projection Simulator (Section 6):** 
+    *   **Requirement:** An interactive SVG where users can drag a "Cardiac Vector" $\vec{P}$ 360 degrees. 
+    *   **Logic:** As the vector moves, show its projection on Lead II. Real-time update of a simulated ECG wave (Positive, Isoelectric, or Negative) based on the angle $\theta$.
+*   **Hexaxial Reference System (Section 4):** 
+    *   **Interaction:** Hovering over a lead (e.g., $aVF$) highlights its corresponding anatomical region (Inferior Wall) on a simplified heart diagram.
+*   **3D Plane Toggle (Section 5):** 
+    *   **Interaction:** A toggle to switch the viewer's perspective between the **Frontal Plane** (Limb Leads) and the **Horizontal Plane** (Precordial Leads), using CSS `transform: rotateX()` or a 3D SVG projection.
+
+### 4. Accessibility & Performance
+*   **Accessibility:** All SVG components must include `<title>` tags and ARIA labels. Contrast ratios for text must meet WCAG AA standards (minimum 4.5:1).
+*   **Performance:** 
+    *   **MathJax:** Use TeX-SVG output for faster rendering.
+    *   **Assets:** Inline all critical SVGs to prevent Layout Shift (CLS). Use Tailwind's JIT engine for minimal CSS footprint.
+    *   **Lazy Loading:** Apply to non-critical anatomical illustrations.

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVGAgent Architecture Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: false, htmlLabels: true }
+        });
+    </script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            padding: 40px; 
+            background-color: #f0f2f5; 
+        }
+        h1 { color: #1a73e8; margin-bottom: 30px; }
+        .mermaid { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
+        }
+    </style>
+</head>
+<body>
+    <h1>SVGAgent SOTA 2.0 Architecture</h1>
+    <div class="mermaid">
+graph TD
+    %% 输入
+    subgraph Input ["📥 输入 (Input)"]
+        direction TB
+        ID[VisualDirective: ID / Description / Style Hints]
+        Context[Context Perception: Sliding Context Before/After]
+        State[AgentState: Global Config / Workspace Path]
+    end
+
+    %% SVGAgent 核心逻辑
+    subgraph SVGAgent_Boundary ["🤖 SVGAgent (Black Box)"]
+        direction TB
+        
+        InitGen["1. Initial Generation<br/>(generate_svg_async)"]
+        
+        subgraph Reflection_Loop ["🔄 Reflection Loop (Max 5 Attempts)"]
+            direction TB
+            VLM_Audit{"2. VLM Audit<br/>(Visual + Code)"}
+            Repair["3. Precision Repair<br/>(repair_svg_async)"]
+            Feedback["Feedback: Issues + Suggestions + Rendered Image"]
+        end
+        
+        Finalize["4. Asset Finalization<br/>(UAR Registration)"]
+    end
+
+    %% 外部依赖
+    subgraph External_Tools ["🛠️ 外部依赖"]
+        direction TB
+        Gemini["Gemini API (Native Protocol)"]
+        Renderer["Playwright / CairoSVG<br/>(SVG -> Image)"]
+        Patcher["High-Precision Patcher<br/>(diff-match-patch)"]
+    end
+
+    %% 输出
+    subgraph Output ["📤 输出 (Output)"]
+        direction TB
+        Asset["AssetEntry: Physical Path / Content Hash / VQA Status"]
+        HTML["HTML Figure: Responsive & Object-Fit Aware"]
+    end
+
+    %% 流程连接
+    Input --> SVGAgent_Boundary
+    
+    InitGen --> VLM_Audit
+    VLM_Audit -- "FAIL / NEEDS_REVISION" --> Feedback
+    Feedback --> Repair
+    Repair --> VLM_Audit
+    
+    VLM_Audit -- "PASS / MAX_ATTEMPTS" --> Finalize
+    Finalize --> Output
+
+    %% 依赖连接
+    InitGen -.-> Gemini
+    VLM_Audit -.-> Renderer
+    VLM_Audit -.-> Gemini
+    Repair -.-> Gemini
+    Repair -.-> Patcher
+    </div>
+</body>
+</html>

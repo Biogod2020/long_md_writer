@@ -1,0 +1,91 @@
+{
+  "project_title": "从电极到导联：构建心电图的几何与物理空间",
+  "author": "Magnum Opus AI",
+  "description": "",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "观察者的视角：从电偶极子到导联轴的跃迁",
+      "summary": "本节作为全章的导论，旨在建立“导联即视角”的核心隐喻。首先回顾第一章中电偶极子的物理本质，随后引入导联轴（Lead Axis）的概念。通过将心脏产生的电场比作被观察的物体，将导联轴比作观测相机的机位，解释为什么单一维度的测量无法捕捉心脏复杂的除极过程。本节为后续学习多维坐标系统奠定哲学和物理基础，强调从一维标量测量向多维向量投影的认知转变。",
+      "estimated_words": 1500,
+      "file_path": null
+    },
+    {
+      "id": "sec-2",
+      "title": "双极肢体导联：爱因托芬三角的几何美学",
+      "summary": "本节详细解析标准的双极肢体导联（I, II, III）。重点在于爱因托芬（Einthoven）如何利用等边三角形模型，将人体体表电位差转化为额面上的几何向量。通过推导爱因托芬定律（I + III = II），揭示导联之间的内在数学逻辑。此部分不仅是历史的回顾，更是为了让读者理解正负电极的物理摆放如何决定了导联轴的方向，以及这种方向性如何影响电信号的捕获。",
+      "estimated_words": 2000,
+      "file_path": null
+    },
+    {
+      "id": "sec-3",
+      "title": "加压肢体导联与威尔逊中央电端：虚构的零点",
+      "summary": "本节探讨单极加压肢体导联（aVR, aVL, aVF）的物理原理。核心在于解释“威尔逊中央电端”（WCT）的构建，即如何通过电阻网络创造一个稳定的“零电位”参考点。通过解析“加压”的物理含义（增加信号幅度），解释这些导联如何填补了双极导联在额面上的观察空白。本节侧重于物理电路的简化模型，帮助读者理解这些导联轴在额面空间中的独特指向性。",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-4",
+      "title": "六轴参考系统：额面电轴的完整版图",
+      "summary": "本节将前两节讨论的六个肢体导联整合为统一的六轴参考系统（Hexaxial Reference System）。通过几何平移，将所有导联轴汇聚于心脏中心，形成一个360度的额面坐标系。本节重点在于训练读者在脑海中建立这一坐标系的能力，使其能够迅速定位每个导联对应的度数，并理解为什么某些导联（如II和aVF）在观察下壁心肌时具有高度的相关性。",
+      "estimated_words": 1800,
+      "file_path": null
+    },
+    {
+      "id": "sec-5",
+      "title": "胸前导联：横断面的立体环绕视角",
+      "summary": "本节从额面转向水平面，介绍V1-V6胸前导联。解释为什么仅有肢体导联不足以诊断前壁或后壁的病变，从而引入水平面观测的必要性。详细描述电极在胸壁上的解剖定位及其对应的导联轴指向，解释导联轴如何从右前方（V1）逐渐过渡到左侧方（V6）。通过本节学习，读者将理解心电图如何从一个平面的描记演变为对心脏电活动的立体空间扫描。",
+      "estimated_words": 2200,
+      "file_path": null
+    },
+    {
+      "id": "sec-6",
+      "title": "向量投影定律：波形极性的数学真理",
+      "summary": "这是本章最具技术深度的部分，详细讲解心脏综合向量在导联轴上的投影（Vector Projection）。利用点积（Dot Product）原理，解释当心脏向量指向导联正极、负极或与其垂直时，心电图纸上分别产生正向波、负向波或双相波。通过严格的几何推导，赋予读者预测波形形态的能力，使他们不再依赖死记硬背，而是通过物理直觉判断电轴偏移对波形的影响。",
+      "estimated_words": 3000,
+      "file_path": null
+    },
+    {
+      "id": "sec-7",
+      "title": "解剖学映射：导联组合与心肌壁的对应关系",
+      "summary": "本节将物理坐标系回归到临床解剖。通过将12个导联分组（下壁、侧壁、前间壁、前壁），解释每组导联背后的“相机阵列”如何协同工作以监控特定的冠状动脉供血区域。本节是全章知识的升华，将抽象的向量投影转化为临床医生诊断心肌缺血或梗死的空间定位工具，完成从物理原理到临床实践的最后闭环。",
+      "estimated_words": 2000,
+      "file_path": null
+    }
+  ],
+  "knowledge_map": {
+    "sec-1": [
+      "Lead Axis Concept",
+      "Observer Metaphor"
+    ],
+    "sec-2": [
+      "Bipolar Leads",
+      "Einthoven’s Triangle",
+      "Einthoven’s Law"
+    ],
+    "sec-3": [
+      "Augmented Leads",
+      "Wilson Central Terminal",
+      "Unipolar Concept"
+    ],
+    "sec-4": [
+      "Hexaxial Reference System",
+      "Frontal Plane Geometry"
+    ],
+    "sec-5": [
+      "Precordial Leads",
+      "Horizontal Plane",
+      "V1-V6 Spatial Orientation"
+    ],
+    "sec-6": [
+      "Vector Projection",
+      "Dot Product",
+      "Waveform Polarity Physics"
+    ],
+    "sec-7": [
+      "Anatomical Grouping",
+      "Myocardial Wall Mapping",
+      "Clinical Correlation"
+    ]
+  }
+}

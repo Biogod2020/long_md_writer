@@ -1,0 +1,169 @@
+<section id="sec-3" class="content-section">
+<section id="sec-3" class="content-section">
+  <article id="sec-3-article" class="ecg-article-container">
+    <header>
+      <h1 class="ecg-h1">加压肢体导联与威尔逊中央电端：虚构的零点</h1>
+    </header>
+
+    <p class="ecg-body-text">
+      在 <a href="#sec-2" title="查看第二节：双极肢体导联">第二节</a> 中，我们见证了爱因托芬如何利用简单的等边三角形几何学，捕捉到了心脏在额面上的三个投影（I, II, III）。然而，这种“双极”观测法存在一个本质的局限：它只能测量两个点之间的<span class="ecg-u-bold">电位差</span>。
+    </p>
+
+    <p class="ecg-body-text">
+      如果我们想从三角形的每一个顶点（右臂、左臂、左腿）直接“俯视”位于中心的心脏，我们需要一种全新的观测方式——<span class="ecg-u-bold">单极导联（Unipolar Leads）</span>。本节将深入探讨心电学中最精妙的物理构造：如何通过一个简单的电阻网络，在人体中心凭空创造出一个“虚构的零点”，并以此构建出加压肢体导联（aVR, aVL, aVF）。
+    </p>
+
+    <section id="sec-3-unipolar-challenge">
+      <h3 class="ecg-h3">寻找绝对的参照：单极导联的物理挑战</h3>
+      <p class="ecg-body-text">
+        在物理测量中，电压（电位差）永远是相对的。如果要测量某个特定电极（探查电极）的“绝对电位”，我们必须找到一个电位恒定为零的参考点。
+      </p>
+      <p class="ecg-body-text">
+        在实验室里，我们可以轻松地将电路接地。但在动态跳动的人体中，哪里才是“零电位”？
+      </p>
+
+      <div class="ecg-callout ecg-callout--important">
+        <p class="ecg-body-text"><span class="ecg-u-bold">单极导联的定义</span></p>
+        <p class="ecg-body-text">单极导联是指将一个<span class="ecg-u-bold">探查电极（Exploring Electrode）</span>置于体表某处，而将另一个<span class="ecg-u-bold">参考电极（Reference Electrode）</span>的电位人为地维持在接近零的水平。此时，导联记录到的电压几乎完全反映了探查电极所在位置的电位变化。</p>
+      </div>
+    </section>
+
+    <section id="sec-3-wct-logic">
+      <h3 class="ecg-h3">威尔逊中央电端（WCT）：电路拓扑的巧妙平衡</h3>
+      <p class="ecg-body-text">
+        1934年，诺曼·威尔逊（Frank Norman Wilson）提出了一个天才的设想：如果心脏位于等边三角形的中心，根据物理学的电场对称性，将三个顶点（RA, LA, LL）的电位进行算术平均，其总和理论上应该恒等于零。
+      </p>
+
+      <h3 class="ecg-h3">WCT 的电路构造</h3>
+      <p class="ecg-body-text">
+        将来自右臂（RA）、左臂（LA）和左腿（LL）的导线分别连接到一个 $5k\Omega$ 的高精度电阻上，然后将这三个电阻的另一端汇聚到一个公共点。这个汇聚点被称为<span class="ecg-u-bold">威尔逊中央电端（Wilson Central Terminal, WCT）</span>。
+      </p>
+
+      <figure class="ecg-sim-card">
+        <svg viewBox="0 0 400 300" width="100%" xmlns="http://www.w3.org/2000/svg" aria-label="威尔逊中央电端电路原理图">
+          <title>Wilson Central Terminal (WCT) Circuit Diagram</title>
+          <!-- Nodes -->
+          <circle cx="50" cy="50" r="5" fill="#0f172a" />
+          <text x="30" y="40" font-family="Roboto Mono" font-size="14" fill="#0f172a">RA</text>
+          
+          <circle cx="350" cy="50" r="5" fill="#0f172a" />
+          <text x="355" y="40" font-family="Roboto Mono" font-size="14" fill="#0f172a">LA</text>
+          
+          <circle cx="200" cy="250" r="5" fill="#0f172a" />
+          <text x="190" y="275" font-family="Roboto Mono" font-size="14" fill="#0f172a">LL</text>
+          
+          <!-- Center Point -->
+          <circle cx="200" cy="120" r="6" fill="#0ea5e9" />
+          <text x="215" y="125" font-family="Roboto Mono" font-size="14" font-weight="bold" fill="#0ea5e9">WCT (Zero)</text>
+          
+          <!-- Resistors (Simplified as rectangles for clarity) -->
+          <path d="M 50 50 L 100 50 L 110 40 L 120 60 L 130 40 L 140 60 L 150 50 L 200 120" stroke="#64748b" stroke-width="2" fill="none" />
+          <path d="M 350 50 L 300 50 L 290 40 L 280 60 L 270 40 L 260 60 L 250 50 L 200 120" stroke="#64748b" stroke-width="2" fill="none" />
+          <path d="M 200 250 L 200 200 L 190 190 L 210 180 L 190 170 L 210 160 L 200 150 L 200 120" stroke="#64748b" stroke-width="2" fill="none" />
+          
+          <!-- Labels -->
+          <text x="100" y="35" font-family="Roboto Mono" font-size="12" fill="#64748b">5kΩ</text>
+          <text x="270" y="35" font-family="Roboto Mono" font-size="12" fill="#64748b">5kΩ</text>
+          <text x="215" y="190" font-family="Roboto Mono" font-size="12" fill="#64748b">5kΩ</text>
+        </svg>
+        <figcaption class="ecg-body-text" style="text-align: center; font-size: 0.9rem; color: #64748b;">
+          图 2-4：威尔逊中央电端的电路原理图。三个 5kΩ 电阻构成的平衡网络。
+        </figcaption>
+      </figure>
+
+      <p class="ecg-body-text">
+        根据基尔霍夫电流定律（Kirchhoff's Current Law），在这个节点处，流入电端的电流总和为零。其电位 $V_{WCT}$ 的数学表达式为：
+      </p>
+
+      <div class="ecg-math-display">
+        $$ V_{WCT} = \frac{\Phi_{RA} + \Phi_{LA} + \Phi_{LL}}{3} $$
+      </div>
+
+      <p class="ecg-body-text">
+        在理想状态下，$V_{WCT}$ 在整个心动周期中保持高度稳定，几乎可以作为“零电位”参考点。于是，最初的单极肢体导联（$V_R, V_L, V_F$）诞生了：
+      </p>
+      <ul>
+        <li class="ecg-body-text"><span class="ecg-u-bold">$V_R = \Phi_{RA} - V_{WCT}$</span></li>
+        <li class="ecg-body-text"><span class="ecg-u-bold">$V_L = \Phi_{LA} - V_{WCT}$</span></li>
+        <li class="ecg-body-text"><span class="ecg-u-bold">$V_F = \Phi_{LL} - V_{WCT}$</span></li>
+      </ul>
+    </section>
+
+    <section id="sec-3-goldberger-augmentation">
+      <h3 class="ecg-h3">从 V 到 aV：戈德伯格的“加压”魔法</h3>
+      <p class="ecg-body-text">
+        虽然威尔逊解决了“零点”问题，但临床医生很快发现了一个新问题：由于 WCT 包含了探查电极自身的部分电位，这导致测得的信号振幅非常微弱。
+      </p>
+      <p class="ecg-body-text">
+        1942年，伊曼纽尔·戈德伯格（Emanuel Goldberger）发现，如果在测量某个肢体电极时，暂时切断该肢体与 WCT 之间的连接，信号幅度将显著增强。
+      </p>
+
+      <div class="ecg-callout ecg-callout--important">
+        <p class="ecg-body-text"><span class="ecg-u-bold">加压定律（Augmentation Law）</span></p>
+        <p class="ecg-body-text">通过断开探查肢体与参考端的连接，测得的电位振幅是原始单极导联的 <span class="ecg-u-bold">1.5 倍</span>。</p>
+        <div class="ecg-math-display">
+          $$ aV = 1.5 \times V $$
+        </div>
+        <p class="ecg-body-text">这就是为什么这些导联被称为<span class="ecg-u-bold">加压（Augmented）</span>单极肢体导联，并在缩写前加上了小写的 <span class="ecg-u-bold">"a"</span>。</p>
+      </div>
+    </section>
+
+    <section id="sec-3-spatial-geometry">
+      <h3 class="ecg-h3">空间几何：填补额面的观察空白</h3>
+      <p class="ecg-body-text">
+        加压肢体导联的引入，彻底改变了我们对心脏额面的观察维度。如果说导联 I, II, III 构成了三角形的边，那么 aVR, aVL, aVF 就构成了从顶点指向中心的<span class="ecg-u-bold">中线</span>。
+      </p>
+
+      <ul id="sec-3-av-list">
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">1. aVF (Augmented Vector Foot)</span>: 探查位置为左腿。导联轴方向垂直向下，指向 <span class="ecg-math-inline">$+90^\circ$</span>。它是观察心脏<span class="ecg-u-bold">下壁（Inferior Wall）</span>最纯粹的视角。
+        </li>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">2. aVL (Augmented Vector Left)</span>: 探查位置为左臂。导联轴方向指向左上方，指向 <span class="ecg-math-inline">$-30^\circ$</span>。是观察心脏<span class="ecg-u-bold">高侧壁（High Lateral Wall）</span>的关键机位。
+        </li>
+        <li class="ecg-body-text">
+          <span class="ecg-u-bold">3. aVR (Augmented Vector Right)</span>: 探查位置为右臂。导联轴方向指向右上方，指向 <span class="ecg-math-inline">$-150^\circ$</span>。它从心脏的右上方向下俯视心腔内部。
+        </li>
+      </ul>
+
+      <div class="ecg-callout ecg-callout--warning">
+        <p class="ecg-body-text"><span class="ecg-u-bold">病理陷阱：aVR 的“镜像”错觉</span></p>
+        <p class="ecg-body-text">由于 aVR 的导联轴方向与大多数心脏除极向量（通常指向左下）完全相反，因此在正常心电图中，aVR 的所有波形（P, QRS, T）都应该是<span class="ecg-u-bold">倒置</span>的。如果 aVR 出现了直立的 R 波，通常意味着电极接反，或者存在严重的右心室肥厚或右位心。</p>
+      </div>
+    </section>
+
+    <section id="sec-3-limitations">
+      <h3 class="ecg-h3">威尔逊中央电端的局限性与物理真实性</h3>
+      <p class="ecg-body-text">
+        尽管 WCT 被称为“零电位”，但它并非真正的物理地。它是一个<span class="ecg-u-bold">虚构的参考点</span>。
+      </p>
+      <ol>
+        <li class="ecg-body-text"><span class="ecg-u-bold">非均匀导体效应</span>：人体并非完美的球体，各组织电阻率不同，使得 WCT 并不完全位于电学中心。</li>
+        <li class="ecg-body-text"><span class="ecg-u-bold">心脏位置偏移</span>：解剖位置的个体差异导致 WCT 提供的“零点”存在细微偏移。</li>
+      </ol>
+      <p class="ecg-body-text">
+        然而，WCT 的建立不仅让我们获得了 aV 系列导联，更为 <a href="#sec-5" title="查看第五节：胸前导联">第五节</a> 中即将讨论的<span class="ecg-u-bold">胸前导联（Precordial Leads）</span>提供了不可或缺的参考基准。
+      </p>
+    </section>
+
+    <section id="sec-3-summary">
+      <h3 class="ecg-h3">总结：额面六轴系统的合体</h3>
+      <p class="ecg-body-text">
+        通过本节的探讨，我们现在手中已经握有六台“相机”：三台双极相机（I, II, III）观察三角形的边；三台单极加压相机（aVR, aVL, aVF）从顶点射向中心。
+      </p>
+      <p class="ecg-body-text">
+        这六个导联轴在空间上每隔 $30^\circ$ 就布下一道岗哨，共同构成了<span class="ecg-u-bold">额面六轴参考系统</span>。在接下来的 <a href="#sec-4" title="查看第四节：六轴参考系统">第四节</a> 中，我们将学习如何将这六个维度整合在一起，去精确判定心脏的平均电轴。
+      </p>
+    </section>
+
+    <section id="sec-3-interactive" class="ecg-sim-card">
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <p style="font-family: 'Roboto Mono'; font-size: 0.85rem; color: #64748b; margin: 0;">
+          <span class="ecg-u-pulse">●</span> [交互式演示：WCT 电阻模拟器] <br>
+          尝试改变 RA, LA, LL 的输入电位，观察 WCT 节点的电压波动。当三个电阻平衡时，验证 $V_{WCT} = (RA+LA+LL)/3$。
+        </p>
+      </div>
+    </section>
+  </article>
+</section>
+</section>

@@ -1,0 +1,35 @@
+# Technical Specification (SOTA Description): Chapter 2 - From Electrodes to Leads
+
+## 1. Content Guidelines
+The Writer must adopt a **first-principles deductive reasoning style**. Rather than starting with electrode placement, begin with the abstract concept of a **Lead Axis** as a directed line segment in a 3D coordinate system. 
+
+*   **Mathematical Rigor:** Use MathJax to derive the relationship between the cardiac dipole $\vec{P}$ and the recorded voltage $V$. The core formula $V = |\vec{P}| \cdot \cos(\theta)$ must be the "hero" of Section 6, explaining how the angle between the cardiac vector and the lead axis dictates wave morphology (isoelectric, positive, or negative).
+*   **Narrative Framework:** Employ the "Camera Analogy." Treat the 12-lead system as a synchronized multi-camera shoot in a 3D studio.
+*   **Terminology:** Maintain strict academic precision. Use terms like "Wilson Central Terminal (WCT)," "Augmented Unipolar Leads," and "Hexaxial Reference System."
+*   **Evidence:** Ground all physical claims in Einthoven’s Law and the physical properties of volume conductors.
+
+## 2. Visual Design System
+The document must adhere to the high-end academic aesthetic established in Chapter 1.
+
+*   **Color Palette:** 
+    *   *Primary:* Medical Blue (`#0ea5e9` for accents, `#0c4a6e` for headings).
+    *   *Secondary:* Heart Red (`#e11d48`) for depolarization vectors and active signals.
+    *   *Neutral:* Slate scales (`#f8fafc` to `#1e293b`) for backgrounds and formula blocks.
+*   **Typography:** 
+    *   *Body:* **Noto Serif SC** (400) for high readability and academic tone.
+    *   *Headings:* **Inter** (700) for a modern, technical feel.
+    *   *Math/Data:* **Roboto Mono** for variable definitions and formula annotations.
+*   **Components:** 
+    *   **Formula Blocks:** Rounded `slate-50` containers with a subtle `slate-200` border.
+    *   **Callouts:** Use "Goldberger’s Insight" or "Physics Note" boxes with a left-border accent in `medical-500`.
+
+## 3. Interactive Element Specifications
+The Transformer agent should implement the following using Inline SVG and Tailwind/CSS:
+
+*   **The Projection Simulator (SVG):** A central diagram where a rotating red arrow (Cardiac Vector $\vec{P}$) projects a "shadow" onto a horizontal axis (Lead I). As $\vec{P}$ rotates, the "shadow" length changes, and a corresponding ECG wave is drawn in real-time on a grid below.
+*   **Hexaxial Toggle:** A 360-degree wheel representing the frontal plane. Hovering over a specific lead (e.g., aVL) should highlight the corresponding anatomical region (Lateral Wall) and the specific coronary artery (LCx) in a small inset diagram.
+*   **Progressive Disclosure:** Use CSS transitions to "peel back" the skin of a 3D chest model, revealing the anatomical heart aligned within the Einthoven Triangle.
+
+## 4. Accessibility & Performance
+*   **Accessibility:** All SVG components must include `<title>` and `<desc>` tags for screen readers. Ensure a contrast ratio of at least 4.5:1 for all text against backgrounds. 
+*   **Performance:** Avoid external heavy JS frameworks. All animations should be CSS-driven or lightweight vanilla JS. MathJax should be configured for "lazy-loading" to ensure the initial text renders instantly. SVGs must be responsive, scaling fluidly across mobile and desktop viewports.

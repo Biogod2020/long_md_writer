@@ -1,0 +1,8 @@
+{
+  "track_id": "validator_robustness_20260225",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-02-25T10:00:00Z",
+  "updated_at": "2026-02-25T10:00:00Z",
+  "description": "Upgrade MarkdownStructureValidator to be block-aware and robust against multi-line JSON configurations, solving the 'fix-loop' cycle."
+}

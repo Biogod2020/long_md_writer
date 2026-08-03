@@ -1,0 +1,94 @@
+{
+  "project_title": "Chapter 2: From Electrodes to Leads — The Spatial Physics of the ECG",
+  "author": "Magnum Opus AI",
+  "description": "# Technical Specification (SOTA Description): Chapter 2 - From Electrodes to Leads\n\n## 1. Content Guidelines\nThe Writer must adopt a **first-principles deductive reasoning style**. Rather than starting with electrode placement, begin with the abstract concept of a **Lead Axis** as a directed line segment in a 3D coordinate system. \n\n*   **Mathematical Rigor:** Use MathJax to derive the relationship between the cardiac dipole $\\vec{P}$ and the recorded voltage $V$. The core formula $V = |\\vec{P}| \\cdot \\cos(\\theta)$ must be the \"hero\" of Section 6, explaining how the angle between the cardiac vector and the lead axis dictates wave morphology (isoelectric, positive, or negative).\n*   **Narrative Framework:** Employ the \"Camera Analogy.\" Treat the 12-lead system as a synchronized multi-camera shoot in a 3D studio.\n*   **Terminology:** Maintain strict academic precision. Use terms like \"Wilson Central Terminal (WCT),\" \"Augmented Unipolar Leads,\" and \"Hexaxial Reference System.\"\n*   **Evidence:** Ground all physical claims in Einthoven’s Law and the physical properties of volume conductors.\n\n## 2. Visual Design System\nThe document must adhere to the high-end academic aesthetic established in Chapter 1.\n\n*   **Color Palette:** \n    *   *Primary:* Medical Blue (`#0ea5e9` for accents, `#0c4a6e` for headings).\n    *   *Secondary:* Heart Red (`#e11d48`) for depolarization vectors and active signals.\n    *   *Neutral:* Slate scales (`#f8fafc` to `#1e293b`) for backgrounds and formula blocks.\n*   **Typography:** \n    *   *Body:* **Noto Serif SC** (400) for high readability and academic tone.\n    *   *Headings:* **Inter** (700) for a modern, technical feel.\n    *   *Math/Data:* **Roboto Mono** for variable definitions and formula annotations.\n*   **Components:** \n    *   **Formula Blocks:** Rounded `slate-50` containers with a subtle `slate-200` border.\n    *   **Callouts:** Use \"Goldberger’s Insight\" or \"Physics Note\" boxes with a left-border accent in `medical-500`.\n\n## 3. Interactive Element Specifications\nThe Transformer agent should implement the following using Inline SVG and Tailwind/CSS:\n\n*   **The Projection Simulator (SVG):** A central diagram where a rotating red arrow (Cardiac Vector $\\vec{P}$) projects a \"shadow\" onto a horizontal axis (Lead I). As $\\vec{P}$ rotates, the \"shadow\" length changes, and a corresponding ECG wave is drawn in real-time on a grid below.\n*   **Hexaxial Toggle:** A 360-degree wheel representing the frontal plane. Hovering over a specific lead (e.g., aVL) should highlight the corresponding anatomical region (Lateral Wall) and the specific coronary artery (LCx) in a small inset diagram.\n*   **Progressive Disclosure:** Use CSS transitions to \"peel back\" the skin of a 3D chest model, revealing the anatomical heart aligned within the Einthoven Triangle.\n\n## 4. Accessibility & Performance\n*   **Accessibility:** All SVG components must include `<title>` and `<desc>` tags for screen readers. Ensure a contrast ratio of at least 4.5:1 for all text against backgrounds. \n*   **Performance:** Avoid external heavy JS frameworks. All animations should be CSS-driven or lightweight vanilla JS. MathJax should be configured for \"lazy-loading\" to ensure the initial text renders instantly. SVGs must be responsive, scaling fluidly across mobile and desktop viewports.",
+  "sections": [
+    {
+      "id": "sec-1",
+      "title": "The Observer’s Perspective: Defining the Lead Axis",
+      "summary": "This introductory section bridges the gap between the microscopic cellular dipole discussed in Chapter 1 and the macroscopic recording system. It redefines a 'Lead' not as a physical wire, but as an abstract geometric axis in 3D space. By establishing the 'Physics-First' methodology, we explain how the placement of a positive and negative electrode creates a specific line of sight. This section justifies its primary position by setting the conceptual groundwork for all subsequent spatial projections and vector mathematics.",
+      "estimated_words": 1500,
+      "file_path": null
+    },
+    {
+      "id": "sec-2",
+      "title": "Einthoven’s Legacy: The Bipolar Limb Leads",
+      "summary": "This section explores the historical and physical foundations of Leads I, II, and III. We detail the construction of Einthoven’s Triangle and the mathematical symmetry that governs it. Special emphasis is placed on Einthoven’s Law (Lead I + Lead III = Lead II), explaining how this redundancy ensures data integrity. This section is placed here to introduce the simplest form of lead geometry—the equilateral triangle—before moving into more complex virtual electrode systems and augmented views.",
+      "estimated_words": 2000,
+      "file_path": null
+    },
+    {
+      "id": "sec-3",
+      "title": "The Augmented Leads: Goldberger’s Virtual Center",
+      "summary": "Moving beyond bipolar pairs, this section introduces Leads aVR, aVL, and aVF. We explain the concept of the 'Wilson Central Terminal' and how the ECG machine creates a virtual 'zero' reference point at the center of the heart. The summary covers why these leads are 'augmented' (amplified) and how they fill the 60-degree gaps left by the standard bipolar leads. This follows the bipolar section to show the evolution of the frontal plane recording system.",
+      "estimated_words": 2500,
+      "file_path": null
+    },
+    {
+      "id": "sec-4",
+      "title": "The Hexaxial Reference System: A 360-Degree Frontal View",
+      "summary": "This section synthesizes the three bipolar leads and three augmented leads into a single 360-degree compass—the Hexaxial Reference System. We explain how this system allows clinicians to pinpoint the 'Mean Cardiac Axis' in the frontal plane. By visualizing the heart as being at the center of a circular grid, students learn to predict which lead will show the most positive deflection based on the vector's orientation. This serves as the climax of frontal plane physics.",
+      "estimated_words": 2200,
+      "file_path": null
+    },
+    {
+      "id": "sec-5",
+      "title": "The Horizontal Plane: Precordial Leads V1–V6",
+      "summary": "Transitioning from the frontal (coronal) plane to the horizontal (transverse) plane, this section introduces the precordial leads. We discuss the anatomical placement of electrodes V1 through V6 and how they provide a wrap-around view of the ventricles. This section explains the 'R-wave progression' as a physical consequence of the heart's depolarization vector moving toward the left and posterior directions. It is positioned here to complete the 3D 'camera' analogy of the ECG system.",
+      "estimated_words": 2800,
+      "file_path": null
+    },
+    {
+      "id": "sec-6",
+      "title": "The Physics of Projection: Dot Products and Wave Morphology",
+      "summary": "This core theoretical section introduces the semi-quantitative math behind the ECG. Using the formula V = |P| cos θ, we explain why a vector perpendicular to a lead axis produces an isoelectric line, while a parallel vector produces the maximum deflection. This section clarifies the relationship between the magnitude of the cardiac dipole and the voltage recorded on paper. Placing this after the lead descriptions allows students to apply the math to the specific geometries they have just learned.",
+      "estimated_words": 3000,
+      "file_path": null
+    },
+    {
+      "id": "sec-7",
+      "title": "Anatomical Grouping and Coronary Correlation",
+      "summary": "The final section translates the abstract physics back into clinical reality. We group the 12 leads into anatomical 'territories' (Inferior, Lateral, Septal, and Anterior) and correlate them with their respective coronary artery blood supplies. By understanding the lead axis, students can now intuitively see why Lead II, III, and aVF 'look at' the diaphragm/inferior wall. This serves as the concluding synthesis, preparing the reader for clinical diagnosis in future chapters.",
+      "estimated_words": 2000,
+      "file_path": null
+    }
+  ],
+  "knowledge_map": {
+    "sec-1": [
+      "Lead Axis",
+      "Electrode Polarity",
+      "Spatial Perspective"
+    ],
+    "sec-2": [
+      "Einthoven's Triangle",
+      "Bipolar Leads",
+      "Einthoven's Law"
+    ],
+    "sec-3": [
+      "Unipolar Leads",
+      "Augmented Voltage",
+      "Wilson Central Terminal"
+    ],
+    "sec-4": [
+      "Hexaxial System",
+      "Frontal Plane",
+      "Mean Cardiac Axis"
+    ],
+    "sec-5": [
+      "Precordial Leads",
+      "Horizontal Plane",
+      "R-wave Progression"
+    ],
+    "sec-6": [
+      "Vector Projection",
+      "Cosine Rule",
+      "Dot Product",
+      "Voltage Magnitude"
+    ],
+    "sec-7": [
+      "Anatomical Territories",
+      "Coronary Artery Mapping",
+      "Inferior/Lateral/Anterior views"
+    ]
+  }
+}

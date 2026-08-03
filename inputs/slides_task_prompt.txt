@@ -1,0 +1,13 @@
+Create a high-end interactive HTML slide deck based on the provided reference '从偶极子到心电图.html'. 
+
+The goal is to transform the deep technical derivation into a visual presentation suitable for a medical university lecture.
+
+Key Requirements:
+1. Layout Type: MUST use the 'slide' layout.
+2. Aesthetic: SOTA dark mode with glassmorphism effects and neon accent colors.
+3. Content Flow: Maintain the 'first-principles' derivation from microscopic dipoles to macroscopic ECG leads.
+4. Images: Proactively include placeholders for high-quality internet images (e.g., cardiac muscle anatomy, electrode placement diagrams). 
+5. Visual Logic: Each slide should focus on ONE core concept with clear visual hierarchy.
+6. Interactivity: Slide navigation (arrows/keyboard), reading progress, and animated transitions.
+
+Please use the provided reference material as the source of truth.

@@ -1,0 +1,8 @@
+{
+  "track_id": "repo_tidy_up_20260129",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-01-29T00:00:00Z",
+  "updated_at": "2026-01-29T00:00:00Z",
+  "description": "Organize the project root directory by relocating scripts, tests, and documentation to appropriate subdirectories while preserving original functionality and task-tracking files."
+}

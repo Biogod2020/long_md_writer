@@ -1,0 +1,76 @@
+[20:09:29] 🚀 Starting Debug Test: debug_200929
+[20:09:29] 📂 Workspace: workspace_debug/debug_200929
+[20:09:29] 🧶 Thread ID: 69eb27f7
+[20:09:29] 
+--- Entering Graph Execution ---
+[20:09:38] ✅ Node Finished: clarifier
+[20:09:38]    Questions: 4
+[20:09:38] 
+⏸️ Interrupt before: refiner
+[20:09:38] 🤖 Simulating User Answers for Clarification...
+[20:09:38] ▶️ Resuming from refiner...
+[20:09:56] ✅ Node Finished: refiner
+[20:09:56]    Brief length: 3942 chars
+[20:09:56] 
+⏸️ Interrupt before: review_brief
+[20:09:56] 🤖 Simulating User Approval: Project Brief
+[20:09:56] ▶️ Resuming from review_brief...
+[20:09:56] ✅ Node Finished: review_brief
+[20:10:12] ✅ Node Finished: outline
+[20:10:12]    Sections: 7
+[20:10:12] 
+⏸️ Interrupt before: review_outline
+[20:10:12] 🤖 Simulating User Approval: Outline
+[20:10:12] ▶️ Resuming from review_outline...
+[20:10:12] ✅ Node Finished: review_outline
+[20:10:23] ✅ Node Finished: techspec
+[20:10:48] ✅ Node Finished: writer
+[20:10:48]    MD sections: 1
+[20:11:13] ✅ Node Finished: writer
+[20:11:13]    MD sections: 2
+[20:11:37] ✅ Node Finished: writer
+[20:11:37]    MD sections: 3
+[20:12:00] ✅ Node Finished: writer
+[20:12:00]    MD sections: 4
+[20:12:25] ✅ Node Finished: writer
+[20:12:25]    MD sections: 5
+[20:12:56] ✅ Node Finished: writer
+[20:12:56]    MD sections: 6
+[20:13:24] ✅ Node Finished: writer
+[20:13:24]    MD sections: 7
+[20:14:05] ✅ Node Finished: markdown_qa
+[20:14:05]    Revision needed: False
+[20:14:56] ✅ Node Finished: design
+[20:14:56]    CSS: workspace_debug/debug_200929/assets/style.css, JS: workspace_debug/debug_200929/assets/main.js
+[20:15:26] ✅ Node Finished: transformer
+[20:15:26]    HTML sections: 1
+[20:16:02] ✅ Node Finished: transformer
+[20:16:02]    HTML sections: 2
+[20:16:35] ✅ Node Finished: transformer
+[20:16:35]    HTML sections: 3
+[20:17:08] ✅ Node Finished: transformer
+[20:17:08]    HTML sections: 4
+[20:17:56] ✅ Node Finished: transformer
+[20:17:56]    HTML sections: 5
+[20:18:29] ✅ Node Finished: transformer
+[20:18:29]    HTML sections: 6
+[20:19:20] ✅ Node Finished: transformer
+[20:19:20]    HTML sections: 7
+[20:19:20] ✅ Node Finished: image_sourcer
+[20:19:20]    Completed HTML: ['workspace_debug/debug_200929/html/sec-1.html', 'workspace_debug/debug_200929/html/sec-2.html', 'workspace_debug/debug_200929/html/sec-3.html', 'workspace_debug/debug_200929/html/sec-4.html', 'workspace_debug/debug_200929/html/sec-5.html', 'workspace_debug/debug_200929/html/sec-6.html', 'workspace_debug/debug_200929/html/sec-7.html']
+[20:19:20] ✅ Node Finished: assembler
+[20:19:20]    Final HTML: None
+[20:19:20]    ⚠️ ERRORS: ["Assembler Agent: Failed to generate final HTML: unexpected '{' in field name"]
+[20:19:20] ✅ Node Finished: visual_qa
+[20:19:20]    VQA needs reassembly: False
+[20:19:20]    ⚠️ ERRORS: ["Assembler Agent: Failed to generate final HTML: unexpected '{' in field name", 'VisualQAAgent: final_html_path not set.']
+[20:19:20] 
+🎉 Workflow Completed Successfully!
+[20:19:20] 
+==================================================
+[20:19:20] Final HTML: None
+[20:19:20] Errors: ["Assembler Agent: Failed to generate final HTML: unexpected '{' in field name", 'VisualQAAgent: final_html_path not set.']
+[20:19:20] MD Sections: 7
+[20:19:20] HTML Sections: 7
+[20:19:20] Debug Log: workspace_debug/debug_200929/debug_log.txt
+[20:19:20] ==================================================
