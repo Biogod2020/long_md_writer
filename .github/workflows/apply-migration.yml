@@ -48,10 +48,11 @@ jobs:
           git checkout origin/master -- .
 
           # Remove credential-bearing/generated tool state and unequivocal caches.
-          rm -rf .agent .claude .gemini .gemini-clipboard
-          rm -rf temp_*_ms workspaces/workspace_debug log
-          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          rm -rf .agent .claude .gemini .gemini-clipboard log
+          find . -maxdepth 1 -type d -name 'temp_*_ms' -exec rm -rf -- {} +
+          find . -type d -name __pycache__ -print0 | xargs -0 -r rm -rf
           find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          rm -rf workspaces/workspace_debug
 
           # Replace only the active implementation and its documentation/tests.
           # Historical project materials outside these paths remain intact.
@@ -65,18 +66,55 @@ jobs:
 
           tar -xzf /tmp/migration-runtime.tgz
 
-          test -f inputs/prompt.txt
-          test -f requirements.txt
-          test -f src/orchestration/openai_workflow.py
-          test -f src/orchestration/codex_runtime.py
-          test -f tests/test_workflow_e2e.py
-          test -f docs/SECURITY.md
-          test -f .github/workflows/apply-migration.yml
-          test ! -e src/agents
-          test ! -e src/core
-          test ! -e .github/workflows/ci.yml
-          test -z "$(find . -maxdepth 1 -type d -name 'temp_*_ms' -print -quit)"
-          test ! -e workspaces/workspace_debug
+          python - <<'PY'
+          from pathlib import Path
+
+          required_files = [
+              'inputs/prompt.txt',
+              'requirements.txt',
+              'src/orchestration/openai_workflow.py',
+              'src/orchestration/codex_runtime.py',
+              'tests/test_workflow_e2e.py',
+              'docs/SECURITY.md',
+              '.github/workflows/apply-migration.yml',
+          ]
+          required_dirs = ['assets', 'conductor']
+          forbidden_paths = [
+              'src/agents',
+              'src/core',
+              '.github/workflows/ci.yml',
+              'workspaces/workspace_debug',
+              '.agent',
+              '.claude',
+              '.gemini',
+              '.gemini-clipboard',
+          ]
+
+          errors = []
+          for raw in required_files:
+              path = Path(raw)
+              if not path.is_file():
+                  errors.append(f'missing required file: {raw}')
+          for raw in required_dirs:
+              path = Path(raw)
+              if not path.is_dir():
+                  errors.append(f'missing required directory: {raw}')
+          for raw in forbidden_paths:
+              if Path(raw).exists():
+                  errors.append(f'forbidden legacy/generated path remains: {raw}')
+
+          temp_dirs = sorted(str(path) for path in Path('.').glob('temp_*_ms') if path.is_dir())
+          if temp_dirs:
+              errors.append(f'temporary model-output directories remain: {temp_dirs}')
+
+          if errors:
+              print('Rebuilt tree validation failed:')
+              for error in errors:
+                  print(f' - {error}')
+              raise SystemExit(1)
+
+          print('Rebuilt tree contract passed.')
+          PY
 
       - name: Install migrated dependencies
         shell: bash
@@ -96,8 +134,6 @@ jobs:
           python main.py --help >/dev/null
           python main_markdown.py --help >/dev/null
           python -m src.orchestration.validate_cli --help >/dev/null
-
-          # Material that defines the previous experiment must still be present.
           test -s inputs/prompt.txt
           test -d assets
           test -d conductor
@@ -111,8 +147,7 @@ jobs:
           git add -A
 
           # Validate only files authored by this migration. Preserved inputs and
-          # historical conductor records intentionally remain byte-identical to master,
-          # including legacy whitespace that is outside this refactor's scope.
+          # historical conductor records intentionally remain byte-identical to master.
           git diff --cached --check -- \
             .env.example .gitignore AGENTS.md CLAUDE.md GEMINI.md \
             README.md README_CN.md TODO.md app.py main.py main_markdown.py \
@@ -125,9 +160,6 @@ jobs:
             exit 1
           }
 
-          # Build the already-validated index into a commit whose parent is the latest
-          # remote branch head. This avoids non-fast-forward races with PR metadata or
-          # workflow-fix commits made while the validation job was running.
           tree_sha="$(git write-tree)"
           git fetch origin agent/openai-codex-migration
           parent_sha="$(git rev-parse origin/agent/openai-codex-migration)"
