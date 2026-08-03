@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Environments and credentials
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Generated publication jobs and control-plane scratch
+workspace/
+workspaces/
+workspace_test/
+.magnum-locks/
+.magnum-tasks/
+outputs/
+*.log
+
+# Local agent tooling
+.agent/
+.claude/
+.gemini/
+.gemini-clipboard/
