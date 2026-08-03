@@ -1,4 +1,4 @@
-name: Apply OpenAI Codex migration
+name: Preserve project data and finalize OpenAI Codex migration
 
 on:
   push:
@@ -12,56 +12,65 @@ permissions:
   contents: write
 
 jobs:
-  apply:
+  finalize:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the migration head
+        uses: actions/checkout@v4
         with:
           ref: agent/openai-codex-migration
           fetch-depth: 0
 
-      - name: Reconstruct and verify migration archive
+      - name: Snapshot the verified migration runtime
         shell: bash
         run: |
           set -euo pipefail
           cp .github/workflows/apply-migration.yml /tmp/apply-migration.yml
-          cat .migration/archive-*.b64 | base64 --decode > /tmp/migration.tgz
-          echo "c2c38a4c8fa7edf17200482b7823821853c1faffccd1edfb1df5308f17e83684  /tmp/migration.tgz" | sha256sum -c -
-          python - <<'PY'
-          import tarfile
-          from pathlib import PurePosixPath
+          tar \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            -czf /tmp/migration-runtime.tgz .
+          test -s /tmp/migration-runtime.tgz
 
-          with tarfile.open('/tmp/migration.tgz', 'r:gz') as archive:
-              members = archive.getmembers()
-              if not members:
-                  raise SystemExit('migration archive is empty')
-              for member in members:
-                  path = PurePosixPath(member.name)
-                  if path.is_absolute() or '..' in path.parts:
-                      raise SystemExit(f'unsafe archive member: {member.name}')
-                  if member.issym() or member.islnk():
-                      raise SystemExit(f'links are forbidden in migration archive: {member.name}')
-          PY
-          rm -rf /tmp/migration-tree
-          mkdir -p /tmp/migration-tree
-          tar -xzf /tmp/migration.tgz -C /tmp/migration-tree
-
-      - name: Replace repository tree while preserving bootstrap workflow
+      - name: Rebuild on master while preserving project materials
         shell: bash
         run: |
           set -euo pipefail
+          git fetch origin master
+
+          # Start from the complete original project tree. This restores user inputs,
+          # assets, historical baselines and conductor records that a source-only
+          # migration must never delete.
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
-          cp -a /tmp/migration-tree/. .
+          git checkout origin/master -- .
+
+          # Remove credential-bearing/generated tool state that was accidentally
+          # committed in the legacy repository.
+          rm -rf .agent .claude .gemini .gemini-clipboard
+
+          # Replace only the active implementation and its documentation/tests.
+          # Historical project materials outside these paths remain intact.
+          rm -rf src/agents src/core src/orchestration scripts tests docs
+
+          # Workflow files are finalized separately through the GitHub connector,
+          # because the default Actions token cannot create/replace workflows.
           rm -rf .github/workflows
           mkdir -p .github/workflows
           cp /tmp/apply-migration.yml .github/workflows/apply-migration.yml
+
+          tar -xzf /tmp/migration-runtime.tgz
+
+          test -f inputs/prompt.txt
           test -f requirements.txt
           test -f src/orchestration/openai_workflow.py
+          test -f src/orchestration/codex_runtime.py
           test -f tests/test_workflow_e2e.py
-          test ! -e .migration
+          test -f docs/SECURITY.md
           test -f .github/workflows/apply-migration.yml
+          test ! -e src/agents
+          test ! -e src/core
           test ! -e .github/workflows/ci.yml
 
       - name: Install migrated dependencies
@@ -73,7 +82,7 @@ jobs:
           python -m pip check
           python -m playwright install --with-deps chromium
 
-      - name: Validate migrated source
+      - name: Validate the preserved project and new runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -83,7 +92,11 @@ jobs:
           python main_markdown.py --help >/dev/null
           python -m src.orchestration.validate_cli --help >/dev/null
 
-      - name: Commit migrated source tree
+          # Material that defines the previous experiment must still be present.
+          test -s inputs/prompt.txt
+          test -d conductor
+
+      - name: Commit the corrected migration tree
         shell: bash
         run: |
           set -euo pipefail
@@ -91,9 +104,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --check
+
+          # The bootstrap workflow must remain byte-identical in this bot commit;
+          # final workflow replacement is performed by the GitHub connector.
           git diff --cached --quiet -- .github/workflows || {
-            echo 'bootstrap workflow changed unexpectedly' >&2
+            echo 'workflow files changed unexpectedly' >&2
             exit 1
           }
-          git commit -m "refactor: migrate orchestration to OpenAI Agents SDK and Codex"
+
+          git commit -m "fix: preserve project materials in OpenAI Codex migration"
           git push origin HEAD:agent/openai-codex-migration
