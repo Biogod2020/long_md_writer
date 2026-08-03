@@ -6,6 +6,11 @@ on:
       - agent/openai-codex-migration
     paths:
       - .github/workflows/bing-image-smoke.yml
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/workflows/bing-image-smoke.yml
   workflow_dispatch:
 
 permissions:
