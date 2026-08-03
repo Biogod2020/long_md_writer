@@ -19,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: agent/openai-codex-migration
           fetch-depth: 0
 
       - name: Reconstruct and verify migration archive
