@@ -103,7 +103,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --cached --check
+
+          # Validate only files authored by this migration. Preserved inputs and
+          # historical conductor records intentionally remain byte-identical to master,
+          # including legacy whitespace that is outside this refactor's scope.
+          git diff --cached --check -- \
+            .env.example .gitignore AGENTS.md CLAUDE.md GEMINI.md \
+            README.md README_CN.md TODO.md app.py main.py main_markdown.py \
+            pyproject.toml pytest.ini requirements.txt docs scripts src tests
 
           # The bootstrap workflow must remain byte-identical in this bot commit;
           # final workflow replacement is performed by the GitHub connector.
