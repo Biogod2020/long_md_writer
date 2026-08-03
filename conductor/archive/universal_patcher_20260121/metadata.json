@@ -1,8 +1,0 @@
-{
-  "track_id": "universal_patcher_20260121",
-  "type": "bug_fix",
-  "status": "new",
-  "created_at": "2026-01-21T10:00:00Z",
-  "updated_at": "2026-01-21T10:00:00Z",
-  "description": "Refactor the SOTA 2.0 workflow to move asset validation inline, implement a Mermaid QA loop, and fix the brittle 'fixer' logic that causes agents to get stuck."
-}

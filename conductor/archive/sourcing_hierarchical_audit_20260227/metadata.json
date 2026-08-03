@@ -1,8 +1,0 @@
-{
-  "track_id": "sourcing_hierarchical_audit_20260227",
-  "type": "refactor",
-  "status": "new",
-  "created_at": "2026-02-27T12:00:00Z",
-  "updated_at": "2026-02-27T12:00:00Z",
-  "description": "优化websourcing的环节，1-进行分层vlmaudit，第一层10个一组（打乱之后），挑出最好的两个，再从这两个中挑出我们想要的。2. 优化浏览器下载的逻辑，不要导致死锁，（但千万不要动认证相关的，避免引起谷歌的captcha识别）"
-}

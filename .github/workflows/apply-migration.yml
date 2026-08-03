@@ -1,0 +1,86 @@
+name: Apply OpenAI Codex migration
+
+on:
+  push:
+    branches:
+      - agent/openai-codex-migration
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify migration archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .migration/archive-*.b64 | base64 --decode > /tmp/migration.tgz
+          echo "c2c38a4c8fa7edf17200482b7823821853c1faffccd1edfb1df5308f17e83684  /tmp/migration.tgz" | sha256sum -c -
+          python - <<'PY'
+          import tarfile
+          from pathlib import PurePosixPath
+
+          with tarfile.open('/tmp/migration.tgz', 'r:gz') as archive:
+              members = archive.getmembers()
+              if not members:
+                  raise SystemExit('migration archive is empty')
+              for member in members:
+                  path = PurePosixPath(member.name)
+                  if path.is_absolute() or '..' in path.parts:
+                      raise SystemExit(f'unsafe archive member: {member.name}')
+                  if member.issym() or member.islnk():
+                      raise SystemExit(f'links are forbidden in migration archive: {member.name}')
+          PY
+          rm -rf /tmp/migration-tree
+          mkdir -p /tmp/migration-tree
+          tar -xzf /tmp/migration.tgz -C /tmp/migration-tree
+
+      - name: Replace repository tree atomically in the checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
+          cp -a /tmp/migration-tree/. .
+          test -f requirements.txt
+          test -f src/orchestration/openai_workflow.py
+          test -f tests/test_workflow_e2e.py
+          test ! -e .migration
+          test ! -e .github/workflows/apply-migration.yml
+
+      - name: Install migrated dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+          python -m playwright install --with-deps chromium
+
+      - name: Validate migrated source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q src scripts tests main.py main_markdown.py app.py
+          python -m pytest -q
+          python main.py --help >/dev/null
+          python main_markdown.py --help >/dev/null
+          python -m src.orchestration.validate_cli --help >/dev/null
+
+      - name: Commit migrated tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor: migrate orchestration to OpenAI Agents SDK and Codex"
+          git push origin HEAD:agent/openai-codex-migration

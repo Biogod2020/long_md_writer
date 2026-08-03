@@ -1,8 +1,0 @@
-{
-  "track_id": "workspace_cleanup_20260208",
-  "type": "chore",
-  "status": "new",
-  "created_at": "2026-02-08T14:45:00Z",
-  "updated_at": "2026-02-08T14:45:00Z",
-  "description": "cleanup the workspac dir in the root directory"
-}
