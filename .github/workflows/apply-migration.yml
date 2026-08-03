@@ -25,6 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp .github/workflows/apply-migration.yml /tmp/apply-migration.yml
           cat .migration/archive-*.b64 | base64 --decode > /tmp/migration.tgz
           echo "c2c38a4c8fa7edf17200482b7823821853c1faffccd1edfb1df5308f17e83684  /tmp/migration.tgz" | sha256sum -c -
           python - <<'PY'
@@ -46,17 +47,21 @@ jobs:
           mkdir -p /tmp/migration-tree
           tar -xzf /tmp/migration.tgz -C /tmp/migration-tree
 
-      - name: Replace repository tree atomically in the checkout
+      - name: Replace repository tree while preserving bootstrap workflow
         shell: bash
         run: |
           set -euo pipefail
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
           cp -a /tmp/migration-tree/. .
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/apply-migration.yml .github/workflows/apply-migration.yml
           test -f requirements.txt
           test -f src/orchestration/openai_workflow.py
           test -f tests/test_workflow_e2e.py
           test ! -e .migration
-          test ! -e .github/workflows/apply-migration.yml
+          test -f .github/workflows/apply-migration.yml
+          test ! -e .github/workflows/ci.yml
 
       - name: Install migrated dependencies
         shell: bash
@@ -77,7 +82,7 @@ jobs:
           python main_markdown.py --help >/dev/null
           python -m src.orchestration.validate_cli --help >/dev/null
 
-      - name: Commit migrated tree
+      - name: Commit migrated source tree
         shell: bash
         run: |
           set -euo pipefail
@@ -85,5 +90,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --check
+          git diff --cached --quiet -- .github/workflows || {
+            echo 'bootstrap workflow changed unexpectedly' >&2
+            exit 1
+          }
           git commit -m "refactor: migrate orchestration to OpenAI Agents SDK and Codex"
           git push origin HEAD:agent/openai-codex-migration
