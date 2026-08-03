@@ -1,12 +1,13 @@
 name: Preserve project data and finalize OpenAI Codex migration
 
 on:
-  push:
-    branches:
-      - agent/openai-codex-migration
   pull_request:
     branches:
       - master
+
+concurrency:
+  group: openai-codex-migration-finalizer
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -46,9 +47,11 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
           git checkout origin/master -- .
 
-          # Remove credential-bearing/generated tool state that was accidentally
-          # committed in the legacy repository.
+          # Remove credential-bearing/generated tool state and unequivocal caches.
           rm -rf .agent .claude .gemini .gemini-clipboard
+          rm -rf temp_*_ms workspaces/workspace_debug log
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
           # Replace only the active implementation and its documentation/tests.
           # Historical project materials outside these paths remain intact.
@@ -72,6 +75,8 @@ jobs:
           test ! -e src/agents
           test ! -e src/core
           test ! -e .github/workflows/ci.yml
+          test -z "$(find . -maxdepth 1 -type d -name 'temp_*_ms' -print -quit)"
+          test ! -e workspaces/workspace_debug
 
       - name: Install migrated dependencies
         shell: bash
@@ -94,9 +99,10 @@ jobs:
 
           # Material that defines the previous experiment must still be present.
           test -s inputs/prompt.txt
+          test -d assets
           test -d conductor
 
-      - name: Commit the corrected migration tree
+      - name: Publish the verified tree on top of the latest branch head
         shell: bash
         run: |
           set -euo pipefail
@@ -119,5 +125,11 @@ jobs:
             exit 1
           }
 
-          git commit -m "fix: preserve project materials in OpenAI Codex migration"
-          git push origin HEAD:agent/openai-codex-migration
+          # Build the already-validated index into a commit whose parent is the latest
+          # remote branch head. This avoids non-fast-forward races with PR metadata or
+          # workflow-fix commits made while the validation job was running.
+          tree_sha="$(git write-tree)"
+          git fetch origin agent/openai-codex-migration
+          parent_sha="$(git rev-parse origin/agent/openai-codex-migration)"
+          commit_sha="$(printf '%s\n' 'fix: preserve project materials in OpenAI Codex migration' | git commit-tree "$tree_sha" -p "$parent_sha")"
+          git push origin "$commit_sha:refs/heads/agent/openai-codex-migration"
