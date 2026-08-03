@@ -10,6 +10,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_bing_image_smoke:
+        description: Run live Bing image sourcing smoke checks
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -54,6 +59,7 @@ jobs:
         run: pytest -q tests/integration/test_browser_probe.py
 
   bing-image-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_bing_image_smoke
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -77,6 +83,7 @@ jobs:
           retention-days: 3
 
   codex-bing-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_bing_image_smoke
     needs: bing-image-smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
