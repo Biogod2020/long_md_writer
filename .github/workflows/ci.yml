@@ -1,17 +1,131 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_codex_smoke:
+        description: Run credentialed Codex smoke test
+        required: false
+        default: false
+        type: boolean
+      run_bing_image_smoke:
+        description: Run live Bing image sourcing smoke checks
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Install dependencies
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
         run: |
-          pip install -r requirements.txt
-          pip install pytest
-      - name: Run tests
-        run: pytest
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Compile and test deterministic control plane
+        run: |
+          python -m compileall -q src scripts tests main.py main_markdown.py app.py
+          pytest -q -m "not integration"
+          python main.py --help >/dev/null
+          python main_markdown.py --help >/dev/null
+          python -m src.orchestration.validate_cli --help >/dev/null
+
+  browser-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Verify independent browser evidence
+        run: pytest -q tests/integration/test_browser_probe.py
+
+  bing-image-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_bing_image_smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install parser and image validator
+        run: python -m pip install lxml Pillow
+      - name: Search Bing, require query relevance, and validate an original image
+        run: >-
+          python scripts/bing_image_smoke.py
+          --query "cardiac conduction system diagram"
+          --output bing-smoke
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: bing-image-http-smoke
+          path: bing-smoke/
+          if-no-files-found: warn
+          retention-days: 3
+
+  codex-bing-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_bing_image_smoke
+    needs: bing-image-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+      ORCHESTRATOR_MODEL: ${{ vars.ORCHESTRATOR_MODEL }}
+      CODEX_MODEL: ${{ vars.CODEX_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install migrated runtime
+        run: python -m pip install -r requirements.txt
+      - name: Run network-enabled ASSETS task through Agents SDK and Codex
+        run: PYTHONPATH=. python scripts/codex_bing_image_smoke.py --output codex-bing-smoke
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: codex-bing-image-smoke
+          path: |
+            codex-bing-smoke/
+            codex-bing-smoke-result.json
+          if-no-files-found: warn
+          retention-days: 3
+
+  codex-smoke:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_codex_smoke
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Require a credential
+        run: test -n "$OPENAI_API_KEY$CODEX_API_KEY"
+      - name: Run real Agents SDK to Codex delegation
+        run: pytest -q tests/integration/test_codex_smoke.py

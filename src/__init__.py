@@ -1,1 +1,1 @@
-# Magnum Opus HTML Agent
+"""Magnum Opus publication agent."""
