@@ -9,6 +9,11 @@ htmlcov/
 build/
 dist/
 
+# Node / DSH plugin development
+node_modules/
+.pnpm-store/
+.sessions/
+
 # Environments and credentials
 .env
 .env.*

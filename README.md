@@ -7,6 +7,22 @@ asset fulfillment, publishing, audit, repair, and verification inside disposable
 workspace copies. Python owns state, locks, approvals, artifact promotion, browser
 evidence, deterministic validation, and no-regression comparison.
 
+## DSH-native preview
+
+A parallel DeepSeek Harness implementation now lives under [`dsh-native/`](dsh-native/README.md). It does not replace the current production path yet.
+
+The preview removes custom workflow-history management and uses one persistent DSH Session, one durable Goal, automatic Goal rounds, one atomic manuscript chunk per root turn, and fresh reviewer subagents. Its canonical workspace is reduced to:
+
+```text
+project.json
+article.md
+assets/manifest.json
+```
+
+DSH owns event history, compaction, persistence, recovery, tool execution, and child-agent lifecycle. `finalize_publication` is the only Goal-completion authority and requires both deterministic validation and a SHA-bound independent review.
+
+The bundle is pinned to the verified public DSH runtime `0.1.0-rc.6`; the public seam contract was inspected at upstream commit `47f943859bef60e4160492346772ded9b24f765a`. See [DSH-native Architecture](docs/DSH_NATIVE_ARCHITECTURE.md) and [Compatibility Contract](dsh-native/DSH_COMPATIBILITY.md).
+
 ## Why this architecture
 
 The previous implementation encoded the publication process as a fine-grained
