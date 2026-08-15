@@ -1,124 +1,83 @@
-# Magnum Opus
+# LongMDWriter (Magnum Opus)
 
-A bounded long-form publication system built on the OpenAI Agents SDK and Codex.
+A bounded long-form publication system that runs as a **DeepSeek Harness (DSH)**
+plugin. The current repository contains a single implementation: `dsh-native/`.
 
-The Agents SDK is the delegation layer. Codex performs planning, section writing,
-asset fulfillment, publishing, audit, repair, and verification inside disposable
-workspace copies. Python owns state, locks, approvals, artifact promotion, browser
-evidence, deterministic validation, and no-regression comparison.
+## What it is
 
-## DSH-native preview
-
-A parallel DeepSeek Harness implementation now lives under [`dsh-native/`](dsh-native/README.md). It does not replace the current production path yet.
-
-The preview removes custom workflow-history management and uses one persistent DSH Session, one durable Goal, automatic Goal rounds, one atomic manuscript chunk per root turn, and fresh reviewer subagents. Its canonical workspace is reduced to:
+A DSH-native publication loop. DSH owns conversation history, event
+persistence, compaction, crash recovery, tool execution, goal continuation,
+and child-agent lifecycle. The bundle owns only publication-domain policy and
+three canonical workspace records:
 
 ```text
-project.json
-article.md
-assets/manifest.json
+project.json          structural truth (objective, sections, quality contract)
+article.md            the single canonical manuscript
+assets/manifest.json  asset provenance truth
 ```
 
-DSH owns event history, compaction, persistence, recovery, tool execution, and child-agent lifecycle. `finalize_publication` is the only Goal-completion authority and requires both deterministic validation and a SHA-bound independent review.
+The loop: one durable root Session + one armed Goal. Each automatic Goal round
+commits at most one manuscript chunk via `commit_chunk` / `revise_chunk`.
+`finalize_publication` certifies completion only after deterministic validation
+and a fresh independent reviewer both pass. The model cannot self-certify.
 
-The bundle is pinned to the verified public DSH runtime `0.1.0-rc.6`; the public seam contract was inspected at upstream commit `47f943859bef60e4160492346772ded9b24f765a`. See [DSH-native Architecture](docs/DSH_NATIVE_ARCHITECTURE.md) and [Compatibility Contract](dsh-native/DSH_COMPATIBILITY.md).
+Current milestone: **M1 — Markdown-first**. Image sourcing and visual review
+are planned for M2/M3 (see `docs/DSH_NATIVE_ARCHITECTURE.md`).
 
-## Why this architecture
+## Quick start
 
-The previous implementation encoded the publication process as a fine-grained
-LangGraph graph and required model-generated search/replace patches. This version
-uses five durable stages instead:
+Pinned to DSH `0.1.0-rc.6`. Read `dsh-native/README.md` and
+`dsh-native/DSH_COMPATIBILITY.md` first.
+
+```bash
+npm install --global @deepseek-ai/dsh@0.1.0-rc.6
+cd long_md_writer
+dsh plugin --profile web add ./dsh-native
+dsh --profile web --dump-config
+dsh --profile web
+```
+
+Open a Web session in the publication workspace and ask the root agent to
+create a publication. It calls `initialize_publication` and the Goal Round
+Driver continues the session until `finalize_publication` certifies completion.
+
+Directory layout:
 
 ```text
-plan -> draft -> assets -> publish -> qa
-```
-
-Each Codex task is bounded by an allowlist and executed in an isolated staging
-workspace. A model response never constitutes acceptance. Physical artifacts are
-validated and atomically promoted only after the filesystem contract and the
-stage quality gate pass.
-
-## Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m playwright install chromium
-cp .env.example .env
-```
-
-Set `OPENAI_API_KEY` or `CODEX_API_KEY`. The default manager model is
-`gpt-5.6-sol`; the default workspace execution model is `gpt-5.3-codex`.
-
-## Run
-
-```bash
-python main.py \
-  --input inputs/prompt.txt \
-  --reference inputs/source.md \
-  --assets-dir inputs/assets \
-  --mode html \
-  --auto-approve \
-  --output workspace
-```
-
-Markdown-only:
-
-```bash
-python main_markdown.py --intent "Write a rigorous technical guide" --auto-approve
-```
-
-Compare against a previous production workspace:
-
-```bash
-python main.py \
-  --input inputs/prompt.txt \
-  --baseline-workspace workspace/v18_comprehensive_run \
-  --auto-approve
-```
-
-Validate any stage independently:
-
-```bash
-python -m src.orchestration.validate_cli \
-  --workspace workspace/my-job \
-  --stage qa \
-  --mode html \
-  --json
-```
-
-## Workspace contract
-
-```text
-workspace/<job-id>/
-├── inputs/                     # immutable, control-plane-owned input copy
-├── project_brief.md
-├── plan.json
-├── drafts/                     # immutable section drafts
-├── md/                         # asset-resolved sections
-├── assets/asset-manifest.json
-├── final.md
-├── final.html                  # HTML mode
-├── qa/
-│   ├── audit-findings.json
-│   ├── browser_report.json
-│   ├── render-desktop.png
-│   └── render-mobile.png
-├── qa_report.json
-└── .magnum/                    # durable state and evidence logs
+dsh-native/
+├── index.js                     # domain tool definitions and policy
+├── lib/
+│   ├── project-store.js         # atomic chunk store with injection guards
+│   ├── validator-runner.js      # subprocess bridge to the Python validator
+│   └── dsh-compat.js            # the only DSH-coupled adapter
+├── python/validate_publication.py  # deterministic acceptance authority
+├── test/                        # domain and plugin-contract tests
+├── cordis.patch.yml             # profile composition (session namespace, compaction)
+└── examples/project.example.json
 ```
 
 ## Verification
 
 ```bash
-pytest -q -m "not integration"
-python -m playwright install chromium
-pytest -q tests/integration/test_browser_probe.py
+cd dsh-native
+node --test test/project-store.test.js
+python3 -m unittest discover -s test -p 'test_validator.py'
 ```
 
-The credentialed Codex smoke test is intentionally opt-in through the GitHub
-Actions `workflow_dispatch` input.
+CI (`.github/workflows/dsh-native.yml`) installs the pinned DSH release,
+composes the bundle into a real DSH Web profile, and boots the Web server.
 
-See [Architecture](docs/ARCHITECTURE.md), [Security](docs/SECURITY.md), and
-[Migration Notes](docs/MIGRATION.md).
+## History and comparison baseline
+
+The Codex-era implementation (`src/orchestration/`, OpenAI Agents SDK + Codex
+five-stage pipeline) and the earlier LangGraph multi-agent implementation were
+removed from the working tree. Both remain in Git history.
+
+**All comparisons in this repository use the pre-Codex (LangGraph) version as
+the baseline** — i.e. "dsh vs codex-before" — per repository convention.
+
+Materials that are preserved and protected:
+
+- `inputs/` — source materials for publications
+- `assets/` — publication asset library
+- `conductor/` — historical development records (read-only archive)

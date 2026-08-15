@@ -1,1 +1,0 @@
-"""Magnum Opus publication agent."""
