@@ -1,0 +1,43 @@
+{
+  "name": "long-md-writer-dsh-native",
+  "version": "0.1.0",
+  "description": "DSH-native long-form publication loop for Magnum Opus",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "lib/*.js",
+    "python/*.py",
+    "README.md",
+    "DSH_COMPATIBILITY.md",
+    "examples/*.json"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.6"
+  },
+  "scripts": {
+    "check:syntax": "node --check index.js && node --check lib/project-store.js && node --check lib/validator-runner.js && node --check lib/dsh-compat.js && python3 -m py_compile python/validate_publication.py",
+    "check:imports": "node -e \"import('./index.js').then(m => { if (typeof m.apply !== 'function') process.exit(1) })\"",
+    "test:node": "node --test test/project-store.test.js",
+    "test:python": "python3 -m unittest discover -s test -p 'test_validator.py'",
+    "test": "pnpm run check:syntax && pnpm run test:node && pnpm run test:python",
+    "test:dsh-contract": "node --test test/plugin-contract.test.js"
+  },
+  "longwriter": {
+    "dshCliVersion": "0.1.0-rc.6",
+    "dshToolsVersion": "0.1.0-rc.6",
+    "dshSourceCommit": "47f943859bef60e4160492346772ded9b24f765a",
+    "sessionNamespace": "dsh-0.1.0-rc.6"
+  }
+}
