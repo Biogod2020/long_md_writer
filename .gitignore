@@ -43,3 +43,6 @@ outputs/
 .claude/
 .gemini/
 .gemini-clipboard/
+
+# DSH session runtime scratch (image audits, downloads, harness checkouts)
+tmp/
