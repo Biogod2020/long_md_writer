@@ -1,0 +1,3 @@
+[submodule "dsh-bing-search"]
+	path = dsh-bing-search
+	url = https://github.com/Biogod2020/dsh-bing-search.git
