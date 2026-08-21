@@ -60,12 +60,31 @@ After a process restart, reopen the persisted Session and ask it to continue. DS
 | Tool | Role | Ends root turn |
 |---|---|---:|
 | `initialize_publication` | Create canonical files and Goal | yes |
+| `plan_visuals` | Set `project.json.visual_contract` before drawing figures | yes |
 | `resume_publication` | Re-arm a resumed Goal | yes |
 | `publication_status` | Read deterministic progress and article hash | no |
 | `commit_chunk` | Append one coherent chunk atomically | yes |
 | `revise_chunk` | Replace one existing chunk atomically | yes |
 | `review_publication` | Run a fresh read-only reviewer subagent | yes |
 | `finalize_publication` | Validate, independently review, and complete Goal | yes |
+| `svg_check` | Deterministically inspect caller-supplied SVG source; never writes or calls a model | no |
+| `svg_submit` | Re-check and append a planned SVG candidate through the asset store; dry runs do not write | no |
+| `svg_preflight` | Retain a PNG preview and hash-bound CoreText geometry receipt for a planned SVG | no |
+| `svg_record_review` | Append explicit pass/fail inspection evidence for that retained preview | no |
+
+The visual path is `plan_visuals` → `svg_check` → `svg_submit` →
+`svg_preflight` → inspect returned PNG with `read_image` → `svg_record_review`
+→ Markdown reference in the planned section. The module never generates,
+repairs, or visually judges with a model. It verifies SVG safety and structure,
+measures text geometry with local CoreText, retains a PNG evidence asset, and
+binds preflight/review receipts to the exact SVG and preview hashes. A failed
+candidate remains historical; a corrected candidate must append an explicit
+single-successor `supersedes_asset_id` revision. See
+[docs/SVG_MODULE.md](../docs/SVG_MODULE.md) and the packaged
+`svg-illustrator` Skill.
+The package retains the pinned `@deepseek-ai/dsh-llm` dependency solely to
+satisfy `@deepseek-ai/dsh-tools` peer requirements; the SVG module does not
+import it or make model calls.
 
 A turn may contain several model and tool steps for reading, searching, and reasoning. Only the terminal domain tools call DSH `concludeTurn()`, enforcing at most one manuscript commit per productive turn.
 
@@ -95,7 +114,7 @@ The domain store and validator do not require DSH packages and can be tested dir
 
 ```bash
 cd dsh-native
-node --test test/project-store.test.js
+node --test test/project-store.test.js test/svg-core.test.js
 python3 -m unittest discover -s test -p 'test_validator.py'
 ```
 
@@ -110,4 +129,4 @@ pnpm test
 
 ## Current scope
 
-This milestone is Markdown-first. It proves the difficult runtime boundaries: durable same-session iteration, atomic chunk commits, fresh reviewer delegation, evaluator-gated completion, and update isolation. The old pipeline remains the production path for self-contained HTML rendering, browser screenshots, and the complete legacy asset workflow until those capabilities are moved into DSH-native domain tools.
+This milestone is Markdown-first. It proves durable same-session iteration, atomic chunk commits, fresh reviewer delegation, evaluator-gated completion, update isolation, and a portable SVG evidence lane. SVG semantic correctness remains an explicit reviewer responsibility, but finalization now deterministically requires plan-to-section binding, an actual-geometry preflight, a retained preview, and a hash-bound review record. Self-contained HTML rendering, browser screenshots, and web image sourcing remain future domain tools.

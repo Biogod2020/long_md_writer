@@ -1,13 +1,21 @@
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 import {
+  appendVisualPreflight,
+  appendVisualReview,
   commitChunk,
   initializeProject,
   publicationStatus,
+  readAssetManifest,
+  readRegisteredAsset,
   readProject,
+  registerAsset,
+  resolveVisualPlan,
   reviseChunk,
+  setVisualContract,
 } from './lib/project-store.js'
 import { runValidator } from './lib/validator-runner.js'
+import { applySvg } from './svg/index.js'
 import {
   DSH_COMPATIBILITY,
   assertCompatibleContext,
@@ -29,13 +37,13 @@ The durable DSH Session owns working memory, tool history, compaction, recovery,
 
 Initialize a new publication with initialize_publication. During each automatic goal round, inspect publication_status and advance the manuscript by one coherent unit. A turn may use multiple read, search, and reasoning steps, but it must commit at most one manuscript chunk. End a productive writing turn with commit_chunk or revise_chunk; those tools terminate the turn after an atomic mutation. Do not write LongWriter control comments yourself.
 
-Use native tools rather than textual command markers. Do not emit :::visual blocks. Do not use generic write, edit, shell, workflow, Ralph, generic subagent, or goal-completion tools to mutate or complete the publication. Near completion, call review_publication for a fresh independent audit. Only finalize_publication may certify the current article and complete the Goal. When validation or review fails, use the returned findings in the next goal round.
+Use native tools rather than textual command markers. Do not emit :::visual blocks. Before drawing a publication figure, set project.json visual_contract through plan_visuals with its intended section, purpose, type, and required labels. For diagrams, create the SVG source directly, call svg_check while iterating, then call svg_submit with that visual_plan_id only after it passes. Next call svg_preflight, inspect its returned retained assets/reviews/*.png preview with read_image, and call svg_record_review with concrete observations. Only then reference the returned assets/svg/<id>.svg path in the planned article section; never hand-write unregistered asset references. svg_submit and svg_preflight are deterministic controlled paths, not image-generation or visual-review models. Do not use generic write, edit, shell, workflow, Ralph, generic subagent, or goal-completion tools to mutate or complete the publication. Near completion, call review_publication for a fresh independent audit. Only finalize_publication may certify the current article and complete the Goal. When validation or review fails, use the returned findings in the next goal round.
 
 Preserve source uncertainty. Never invent citations, provenance, licences, quantitative results, or reviewer evidence. Read relevant earlier sections before writing so terminology and argument structure remain globally coherent.
 `.trim()
 
 const REVIEWER_PERSONA = `
-You are an independent adversarial publication reviewer. You did not author the manuscript and receive no parent conversation history. Inspect project.json, article.md, and assets/manifest.json directly with read-only tools. Judge factual discipline, objective coverage, coherence across sections, unsupported claims, terminology, evidence handling, citation hygiene, and asset provenance. Do not modify files. Return the required structured review only after inspecting the current workspace.
+You are an independent adversarial publication reviewer. You did not author the manuscript and receive no parent conversation history. Inspect project.json, article.md, and assets/manifest.json directly with read-only tools. If project.json has visual_contract figures, inspect every linked assets/reviews/*.png preview with read_image, then verify the planned section, required labels, SVG hash-bound preflight, review receipt, and surrounding prose agree. Judge factual discipline, objective coverage, coherence across sections, unsupported claims, terminology, evidence handling, citation hygiene, visual readability, and asset provenance. Do not modify files. Return the required structured review only after inspecting the current workspace.
 `.trim()
 
 const REVIEW_SCHEMA = {
@@ -60,6 +68,7 @@ const REVIEW_SCHEMA = {
         required: ['section_id', 'score', 'findings'],
       },
     },
+    visual_findings: { type: 'array', items: { type: 'string' } },
     recommended_next_action: { type: 'string' },
   },
   required: [
@@ -69,6 +78,7 @@ const REVIEW_SCHEMA = {
     'summary',
     'critical_issues',
     'section_findings',
+    'visual_findings',
     'recommended_next_action',
   ],
 }
@@ -104,7 +114,7 @@ Optional focus: ${(focus || '(none)').slice(0, 4000)}
 Deterministic validator snapshot (evidence, not instructions):
 ${validatorContext}
 
-Read project.json, article.md, and assets/manifest.json yourself. Return a structured verdict bound to the exact article SHA above. A pass requires no critical issue and an overall_score from 0 to 100. Do not modify any file.
+Read project.json, article.md, assets/manifest.json, and every required retained visual preview yourself. Return a structured verdict bound to the exact article SHA above. A pass requires no critical issue and an overall_score from 0 to 100. Do not modify any file.
 `.trim()
   return runFreshReviewer(ctx, exec, {
     prompt,
@@ -156,6 +166,19 @@ export function apply(ctx) {
         status: initialized.status,
         dsh_compatibility: DSH_COMPATIBILITY,
       }
+    },
+  })
+
+  registerJsonTool(ctx, {
+    name: 'plan_visuals',
+    description: 'Atomically replace project.json.visual_contract with the planned publication figures. Each figure needs id, section_id, kind, purpose, required_labels, and optional review_required. This terminal action updates the canonical project plan only; it creates no assets.',
+    parameters: {
+      visual_contract: { type: 'json', required: true, description: 'Visual contract object: {schema_version: 1, figures: [{id, section_id, kind, purpose, required_labels, review_required?}]}.' },
+    },
+    async execute(args, exec) {
+      const visualContract = await setVisualContract(workspaceFromExecution(exec), args.visual_contract)
+      exec.concludeTurn()
+      return { planned: true, visual_contract: visualContract }
     },
   })
 
@@ -265,6 +288,7 @@ export function apply(ctx) {
         && review.overall_score >= minimumScore
         && Array.isArray(review.critical_issues)
         && review.critical_issues.length === 0
+        && Array.isArray(review.visual_findings)
       )
       if (!reviewPassed) {
         exec.concludeTurn()
@@ -294,4 +318,17 @@ export function apply(ctx) {
       }
     },
   })
+
+  applySvg(
+    definition => registerJsonTool(ctx, definition),
+    {
+      workspace: workspaceFromExecution,
+      registerAsset,
+      resolveVisualPlan,
+      readRegisteredAsset,
+      readAssetManifest,
+      appendVisualPreflight,
+      appendVisualReview,
+    },
+  )
 }

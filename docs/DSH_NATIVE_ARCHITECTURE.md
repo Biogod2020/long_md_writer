@@ -2,7 +2,10 @@
 
 ## Status
 
-The DSH-native implementation is introduced as a parallel preview under `dsh-native/`. The existing OpenAI Agents SDK/Codex workflow remains intact. This avoids a flag-day migration and gives the new runtime a measurable acceptance path.
+`dsh-native/` is the repository's only implementation. Earlier LangGraph and
+Codex-era controllers remain comparison material in Git history, not live
+runtime references. The current design keeps the acceptance path measurable
+without recreating their controller state.
 
 ## Core judgment
 
@@ -43,11 +46,15 @@ No LongMDWriter event log, retry counter, stage checkpoint, context packet, or s
 
 ### LongMDWriter-owned domain state
 
-`project.json` is structural truth: objective, audience, sections, word targets, evidence requirements, and quality thresholds.
+`project.json` is structural truth: objective, audience, sections, word targets,
+evidence requirements, quality thresholds, and `visual_contract` figure plans.
 
 `article.md` is the single canonical manuscript. Section and chunk comments are deterministic addressing metadata, not an LLM action protocol.
 
-`assets/manifest.json` is provenance truth for physical assets. It remains separate because hashes, licences, local paths, and use sites are publication facts rather than conversation history.
+`assets/manifest.json` is provenance truth for physical assets. It also appends
+hash-bound visual preflight and review receipts; it remains separate because
+hashes, licences, local paths, use sites, and evidence records are publication
+facts rather than conversation history.
 
 ## Turn and step semantics
 
@@ -63,7 +70,9 @@ step 4: commit_chunk
 turn end: concludesTurn
 ```
 
-`commit_chunk`, `revise_chunk`, `review_publication`, `initialize_publication`, `resume_publication`, and `finalize_publication` are terminal tools. `publication_status` is nonterminal.
+`commit_chunk`, `revise_chunk`, `review_publication`, `initialize_publication`,
+`plan_visuals`, `resume_publication`, and `finalize_publication` are terminal
+tools. `publication_status` is nonterminal.
 
 This preserves fast sequential generation while allowing each chunk to receive enough evidence and local context before mutation.
 
@@ -83,6 +92,13 @@ Deterministic operations remain tools:
 - status calculation;
 - atomic chunk insertion and replacement;
 - hashing and validation;
+- SVG evidence: the agent first records a section-bound visual plan, draws the
+  source, then `svg_check` reports deterministic safety/structure findings and
+  `svg_submit` appends `assets/svg/<id>.svg`; `svg_preflight` uses local
+  CoreText geometry measurement, retains a registered PNG preview, and appends
+  a hash-bound receipt; after image inspection, `svg_record_review` appends the
+  independent review receipt. A failed candidate is historical and can only be
+  corrected through one explicit append-only successor;
 - future image-search and asset-registration APIs.
 
 A capability becomes a subagent only when it needs its own decide-act-observe loop. The first such capability is independent review.
@@ -126,7 +142,12 @@ deterministic validator
 
 The reviewer is bound to the current article SHA-256. A review of an earlier article cannot certify a later edit.
 
-The initial validator covers project schema, marker integrity, planned section headings, per-section and total length, placeholders, asset registration, local references, provenance, and physical hashes. Existing production validators remain available and will be migrated incrementally rather than rewritten wholesale in the first change.
+The validator covers project schema, marker integrity, planned section headings,
+per-section and total length, placeholders, asset registration, local
+references, provenance, and physical hashes. For every planned SVG it also
+requires a single active revision-chain tip in its planned section, required
+text labels, a CoreText-backed geometry preflight, a retained PNG derivative,
+and a hash-bound passing review. Models cannot bypass this evidence chain.
 
 ## Upstream-change containment
 
@@ -154,6 +175,8 @@ Compatibility measures:
 - atomic chunk commit/revision;
 - fresh structured reviewer;
 - deterministic finalize gate;
+- visual plans, CoreText geometry preflight, retained PNG evidence, and
+  hash-bound review receipts;
 - update-isolation policy and tests.
 
 ### Milestone 2
@@ -167,7 +190,7 @@ Compatibility measures:
 
 - HTML renderer tool;
 - Playwright browser evidence tool;
-- DSH-native visual and rendering reviewer;
+- richer browser-based rendering review beyond retained SVG previews;
 - baseline no-regression evaluator.
 
 ### Removal gate for the old runtime

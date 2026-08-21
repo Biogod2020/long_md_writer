@@ -26,6 +26,10 @@
       "required_evidence": []
     }
   ],
+  "visual_contract": {
+    "schema_version": 1,
+    "figures": []
+  },
   "quality_contract": {
     "minimum_section_ratio": 0.75,
     "minimum_total_ratio": 0.75,

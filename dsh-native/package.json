@@ -4,10 +4,16 @@
   "description": "DSH-native long-form publication loop for Magnum Opus",
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "longwriter-svg": "svg/cli.js"
+  },
   "files": [
     "index.js",
     "cordis.patch.yml",
     "lib/*.js",
+    "svg/*.js",
+    "svg/*.swift",
+    "skills/svg-illustrator",
     "python/*.py",
     "README.md",
     "DSH_COMPATIBILITY.md",
@@ -24,12 +30,15 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-tools": "0.1.0-rc.6"
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+    "@resvg/resvg-js": "^2.6.2",
+    "@xmldom/xmldom": "^0.9.11"
   },
   "scripts": {
-    "check:syntax": "node --check index.js && node --check lib/project-store.js && node --check lib/validator-runner.js && node --check lib/dsh-compat.js && python3 -m py_compile python/validate_publication.py",
+    "check:syntax": "node --check index.js && node --check lib/project-store.js && node --check lib/validator-runner.js && node --check lib/dsh-compat.js && node --check svg/core.js && node --check svg/metrics.js && node --check svg/preflight.js && node --check svg/renderer.js && node --check svg/submit.js && node --check svg/workflow.js && node --check svg/cli.js && node --check svg/index.js && python3 -m py_compile python/validate_publication.py",
     "check:imports": "node -e \"import('./index.js').then(m => { if (typeof m.apply !== 'function') process.exit(1) })\"",
-    "test:node": "node --test test/project-store.test.js",
+    "test:node": "node --test test/project-store.test.js test/svg-core.test.js test/svg-submit.test.js test/svg-preflight.test.js test/svg-workflow.test.js test/svg-cli.test.js test/svg-renderer.test.js",
     "test:python": "python3 -m unittest discover -s test -p 'test_validator.py'",
     "test": "pnpm run check:syntax && pnpm run test:node && pnpm run test:python",
     "test:dsh-contract": "node --test test/plugin-contract.test.js"

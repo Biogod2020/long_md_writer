@@ -11,9 +11,9 @@ and child-agent lifecycle. The bundle owns only publication-domain policy and
 three canonical workspace records:
 
 ```text
-project.json          structural truth (objective, sections, quality contract)
+project.json          structural truth (objective, sections, quality and visual contracts)
 article.md            the single canonical manuscript
-assets/manifest.json  asset provenance truth
+assets/manifest.json  asset provenance, preflight, and review evidence truth
 ```
 
 The loop: one durable root Session + one armed Goal. Each automatic Goal round
@@ -21,8 +21,11 @@ commits at most one manuscript chunk via `commit_chunk` / `revise_chunk`.
 `finalize_publication` certifies completion only after deterministic validation
 and a fresh independent reviewer both pass. The model cannot self-certify.
 
-Current milestone: **M1 — Markdown-first**. Image sourcing and visual review
-are planned for M2/M3 (see `docs/DSH_NATIVE_ARCHITECTURE.md`).
+Current milestone: **M1 — Markdown-first**. The bundle includes a portable,
+agent-drawn SVG lane with a planned section binding, CoreText geometry preflight,
+retained PNG preview, and explicit hash-bound review evidence. Visual and
+semantic judgment remain reviewer responsibilities rather than model-automated
+claims (see `docs/SVG_MODULE.md`).
 
 ## Quick start
 
@@ -50,6 +53,8 @@ dsh-native/
 │   ├── project-store.js         # atomic chunk store with injection guards
 │   ├── validator-runner.js      # subprocess bridge to the Python validator
 │   └── dsh-compat.js            # the only DSH-coupled adapter
+├── svg/                         # SVG gate, CoreText preflight, evidence workflow, DSH adapter
+├── skills/svg-illustrator/      # portable SVG drawing workflow
 ├── python/validate_publication.py  # deterministic acceptance authority
 ├── test/                        # domain and plugin-contract tests
 ├── cordis.patch.yml             # profile composition (session namespace, compaction)

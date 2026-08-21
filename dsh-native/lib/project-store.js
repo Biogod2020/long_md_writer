@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, rename, stat, unlink } from 'node:fs/promises'
+import { link, lstat, mkdir, open, readFile, rename, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 
 export const PROJECT_FILENAME = 'project.json'
@@ -7,6 +7,7 @@ export const ARTICLE_FILENAME = 'article.md'
 export const ASSET_MANIFEST_FILENAME = 'assets/manifest.json'
 
 const SAFE_ID = /^[A-Za-z0-9_-]+$/
+const SHA256 = /^[a-f0-9]{64}$/
 const CONTROL_MARKER = '<!-- longwriter:'
 const workspaceQueues = new Map()
 
@@ -26,6 +27,20 @@ function requireSafeId(value, name) {
   if (normalized.length > 100 || !SAFE_ID.test(normalized)) {
     throw new TypeError(`${name} may contain only letters, digits, '-' and '_'`)
   }
+  return normalized
+}
+
+function requireSha256(value, name) {
+  const normalized = requireText(value, name).toLowerCase()
+  if (!SHA256.test(normalized)) throw new TypeError(`${name} must be a lowercase SHA-256 hex digest`)
+  return normalized
+}
+
+function requireStringArray(value, name, { maximum = 100, allowEmpty = true } = {}) {
+  if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`)
+  if (value.length > maximum) throw new TypeError(`${name} may contain at most ${maximum} values`)
+  const normalized = value.map((item, index) => requireText(item, `${name}[${index}]`))
+  if (!allowEmpty && normalized.length === 0) throw new TypeError(`${name} must not be empty`)
   return normalized
 }
 
@@ -73,6 +88,48 @@ export function normalizeProject(input) {
   const ids = sections.map(section => section.id)
   if (new Set(ids).size !== ids.length) throw new TypeError('section ids must be unique')
 
+  const visualContractInput = input.visual_contract === undefined ? {} : input.visual_contract
+  if (!isPlainObject(visualContractInput)) {
+    throw new TypeError('project.visual_contract must be an object')
+  }
+  if (visualContractInput.schema_version !== undefined && visualContractInput.schema_version !== 1) {
+    throw new TypeError('project.visual_contract.schema_version must be 1')
+  }
+  const figuresInput = visualContractInput.figures === undefined ? [] : visualContractInput.figures
+  if (!Array.isArray(figuresInput) || figuresInput.length > 100) {
+    throw new TypeError('project.visual_contract.figures must contain at most 100 figures')
+  }
+  const visualFigures = figuresInput.map((raw, index) => {
+    if (!isPlainObject(raw)) throw new TypeError(`project.visual_contract.figures[${index}] must be an object`)
+    const sectionId = requireSafeId(raw.section_id, `project.visual_contract.figures[${index}].section_id`)
+    if (!ids.includes(sectionId)) {
+      throw new TypeError(`project.visual_contract.figures[${index}].section_id is not a planned section`)
+    }
+    const requiredLabels = raw.required_labels === undefined ? [] : requireStringArray(
+      raw.required_labels,
+      `project.visual_contract.figures[${index}].required_labels`,
+      { maximum: 40 },
+    )
+    if (new Set(requiredLabels).size !== requiredLabels.length) {
+      throw new TypeError(`project.visual_contract.figures[${index}].required_labels must be unique`)
+    }
+    if (raw.review_required !== undefined && typeof raw.review_required !== 'boolean') {
+      throw new TypeError(`project.visual_contract.figures[${index}].review_required must be boolean`)
+    }
+    return {
+      id: requireSafeId(raw.id, `project.visual_contract.figures[${index}].id`),
+      section_id: sectionId,
+      kind: requireText(raw.kind, `project.visual_contract.figures[${index}].kind`),
+      purpose: requireText(raw.purpose, `project.visual_contract.figures[${index}].purpose`),
+      required_labels: requiredLabels,
+      review_required: raw.review_required !== false,
+    }
+  })
+  const visualIds = visualFigures.map(figure => figure.id)
+  if (new Set(visualIds).size !== visualIds.length) {
+    throw new TypeError('project.visual_contract.figure ids must be unique')
+  }
+
   const quality = isPlainObject(input.quality_contract) ? input.quality_contract : {}
   return {
     schema_version: 1,
@@ -82,6 +139,10 @@ export function normalizeProject(input) {
     language: requireText(input.language ?? 'zh-CN', 'project.language'),
     mode: 'markdown',
     sections,
+    visual_contract: {
+      schema_version: 1,
+      figures: visualFigures,
+    },
     quality_contract: {
       minimum_section_ratio: requireRatio(
         quality.minimum_section_ratio,
@@ -134,6 +195,8 @@ function emptyAssetManifest() {
   return {
     schema_version: 2,
     assets: [],
+    visual_preflights: [],
+    visual_reviews: [],
   }
 }
 
@@ -221,9 +284,394 @@ export async function readProject(workspace) {
   return normalizeProject(raw)
 }
 
+/**
+ * Resolve a visual-plan record from the canonical project contract.
+ * The returned record is normalized, so callers cannot bypass section or id
+ * validation by supplying an ad-hoc object to a later asset operation.
+ */
+export async function resolveVisualPlan(workspace, visualPlanId) {
+  const id = requireSafeId(visualPlanId, 'visual_plan_id')
+  const project = await readProject(workspace)
+  const figure = project.visual_contract.figures.find(item => item.id === id)
+  if (!figure) throw new Error(`unknown visual_plan_id: ${id}`)
+  return figure
+}
+
+/**
+ * Replace only project.json.visual_contract through the domain store. The
+ * project schema remains the canonical plan record; no fourth workspace file
+ * is introduced for visuals.
+ */
+export async function setVisualContract(workspace, visualContract) {
+  const root = resolveWorkspace(workspace)
+  return withWorkspaceLock(root, async () => {
+    const project = await readProject(root)
+    const normalized = normalizeProject({ ...project, visual_contract: visualContract })
+    const manifest = await readAssetManifest(root)
+    for (const entry of manifest.assets) {
+      if (!entry?.visual_plan_id) continue
+      const before = project.visual_contract.figures.find(figure => figure.id === entry.visual_plan_id)
+      const after = normalized.visual_contract.figures.find(figure => figure.id === entry.visual_plan_id)
+      if (!before || !after || JSON.stringify(before) !== JSON.stringify(after)) {
+        throw new Error(`visual plan ${entry.visual_plan_id} is immutable after an SVG asset is registered`)
+      }
+    }
+    await atomicWrite(path.join(root, PROJECT_FILENAME), `${JSON.stringify(normalized, null, 2)}\n`)
+    return normalized.visual_contract
+  })
+}
+
 export async function readArticle(workspace) {
   const root = resolveWorkspace(workspace)
   return readFile(path.join(root, ARTICLE_FILENAME), 'utf8')
+}
+
+export async function readAssetManifest(workspace) {
+  const root = resolveWorkspace(workspace)
+  const raw = JSON.parse(await readFile(path.join(root, ASSET_MANIFEST_FILENAME), 'utf8'))
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.assets)) {
+    throw new Error('asset manifest must be an object with an assets array')
+  }
+  // Version 2 predates visual receipts. Treat absent receipt arrays as empty
+  // on read, then add them only on the next controlled manifest mutation.
+  if (!Array.isArray(raw.visual_preflights)) raw.visual_preflights = []
+  if (!Array.isArray(raw.visual_reviews)) raw.visual_reviews = []
+  return raw
+}
+
+async function atomicWriteBytes(filePath, bytes) {
+  await mkdir(path.dirname(filePath), { recursive: true })
+  const temporary = path.join(
+    path.dirname(filePath),
+    `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
+  )
+  const handle = await open(temporary, 'wx', 0o600)
+  try {
+    await handle.writeFile(bytes)
+    await handle.sync()
+  } finally {
+    await handle.close()
+  }
+  try {
+    // link() creates the final name only when it does not already exist.
+    // Unlike rename(), it cannot replace a pre-existing protected asset.
+    await link(temporary, filePath)
+    await unlink(temporary)
+  } catch (error) {
+    await unlink(temporary).catch(() => {})
+    throw error
+  }
+}
+
+const ASSET_REQUIRED_TEXT_FIELDS = ['source', 'caption', 'alt_text', 'provenance', 'licence']
+
+function normalizeDerivative(value) {
+  if (value === undefined) return undefined
+  if (!isPlainObject(value)) throw new TypeError('asset derivative_of must be an object')
+  const purpose = requireText(value.purpose, 'asset derivative_of.purpose')
+  if (purpose.length > 120) throw new TypeError('asset derivative_of.purpose is too long')
+  return {
+    asset_id: requireSafeId(value.asset_id, 'asset derivative_of.asset_id'),
+    asset_sha256: requireSha256(value.asset_sha256, 'asset derivative_of.asset_sha256'),
+    purpose,
+  }
+}
+
+function assetPath(root, relative) {
+  if (typeof relative !== 'string' || !relative.startsWith('assets/')) {
+    throw new Error('asset path must live under assets/')
+  }
+  if (relative.split('/').includes('..') || relative.includes('\\')) {
+    throw new Error('asset path must not traverse or escape assets/')
+  }
+  const target = path.resolve(root, relative)
+  const assetsRoot = path.resolve(root, 'assets')
+  if (!target.startsWith(assetsRoot + path.sep)) {
+    throw new Error('asset path escapes assets/')
+  }
+  return target
+}
+
+function findAssetById(manifest, id) {
+  return manifest.assets.find(entry => entry && entry.id === id) ?? null
+}
+
+async function currentAsset(root, manifest, assetId, expectedSha, name = 'asset') {
+  const id = requireSafeId(assetId, `${name}_id`)
+  const sha256 = requireSha256(expectedSha, `${name}_sha256`)
+  const entry = findAssetById(manifest, id)
+  if (!entry) throw new Error(`${name} is not registered: ${id}`)
+  if (entry.sha256 !== sha256) throw new Error(`${name} hash does not match the manifest: ${id}`)
+  const target = assetPath(root, entry.path)
+  const details = await lstat(target)
+  if (!details.isFile() || details.isSymbolicLink()) throw new Error(`${name} must be a regular local file: ${id}`)
+  const bytes = await readFile(target)
+  const actual = createHash('sha256').update(bytes).digest('hex')
+  if (actual !== sha256) throw new Error(`${name} hash does not match the physical file: ${id}`)
+  return { entry, bytes, sha256, path: entry.path }
+}
+
+/**
+ * Register one physical asset under assets/ and append its provenance entry
+ * to assets/manifest.json. Canonical asset mutations flow through this domain
+ * store only: safe id, path containment, hash binding, duplicate rejection,
+ * per-workspace serialization, atomic asset creation, and manifest replacement.
+ *
+ * @param {string} workspace  publication workspace root
+ * @param {object} input      { id, source, path, caption, alt_text,
+ *                             provenance, licence, used_in, bytes }
+ */
+export async function registerAsset(workspace, input) {
+  const root = resolveWorkspace(workspace)
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+    throw new TypeError('asset registration requires an object')
+  }
+  const id = requireSafeId(input.id, 'asset id')
+  const rel = input.path
+  const target = assetPath(root, rel)
+  for (const field of ASSET_REQUIRED_TEXT_FIELDS) {
+    if (typeof input[field] !== 'string' || input[field].trim().length === 0) {
+      throw new TypeError(`asset ${field} must be a non-empty string`)
+    }
+  }
+  if (!Array.isArray(input.used_in)) throw new TypeError('asset used_in must be an array')
+  const usedIn = requireStringArray(input.used_in, 'asset used_in', { maximum: 100 })
+  const visualPlanId = input.visual_plan_id === undefined
+    ? undefined
+    : requireSafeId(input.visual_plan_id, 'asset visual_plan_id')
+  const supersedesAssetId = input.supersedes_asset_id === undefined
+    ? undefined
+    : requireSafeId(input.supersedes_asset_id, 'asset supersedes_asset_id')
+  const derivativeOf = normalizeDerivative(input.derivative_of)
+  const bytes = input.bytes
+  if (!(bytes instanceof Uint8Array) && !Buffer.isBuffer(bytes)) {
+    throw new TypeError('asset bytes must be provided as a Uint8Array or Buffer')
+  }
+  if (bytes.byteLength === 0) throw new Error('asset bytes must not be empty')
+  return withWorkspaceLock(root, async () => {
+    const manifest = await readAssetManifest(root)
+    if (manifest.assets.some(entry => entry && entry.id === id)) {
+      throw new Error(`duplicate asset id: ${id}`)
+    }
+    if (manifest.assets.some(entry => entry && entry.path === rel)) {
+      throw new Error(`asset path already registered: ${rel}`)
+    }
+    if (await exists(target)) {
+      throw new Error(`asset file already exists: ${rel}`)
+    }
+    if (visualPlanId !== undefined) {
+      const plan = await resolveVisualPlan(root, visualPlanId)
+      if (!rel.startsWith('assets/svg/') || !rel.endsWith('.svg')) {
+        throw new Error('a visual_plan_id may be bound only to an assets/svg/*.svg asset')
+      }
+      const plannedAssets = manifest.assets.filter(entry => entry && entry.visual_plan_id === plan.id)
+      if (plannedAssets.length > 0) {
+        if (!supersedesAssetId) {
+          throw new Error(`a new SVG revision for visual plan ${plan.id} requires supersedes_asset_id`)
+        }
+        const predecessor = plannedAssets.find(entry => entry.id === supersedesAssetId)
+        if (!predecessor) {
+          throw new Error('supersedes_asset_id must name an SVG asset bound to the same visual plan')
+        }
+        if (plannedAssets.some(entry => entry.supersedes_asset_id === predecessor.id)) {
+          throw new Error(`supersedes_asset_id already has a successor: ${predecessor.id}`)
+        }
+      } else if (supersedesAssetId !== undefined) {
+        throw new Error('the first SVG for a visual plan must not declare supersedes_asset_id')
+      }
+      if (!usedIn.includes(plan.section_id)) {
+        throw new Error(`asset used_in must include the planned section: ${plan.section_id}`)
+      }
+    } else if (supersedesAssetId !== undefined) {
+      throw new Error('supersedes_asset_id requires visual_plan_id')
+    }
+    const sha256 = createHash('sha256').update(bytes).digest('hex')
+    let assetWritten = false
+    try {
+      await atomicWriteBytes(target, bytes)
+      assetWritten = true
+      const entry = {
+        id,
+        source: input.source,
+        path: rel,
+        caption: input.caption.trim(),
+        alt_text: input.alt_text.trim(),
+        provenance: input.provenance.trim(),
+        licence: input.licence.trim(),
+        used_in: usedIn,
+        sha256,
+      }
+      if (visualPlanId !== undefined) entry.visual_plan_id = visualPlanId
+      if (supersedesAssetId !== undefined) entry.supersedes_asset_id = supersedesAssetId
+      if (derivativeOf !== undefined) entry.derivative_of = derivativeOf
+      manifest.assets.push(entry)
+      await atomicWrite(path.join(root, ASSET_MANIFEST_FILENAME), `${JSON.stringify(manifest, null, 2)}\n`)
+      return { entry, sha256, path: rel }
+    } catch (error) {
+      if (assetWritten) await unlink(target).catch(() => {})
+      throw error
+    }
+  })
+}
+
+/** Read one registered regular asset and re-verify its manifest hash. */
+export async function readRegisteredAsset(workspace, assetId) {
+  const root = resolveWorkspace(workspace)
+  const id = requireSafeId(assetId, 'asset_id')
+  const manifest = await readAssetManifest(root)
+  const entry = findAssetById(manifest, id)
+  if (!entry) throw new Error(`asset is not registered: ${id}`)
+  return currentAsset(root, manifest, id, entry.sha256, 'asset')
+}
+
+function receiptText(value, name, { maximum = 2000 } = {}) {
+  const text = requireText(value, name)
+  if (text.length > maximum) throw new TypeError(`${name} is too long`)
+  return text
+}
+
+function receiptTextArray(value, name, maximum = 100) {
+  const items = value === undefined ? [] : requireStringArray(value, name, { maximum })
+  return items.map((item, index) => receiptText(item, `${name}[${index}]`, { maximum: 500 }))
+}
+
+function visualPlanForProject(project, id) {
+  const plan = project.visual_contract.figures.find(figure => figure.id === id)
+  if (!plan) throw new Error(`unknown visual_plan_id: ${id}`)
+  return plan
+}
+
+function preflightRecord(manifest, id) {
+  return manifest.visual_preflights.find(item => item && item.id === id) ?? null
+}
+
+function isPng(bytes) {
+  return bytes.byteLength >= 8
+    && bytes[0] === 137
+    && bytes[1] === 80
+    && bytes[2] === 78
+    && bytes[3] === 71
+    && bytes[4] === 13
+    && bytes[5] === 10
+    && bytes[6] === 26
+    && bytes[7] === 10
+}
+
+/**
+ * Append immutable geometry-preflight evidence. Both the reviewed SVG and
+ * retained PNG preview are re-hashed before the receipt is written.
+ */
+export async function appendVisualPreflight(workspace, input) {
+  const root = resolveWorkspace(workspace)
+  if (!isPlainObject(input)) throw new TypeError('visual preflight requires an object')
+  return withWorkspaceLock(root, async () => {
+    const manifest = await readAssetManifest(root)
+    const project = await readProject(root)
+    const assetId = requireSafeId(input.asset_id, 'asset_id')
+    const assetSha = requireSha256(input.asset_sha256, 'asset_sha256')
+    const planId = requireSafeId(input.visual_plan_id, 'visual_plan_id')
+    const previewId = requireSafeId(input.preview_asset_id, 'preview_asset_id')
+    const previewSha = requireSha256(input.preview_sha256, 'preview_sha256')
+    const asset = await currentAsset(root, manifest, assetId, assetSha, 'preflight asset')
+    const preview = await currentAsset(root, manifest, previewId, previewSha, 'preflight preview')
+    const plan = visualPlanForProject(project, planId)
+    if (asset.entry.visual_plan_id !== plan.id) {
+      throw new Error('preflight visual_plan_id does not match the registered SVG asset')
+    }
+    const derivative = preview.entry.derivative_of
+    if (!isPlainObject(derivative)
+      || derivative.asset_id !== assetId
+      || derivative.asset_sha256 !== assetSha
+      || derivative.purpose !== 'svg-preview') {
+      throw new Error('preflight preview must be a registered svg-preview derivative of the SVG asset')
+    }
+    if (!preview.entry.path.startsWith('assets/reviews/') || !preview.entry.path.endsWith('.png') || !isPng(preview.bytes)) {
+      throw new Error('preflight preview must be a registered PNG under assets/reviews/')
+    }
+    if (typeof input.passed !== 'boolean') throw new TypeError('preflight passed must be boolean')
+    const metricMode = receiptText(input.metric_mode, 'preflight metric_mode', { maximum: 80 })
+    const renderer = receiptText(input.renderer, 'preflight renderer', { maximum: 80 })
+    const receipt = {
+      id: `preflight-${randomUUID()}`,
+      asset_id: assetId,
+      asset_sha256: assetSha,
+      visual_plan_id: planId,
+      preview_asset_id: previewId,
+      preview_sha256: previewSha,
+      metric_mode: metricMode,
+      renderer,
+      passed: input.passed,
+      issues: receiptTextArray(input.issues, 'preflight issues'),
+      warnings: receiptTextArray(input.warnings, 'preflight warnings'),
+      created_at: new Date().toISOString(),
+    }
+    manifest.visual_preflights.push(receipt)
+    await atomicWrite(path.join(root, ASSET_MANIFEST_FILENAME), `${JSON.stringify(manifest, null, 2)}\n`)
+    return receipt
+  })
+}
+
+/**
+ * Append an explicit human or fresh-reviewer inspection receipt for a retained
+ * PNG preview. It cannot be written for a different SVG, preview, or plan.
+ */
+export async function appendVisualReview(workspace, input) {
+  const root = resolveWorkspace(workspace)
+  if (!isPlainObject(input)) throw new TypeError('visual review requires an object')
+  return withWorkspaceLock(root, async () => {
+    const manifest = await readAssetManifest(root)
+    const project = await readProject(root)
+    const assetId = requireSafeId(input.asset_id, 'asset_id')
+    const preflightId = requireSafeId(input.preflight_id, 'preflight_id')
+    const preflight = preflightRecord(manifest, preflightId)
+    if (!preflight) throw new Error(`unknown preflight_id: ${preflightId}`)
+    if (preflight.asset_id !== assetId || preflight.passed !== true) {
+      throw new Error('visual review requires a passing preflight for the same SVG asset')
+    }
+    const asset = await currentAsset(root, manifest, assetId, preflight.asset_sha256, 'review asset')
+    const preview = await currentAsset(root, manifest, preflight.preview_asset_id, preflight.preview_sha256, 'review preview')
+    const plan = visualPlanForProject(project, preflight.visual_plan_id)
+    if (asset.entry.visual_plan_id !== plan.id) {
+      throw new Error('review visual plan no longer matches the registered SVG asset')
+    }
+    const derivative = preview.entry.derivative_of
+    if (!isPlainObject(derivative)
+      || derivative.asset_id !== assetId
+      || derivative.asset_sha256 !== preflight.asset_sha256
+      || derivative.purpose !== 'svg-preview') {
+      throw new Error('review preview no longer binds to the reviewed SVG asset')
+    }
+    if (!preview.entry.path.startsWith('assets/reviews/') || !preview.entry.path.endsWith('.png') || !isPng(preview.bytes)) {
+      throw new Error('review preview must remain a registered PNG under assets/reviews/')
+    }
+    const verdict = receiptText(input.verdict, 'review verdict', { maximum: 10 })
+    if (verdict !== 'pass' && verdict !== 'fail') throw new TypeError('review verdict must be pass or fail')
+    const checkedLabels = receiptTextArray(input.checked_labels, 'review checked_labels', 40)
+    if (new Set(checkedLabels).size !== checkedLabels.length) {
+      throw new TypeError('review checked_labels must be unique')
+    }
+    if (verdict === 'pass' && !plan.required_labels.every(label => checkedLabels.includes(label))) {
+      throw new Error('a passing review must confirm every required label')
+    }
+    const receipt = {
+      id: `review-${randomUUID()}`,
+      asset_id: assetId,
+      asset_sha256: preflight.asset_sha256,
+      visual_plan_id: plan.id,
+      preflight_id: preflight.id,
+      preview_asset_id: preflight.preview_asset_id,
+      preview_sha256: preflight.preview_sha256,
+      reviewer: receiptText(input.reviewer, 'review reviewer', { maximum: 200 }),
+      verdict,
+      summary: receiptText(input.summary, 'review summary', { maximum: 4000 }),
+      findings: receiptTextArray(input.findings, 'review findings'),
+      checked_labels: checkedLabels,
+      reviewed_at: new Date().toISOString(),
+    }
+    manifest.visual_reviews.push(receipt)
+    await atomicWrite(path.join(root, ASSET_MANIFEST_FILENAME), `${JSON.stringify(manifest, null, 2)}\n`)
+    return receipt
+  })
 }
 
 export function countWords(text) {
