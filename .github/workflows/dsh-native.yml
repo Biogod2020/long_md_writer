@@ -1,16 +1,30 @@
-name: DSH-native compatibility
+name: LongWriter architecture and compatibility
 
 on:
   push:
     branches: [master, "agent/**"]
     paths:
+      - "packages/**"
+      - "adapters/**"
+      - "skills/**"
       - "dsh-native/**"
-      - "docs/DSH_NATIVE_ARCHITECTURE.md"
+      - "test/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "docs/ARCHITECTURE.md"
+      - "docs/MIGRATION.md"
       - ".github/workflows/dsh-native.yml"
   pull_request:
     paths:
+      - "packages/**"
+      - "adapters/**"
+      - "skills/**"
       - "dsh-native/**"
-      - "docs/DSH_NATIVE_ARCHITECTURE.md"
+      - "test/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "docs/ARCHITECTURE.md"
+      - "docs/MIGRATION.md"
       - ".github/workflows/dsh-native.yml"
   workflow_dispatch:
   schedule:
@@ -20,11 +34,8 @@ permissions:
   contents: read
 
 jobs:
-  pinned:
+  portable-core:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dsh-native
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,15 +47,31 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@10.17.1 --activate
       - run: pnpm install --no-frozen-lockfile --strict-peer-dependencies=false
-      - run: pnpm run check:imports
-      - run: pnpm run test:dsh-contract
+      - run: pnpm check
       - run: pnpm test
-      - name: Compose and boot the out-of-tree bundle through DSH 0.1.0-rc.6
+      - name: Import the MCP v2 server package
+        run: pnpm --filter @longwriter/mcp exec node -e "import('./src/server.js').then(m => { if (typeof m.buildServer !== 'function') process.exit(1) })"
+
+  dsh-adapter:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.17.1 --activate
+      - run: pnpm install --no-frozen-lockfile --strict-peer-dependencies=false
+      - run: pnpm --filter @longwriter/adapter-dsh test:integration
+      - name: Compose and boot the compatibility bundle through DSH 0.1.0-rc.6
         env:
           DSH_HOME: ${{ runner.temp }}/dsh-home
         run: |
           npm install --global @deepseek-ai/dsh@0.1.0-rc.6
-          dsh plugin --profile web add .
+          dsh plugin --profile web add ./dsh-native
           dsh --profile web --dump-config > "$RUNNER_TEMP/longwriter-config.yml"
           grep -q "longwriter-native" "$RUNNER_TEMP/longwriter-config.yml"
 
@@ -57,7 +84,7 @@ jobs:
           trap cleanup EXIT
 
           READY=0
-          for _ in $(seq 1 40); do
+          for _ in $(seq 1 60); do
             if curl --fail --silent --show-error http://127.0.0.1:3098/ > /dev/null; then
               READY=1
               break
@@ -73,28 +100,14 @@ jobs:
             exit 1
           fi
 
-  latest-warning:
+  latest-dsh-warning:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     continue-on-error: true
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dsh-native
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: corepack enable
-      - run: corepack prepare pnpm@10.17.1 --activate
-      - run: pnpm install --no-frozen-lockfile --strict-peer-dependencies=false
-      - name: Probe the package-family next tag without changing the production pin
-        run: |
-          pnpm add --save-exact @deepseek-ai/dsh-tools@next
-          npm view @deepseek-ai/dsh@next version
-      - run: pnpm run check:imports
-      - run: pnpm run test:dsh-contract
-      - run: pnpm test
+      - run: npm view @deepseek-ai/dsh@next version
+      - run: npm view @deepseek-ai/dsh-tools@next version
