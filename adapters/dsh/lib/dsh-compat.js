@@ -11,7 +11,7 @@ function requireFunction(owner, name, label) {
   if (owner === undefined || owner === null || typeof owner[name] !== 'function') {
     throw new Error(
       `DSH compatibility check failed: ${label}.${name} is unavailable; `
-      + `this plugin targets CLI ${DSH_COMPATIBILITY.cliVersion}, `
+      + `this adapter targets CLI ${DSH_COMPATIBILITY.cliVersion}, `
       + `dsh-tools ${DSH_COMPATIBILITY.toolsPackageVersion}, and the public seam `
       + `contract inspected at ${DSH_COMPATIBILITY.sourceContractCommit}`,
     )
@@ -31,7 +31,7 @@ export function assertCompatibleContext(ctx) {
 }
 
 export function requireAgent(exec) {
-  if (!exec?.agent) throw new Error('longwriter tools require an active DSH Agent')
+  if (!exec?.agent) throw new Error('LongWriter DSH tools require an active DSH Agent')
   return exec.agent
 }
 
@@ -90,7 +90,7 @@ export async function runFreshReviewer(ctx, exec, request) {
     outputSchema: request.outputSchema,
     maxDepth: 1,
     toolFilter: {
-      allow: ['read', 'read_image', 'grep', 'glob', 'web_search', 'publication_status'],
+      allow: request.toolAllowlist,
     },
     persona: request.persona,
   })

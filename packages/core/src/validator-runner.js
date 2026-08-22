@@ -12,6 +12,9 @@ function pythonExecutable() {
 }
 
 export function runValidator(workspace, signal, timeoutMs = 120_000) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new TypeError('validator timeoutMs must be a positive number')
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(
       pythonExecutable(),
@@ -26,7 +29,9 @@ export function runValidator(workspace, signal, timeoutMs = 120_000) {
     let stdout = ''
     let stderr = ''
     let overflow = false
+    let timedOut = false
     const timer = setTimeout(() => {
+      timedOut = true
       child.kill('SIGTERM')
     }, timeoutMs)
 
@@ -47,6 +52,10 @@ export function runValidator(workspace, signal, timeoutMs = 120_000) {
     })
     child.on('close', code => {
       clearTimeout(timer)
+      if (timedOut) {
+        reject(new Error(`publication validator timed out after ${timeoutMs} ms`))
+        return
+      }
       if (overflow) {
         reject(new Error('publication validator output exceeded 2 MiB'))
         return

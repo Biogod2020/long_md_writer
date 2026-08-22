@@ -1,0 +1,17 @@
+{
+  "name": "longwriter-monorepo",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Harness-agnostic long-form publication control plane",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "check": "pnpm -r --if-present check",
+    "test:architecture": "node --test test/architecture.test.js",
+    "test": "pnpm run test:architecture && pnpm --filter @longwriter/core test && pnpm --filter @longwriter/cli test && pnpm --filter @longwriter/mcp test && pnpm --filter @longwriter/adapter-dsh test"
+  },
+  "type": "module"
+}

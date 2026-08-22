@@ -9,10 +9,13 @@ htmlcov/
 build/
 dist/
 
-# Node / DSH plugin development
+# Node / plugin development
 node_modules/
 .pnpm-store/
 .sessions/
+
+# LongWriter runtime locks are ephemeral; state and receipts remain auditable.
+**/.longwriter/lock/
 
 # Environments and credentials
 .env
@@ -44,5 +47,5 @@ outputs/
 .gemini/
 .gemini-clipboard/
 
-# DSH session runtime scratch (image audits, downloads, harness checkouts)
+# Runtime scratch
 tmp/

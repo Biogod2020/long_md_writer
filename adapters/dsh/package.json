@@ -1,0 +1,34 @@
+{
+  "name": "@longwriter/adapter-dsh",
+  "version": "0.2.0",
+  "description": "Optional DeepSeek Harness adapter for the LongWriter publication kernel",
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "lib",
+    "svg",
+    "cordis.patch.yml",
+    "DSH_COMPATIBILITY.md",
+    "README.md"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-llm": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
+    "@longwriter/core": "workspace:*"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check lib/dsh-compat.js && node --check svg/index.js",
+    "test": "node --test test/source-contract.test.js",
+    "test:integration": "node --test test/plugin-contract.test.js"
+  }
+}
