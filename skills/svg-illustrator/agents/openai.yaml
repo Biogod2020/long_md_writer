@@ -1,0 +1,4 @@
+interface:
+  display_name: "SVG Illustrator"
+  short_description: "Plan and verify publication SVG figures"
+  default_prompt: "Use $svg-illustrator to plan, verify, and review a publication SVG."

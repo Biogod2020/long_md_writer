@@ -1,4 +1,4 @@
-# Compatibility profile for the optional DSH adapter.
+# Optional DSH runtime policy. LongWriter domain state remains in @longwriter/core.
 - id: session-persistence-jsonl
   config:
     root: !!js dshHomePath('sessions-longwriter/dsh-0.1.0-rc.6')
@@ -39,4 +39,4 @@
 
 - insert:
     - id: longwriter-native
-      name: long-md-writer-dsh-native
+      name: @longwriter/adapter-dsh

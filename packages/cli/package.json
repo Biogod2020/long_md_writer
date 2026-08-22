@@ -1,0 +1,19 @@
+{
+  "name": "@longwriter/cli",
+  "version": "0.2.0",
+  "description": "Command-line interface for the LongWriter publication kernel",
+  "type": "module",
+  "bin": {
+    "longwriter": "./src/cli.js"
+  },
+  "files": ["src"],
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@longwriter/core": "workspace:*"
+  },
+  "scripts": {
+    "check": "node --check src/cli.js",
+    "test": "node --test test/*.test.js"
+  }
+}
