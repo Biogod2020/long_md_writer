@@ -21,19 +21,27 @@ commits at most one manuscript chunk via `commit_chunk` / `revise_chunk`.
 `finalize_publication` certifies completion only after deterministic validation
 and a fresh independent reviewer both pass. The model cannot self-certify.
 
-Current milestone: **M1 — Markdown-first**. The bundle includes a portable,
-agent-drawn SVG lane with a planned section binding, CoreText geometry preflight,
-retained PNG preview, and explicit hash-bound review evidence. Visual and
-semantic judgment remain reviewer responsibilities rather than model-automated
-claims (see `docs/SVG_MODULE.md`).
+Current milestone: **M1 — Markdown-first**. The bundle uses DSH's native
+clarification UI, image attachments, history, and compaction; it adds no intake
+or manuscript-memory subsystem. The agent reads the complete `article.md`
+before every commit or revision. Visuals use either a Mermaid-to-SVG tool or a
+bespoke SVG lane, followed by the same CoreText preflight, retained PNG preview,
+and hash-bound review evidence. See `docs/MERMAID_MODULE.md` and
+`docs/SVG_MODULE.md`.
+
+The repository's optional web and image search is the `dsh-bing-search/` Git
+submodule. It is a separate MCP plugin: LongMDWriter permits its four
+`mcp__web__*` tools when mounted but does not embed a machine-specific install
+path. Set `LONGWRITER_DSH_SEARCH_BIN` to the installed executable's absolute
+path to activate the bundle's optional MCP slot.
 
 ## Quick start
 
-Pinned to DSH `0.1.0-rc.6`. Read `dsh-native/README.md` and
+Pinned to DSH `0.1.1-rc.2`. Read `dsh-native/README.md` and
 `dsh-native/DSH_COMPATIBILITY.md` first.
 
 ```bash
-npm install --global @deepseek-ai/dsh@0.1.0-rc.6
+npm install --global @deepseek-ai/dsh@0.1.1-rc.2
 cd long_md_writer
 dsh plugin --profile web add ./dsh-native
 dsh --profile web --dump-config
@@ -41,8 +49,11 @@ dsh --profile web
 ```
 
 Open a Web session in the publication workspace and ask the root agent to
-create a publication. It calls `initialize_publication` and the Goal Round
-Driver continues the session until `finalize_publication` certifies completion.
+create a publication. Include raster reference images in the first message;
+place other source files under `inputs/`. The agent infers what it can and uses
+one native `ask_user_question` batch only for unresolved material choices. It
+then calls `initialize_publication`, and the Goal Round Driver continues until
+`finalize_publication` certifies completion.
 
 Directory layout:
 
@@ -54,10 +65,11 @@ dsh-native/
 │   ├── validator-runner.js      # subprocess bridge to the Python validator
 │   └── dsh-compat.js            # the only DSH-coupled adapter
 ├── svg/                         # SVG gate, CoreText preflight, evidence workflow, DSH adapter
+├── mermaid/                     # bounded Mermaid, local renderer, source/SVG registration
 ├── skills/svg-illustrator/      # portable SVG drawing workflow
 ├── python/validate_publication.py  # deterministic acceptance authority
 ├── test/                        # domain and plugin-contract tests
-├── cordis.patch.yml             # profile composition (session namespace, compaction)
+├── cordis.patch.yml             # profile composition (session namespace, tool boundary, optional search)
 └── examples/project.example.json
 ```
 

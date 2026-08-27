@@ -372,6 +372,57 @@ def validate(workspace: Path) -> dict[str, Any]:
     checks.append(check("assets.entry_ids_unique", len(asset_ids) == len(set(asset_ids)), "asset ids must be unique"))
     checks.append(check("assets.entry_paths_unique", len(asset_paths) == len(set(asset_paths)), "asset paths must be unique"))
 
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
+            continue
+        asset_id = entry["id"]
+        derivative = entry.get("derivative_of")
+        mermaid_render = str(entry.get("provenance", "")).startswith("agent_generated:mermaid-cli@")
+        if derivative is None:
+            if mermaid_render:
+                checks.append(check(
+                    f"assets.mermaid.{asset_id}.source_binding",
+                    False,
+                    f"Mermaid SVG {asset_id} requires a hash-bound retained Mermaid source",
+                ))
+            continue
+        fields_valid = (
+            isinstance(derivative, dict)
+            and isinstance(derivative.get("asset_id"), str)
+            and bool(SAFE_ID.fullmatch(derivative["asset_id"]))
+            and valid_sha256(derivative.get("asset_sha256"))
+            and nonempty_text(derivative.get("purpose"))
+        )
+        checks.append(check(
+            f"assets.derivative.{asset_id}.fields",
+            fields_valid,
+            f"asset derivative {asset_id} is incomplete or malformed",
+        ))
+        parent = registered_by_id.get(derivative.get("asset_id")) if fields_valid else None
+        binding_valid = (
+            parent is not None
+            and derivative.get("asset_id") != asset_id
+            and parent.get("sha256") == derivative.get("asset_sha256")
+        )
+        checks.append(check(
+            f"assets.derivative.{asset_id}.binding",
+            binding_valid,
+            f"asset derivative {asset_id} must bind a registered parent and its current hash",
+        ))
+        if mermaid_render:
+            mermaid_binding = (
+                binding_valid
+                and derivative.get("purpose") == "rendered_from_mermaid_source"
+                and str(parent.get("path", "")).startswith("assets/mermaid/")
+                and str(parent.get("path", "")).endswith(".mmd")
+                and str(parent.get("provenance", "")).startswith("agent_generated:mermaid-source@")
+            )
+            checks.append(check(
+                f"assets.mermaid.{asset_id}.source_binding",
+                mermaid_binding,
+                f"Mermaid SVG {asset_id} must derive from a retained assets/mermaid/*.mmd source",
+            ))
+
     physical = {
         path.relative_to(workspace).as_posix()
         for path in (workspace / "assets").rglob("*")

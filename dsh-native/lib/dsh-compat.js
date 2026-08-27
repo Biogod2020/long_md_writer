@@ -1,10 +1,10 @@
 import path from 'node:path'
 
 export const DSH_COMPATIBILITY = Object.freeze({
-  cliVersion: '0.1.0-rc.6',
-  toolsPackageVersion: '0.1.0-rc.6',
-  sourceContractCommit: '47f943859bef60e4160492346772ded9b24f765a',
-  sessionStoreNamespace: 'dsh-0.1.0-rc.6',
+  cliVersion: '0.1.1-rc.2',
+  toolsPackageVersion: '0.1.1-rc.2',
+  sourceContractCommit: 'b150a551b8d465e31e418e1b2eaf5e79bbb7d28e',
+  sessionStoreNamespace: 'dsh-0.1.1-rc.2',
 })
 
 function requireFunction(owner, name, label) {
@@ -100,7 +100,9 @@ export async function runFreshReviewer(ctx, exec, request) {
       const partial = Array.isArray(result.output)
         ? result.output.filter(block => block?.type === 'text').map(block => block.text).join('')
         : ''
-      throw new Error(`reviewer stopped with ${result.stopReason}${partial ? `: ${partial.slice(0, 2000)}` : ''}`)
+      const diagnostic = typeof result.diagnostic === 'string' ? result.diagnostic.trim() : ''
+      const details = [diagnostic, partial.trim()].filter(Boolean).join('\n').slice(0, 2000)
+      throw new Error(`reviewer stopped with ${result.stopReason}${details ? `: ${details}` : ''}`)
     }
     if (result.structured === undefined || result.structured === null || typeof result.structured !== 'object') {
       throw new Error('reviewer completed without the required structured result')

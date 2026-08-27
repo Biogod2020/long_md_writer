@@ -5,6 +5,7 @@ import path from 'node:path'
 import test from 'node:test'
 
 import { apply } from '../index.js'
+import { runFreshReviewer } from '../lib/dsh-compat.js'
 
 function fakeContext(workspace) {
   const tools = new Map()
@@ -76,8 +77,24 @@ test('mounts only the domain surface and gates completion through validation and
   apply(harness.ctx)
 
   assert.equal(typeof harness.getGuard(), 'function')
-  assert.match(harness.getGuard()({ name: 'write', arguments: { file_path: 'article.md' } }), /disabled/)
-  assert.equal(harness.getGuard()({ name: 'read', arguments: { file_path: 'article.md' } }), undefined)
+  for (const name of ['write', 'edit', 'bash', 'pwsh', 'goal', 'subagent', 'subagent_fork', 'workflow', 'ralph', 'run_in_background', 'todo_write']) {
+    assert.match(harness.getGuard()({ name, arguments: {} }), /unavailable/)
+  }
+  for (const name of [
+    'read',
+    'read_image',
+    'grep',
+    'glob',
+    'web_search',
+    'ask_user_question',
+    'mcp__web__search',
+    'mcp__web__search_images',
+    'mcp__web__open',
+    'mcp__web__find',
+    'publication_status',
+  ]) {
+    assert.equal(harness.getGuard()({ name, arguments: {} }), undefined)
+  }
   assert.deepEqual([...harness.tools.keys()], [
     'initialize_publication',
     'plan_visuals',
@@ -91,7 +108,18 @@ test('mounts only the domain surface and gates completion through validation and
     'svg_submit',
     'svg_preflight',
     'svg_record_review',
+    'mermaid_submit',
   ])
+
+  const unsafeMermaid = await harness.tools.get('mermaid_submit').execute({
+    mermaid: 'flowchart LR\nA-->B\nclick A "https://example.com"',
+    caption: 'Unsafe flow',
+    alt_text: 'An intentionally unsafe test flow.',
+    visual_plan_id: 'not-reached',
+    used_in: ['intro'],
+  }, execution(workspace))
+  assert.equal(unsafeMermaid.status, 'rejected')
+  assert.ok(unsafeMermaid.source_gate.errors.includes('click_action_not_allowed'))
 
   const exec = execution(workspace)
   await harness.tools.get('initialize_publication').execute({
@@ -156,4 +184,32 @@ test('mounts only the domain surface and gates completion through validation and
   const result = await harness.tools.get('finalize_publication').execute({}, exec)
   assert.equal(result.finalized, true)
   assert.equal(harness.getGoal().phase, 'complete')
+})
+
+test('preserves the v0.1.1 reviewer diagnostic on a non-completed child run', async () => {
+  let disposed = false
+  const ctx = {
+    subagents: {
+      async start() {
+        return {
+          result: Promise.resolve({
+            stopReason: 'error',
+            output: [{ type: 'text', text: 'partial reviewer output' }],
+            diagnostic: 'Provider could not complete the reviewer run.',
+          }),
+          async dispose() { disposed = true },
+        }
+      },
+    },
+  }
+  const exec = execution('/tmp/longwriter-reviewer-contract')
+  await assert.rejects(
+    runFreshReviewer(ctx, exec, {
+      prompt: 'Inspect the publication.',
+      outputSchema: { type: 'object' },
+      persona: 'Review independently.',
+    }),
+    /reviewer stopped with error: Provider could not complete the reviewer run\.\npartial reviewer output/,
+  )
+  assert.equal(disposed, true)
 })

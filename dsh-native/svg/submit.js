@@ -110,6 +110,7 @@ export async function submitSvg(workspace, input, dependencies = {}) {
       used_in: plannedUse,
       visual_plan_id: planId,
       ...(supersedesAssetId === undefined ? {} : { supersedes_asset_id: supersedesAssetId }),
+      ...(input.derivative_of === undefined ? {} : { derivative_of: input.derivative_of }),
       bytes: Buffer.from(input.svg, 'utf8'),
     })
     return {

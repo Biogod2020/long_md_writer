@@ -64,7 +64,7 @@ A typical turn is:
 
 ```text
 step 1: publication_status
-step 2: read earlier prose
+step 2: read article.md completely from beginning to end
 step 3: search or inspect evidence
 step 4: commit_chunk
 turn end: concludesTurn
@@ -99,7 +99,14 @@ Deterministic operations remain tools:
   a hash-bound receipt; after image inspection, `svg_record_review` appends the
   independent review receipt. A failed candidate is historical and can only be
   corrected through one explicit append-only successor;
-- future image-search and asset-registration APIs.
+- Mermaid evidence: `mermaid_submit` checks bounded passive Mermaid source,
+  renders through the pinned local CLI, retains the exact `.mmd` source, and
+  registers a hash-bound SVG derivative before reusing the SVG
+  preflight/review path;
+- optional web/image retrieval through the repository `dsh-bing-search` MCP
+  plugin, activated portably through `LONGWRITER_DSH_SEARCH_BIN`; searched
+  images still require a future controlled download,
+  licensing, and registration tool before they can enter the manuscript.
 
 A capability becomes a subagent only when it needs its own decide-act-observe loop. The first such capability is independent review.
 
@@ -109,15 +116,46 @@ A capability becomes a subagent only when it needs its own decide-act-observe lo
 
 DSH Session history is the episodic and working memory. Automatic compaction handles long-running conversation pressure.
 
-The manuscript is external canonical memory. The root Agent reads relevant ranges rather than permanently injecting the full article into every request. This avoids quadratic prompt growth and makes compaction loss nonfatal.
+The manuscript is external canonical truth. Immediately before every
+`commit_chunk` or `revise_chunk`, the root Agent reads the complete current
+`article.md` from beginning to end in that turn. DSH remains solely responsible
+for history and compaction: LongMDWriter adds no memory database, summary
+packet, recall selector, or context middleware. The full-read requirement is a
+deliberately simple writing rule that makes terminology, argument continuity,
+and duplicate detection depend on the current manuscript rather than on a
+possibly compacted recollection.
 
 `AGENTS.md` remains compatible with the upstream agent-instructions plugin and can carry repository-level policy. The LongMDWriter bundle adds a stable system-prompt section for publication-specific loop behavior.
 
+## Opening clarification and attachments
+
+The Web UI already provides the two needed native interaction seams:
+
+```text
+user brief + submitted raster images + workspace inputs/
+  -> agent inspects and infers discoverable fields
+  -> remaining material user-owned ambiguity?
+       no  -> initialize_publication
+       yes -> one batched ask_user_question -> initialize_publication
+```
+
+DSH persists admitted PNG/JPEG/WebP/GIF attachments and projects them as image
+blocks to image-capable models. LongMDWriter does not duplicate those bytes or
+maintain attachment state. The pinned UI does not accept general documents as
+composer attachments, so non-image sources enter through the read-only
+workspace `inputs/` directory. Input attachments are evidence/context; they do
+not bypass `registerAsset` or become canonical publication assets by
+themselves.
+
 ## Mutation security
 
-The dedicated profile disables model-facing shell, workflow, Ralph, generic subagent, string-replace, and generic goal-completion tools.
+The dedicated host composition disables model-facing shell, workflow, Ralph, generic subagent, string-replace, and generic goal-completion tools. The upstream Web `standard` preset may still register model-facing tools at an individual Agent scope after host composition, so that configuration alone is not a security boundary.
 
-The upstream filesystem reader remains useful. A monotonic DSH tool guard rejects every generic `write` or `edit` call in the dedicated profile. Canonical manuscript changes therefore pass through the domain store, which provides:
+A monotonic global DSH tool guard is the authority boundary: it allows only the
+LongMDWriter domain surface, native clarification, read-only workspace tools,
+built-in web search, and the optional repository `mcp__web__*` retrieval tools;
+it rejects every other execution. Canonical manuscript changes therefore pass
+through the domain store, which provides:
 
 - safe identifiers;
 - balanced section/chunk markers;
@@ -161,7 +199,7 @@ Compatibility measures:
 4. mount-time capability probes;
 5. versioned Session storage directories;
 6. canonical workspace files as cross-version recovery truth;
-7. pinned CI plus a nonblocking latest-version probe;
+7. pinned CI plus a nonblocking release-version probe;
 8. manual upgrade promotion after a live crash/compaction/reviewer/resume test.
 
 ## Migration sequence
@@ -177,14 +215,17 @@ Compatibility measures:
 - deterministic finalize gate;
 - visual plans, CoreText geometry preflight, retained PNG evidence, and
   hash-bound review receipts;
+- native opening clarification and DSH image-attachment intake, without a
+  custom intake state machine;
+- Mermaid source retention and deterministic Mermaid-to-SVG registration;
+- optional `dsh-bing-search` retrieval through the DSH MCP client;
 - update-isolation policy and tests.
 
 ### Milestone 2
 
-- native image-search service/provider/tool;
 - asset download, licence verification, and registration;
 - citation/evidence tools;
-- stronger section-range reads for very large manuscripts.
+- optional specialized research providers beyond general web search.
 
 ### Milestone 3
 

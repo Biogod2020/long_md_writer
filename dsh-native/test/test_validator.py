@@ -205,6 +205,50 @@ This deterministic article contains enough substantive words to satisfy the plan
         self.assertFalse(result["passed"])
         self.assertIn("visual.figure.flow-figure.preflight", {failure["code"] for failure in result["failures"]})
 
+    def test_mermaid_svg_requires_a_registered_source_hash_binding(self) -> None:
+        root = self.make_visual_workspace()
+        project_path = root / "project.json"
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+        project["visual_contract"]["figures"][0]["kind"] = "mermaid"
+        project_path.write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+        source_path = root / "assets" / "mermaid" / "flow.mmd"
+        source_path.parent.mkdir()
+        source_path.write_text("flowchart LR\n  A[Flow] --> B[Publish]\n", encoding="utf-8")
+        source_sha = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        manifest_path = root / "assets" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["assets"].insert(0, {
+            "id": "flow-mermaid-source",
+            "source": "agent",
+            "path": "assets/mermaid/flow.mmd",
+            "caption": "Mermaid source for the flow diagram",
+            "alt_text": "Editable Mermaid source.",
+            "provenance": "agent_generated:mermaid-source@11.16.0",
+            "licence": "generated_internal",
+            "used_in": ["intro"],
+            "sha256": source_sha,
+        })
+        svg = next(entry for entry in manifest["assets"] if entry["id"] == "flow-svg")
+        svg["provenance"] = "agent_generated:mermaid-cli@11.16.0"
+        svg["derivative_of"] = {
+            "asset_id": "flow-mermaid-source",
+            "asset_sha256": source_sha,
+            "purpose": "rendered_from_mermaid_source",
+        }
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        valid = VALIDATOR.validate(root)
+        self.assertTrue(valid["passed"], valid["failures"])
+
+        svg["derivative_of"]["asset_sha256"] = "0" * 64
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        invalid = VALIDATOR.validate(root)
+        self.assertFalse(invalid["passed"])
+        codes = {failure["code"] for failure in invalid["failures"]}
+        self.assertIn("assets.derivative.flow-svg.binding", codes)
+        self.assertIn("assets.mermaid.flow-svg.source_binding", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

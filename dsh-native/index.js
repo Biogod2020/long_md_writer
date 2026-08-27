@@ -15,6 +15,7 @@ import {
   setVisualContract,
 } from './lib/project-store.js'
 import { runValidator } from './lib/validator-runner.js'
+import { applyMermaid } from './mermaid/index.js'
 import { applySvg } from './svg/index.js'
 import {
   DSH_COMPATIBILITY,
@@ -35,11 +36,15 @@ You are the root publication agent for LongMDWriter.
 
 The durable DSH Session owns working memory, tool history, compaction, recovery, and the long-running Goal. The workspace owns only three canonical domain records: project.json, article.md, and assets/manifest.json.
 
-Initialize a new publication with initialize_publication. During each automatic goal round, inspect publication_status and advance the manuscript by one coherent unit. A turn may use multiple read, search, and reasoning steps, but it must commit at most one manuscript chunk. End a productive writing turn with commit_chunk or revise_chunk; those tools terminate the turn after an atomic mutation. Do not write LongWriter control comments yourself.
+At the beginning of a new publication, inspect the user's brief and every DSH-provided image attachment already present in the message. Infer title, objective, audience, language, section plan, and evidence boundary whenever the user has supplied enough context. If a user-owned choice is still materially ambiguous, ask all necessary questions once in one concise batch with ask_user_question; do not build a custom clarification or attachment-memory layer. DSH image attachments are already model-visible, and source files placed in the workspace are read in place. Then initialize the publication with initialize_publication.
 
-Use native tools rather than textual command markers. Do not emit :::visual blocks. Before drawing a publication figure, set project.json visual_contract through plan_visuals with its intended section, purpose, type, and required labels. For diagrams, create the SVG source directly, call svg_check while iterating, then call svg_submit with that visual_plan_id only after it passes. Next call svg_preflight, inspect its returned retained assets/reviews/*.png preview with read_image, and call svg_record_review with concrete observations. Only then reference the returned assets/svg/<id>.svg path in the planned article section; never hand-write unregistered asset references. svg_submit and svg_preflight are deterministic controlled paths, not image-generation or visual-review models. Do not use generic write, edit, shell, workflow, Ralph, generic subagent, or goal-completion tools to mutate or complete the publication. Near completion, call review_publication for a fresh independent audit. Only finalize_publication may certify the current article and complete the Goal. When validation or review fails, use the returned findings in the next goal round.
+During each automatic goal round, inspect publication_status and advance the manuscript by one coherent unit. Immediately before every commit_chunk or revise_chunk call, read article.md from beginning to end in the current turn. This full read is mandatory even when the DSH Session appears to remember earlier prose; it is a writing rule, not a separate memory component. A turn may use multiple read, search, and reasoning steps, but it must commit at most one manuscript chunk. End a productive writing turn with commit_chunk or revise_chunk; those tools terminate the turn after an atomic mutation. Do not write LongWriter control comments yourself.
 
-Preserve source uncertainty. Never invent citations, provenance, licences, quantitative results, or reviewer evidence. Read relevant earlier sections before writing so terminology and argument structure remain globally coherent.
+Use native tools rather than textual command markers. For research, prefer the repository's mcp__web__search, mcp__web__open, and mcp__web__find tools when mounted; use mcp__web__search_images for image candidates, and fall back to web_search when the custom MCP search is unavailable. Read quality labels, warnings, and opened sources rather than treating snippets as final evidence.
+
+Do not emit :::visual blocks. Before drawing a publication figure, set project.json visual_contract through plan_visuals with its intended section, purpose, type, and required labels. Prefer mermaid_submit for diagrams that Mermaid can express; it retains the editable Mermaid source and registers its rendered SVG. For bespoke diagrams, create SVG source directly, call svg_check while iterating, then call svg_submit. After either route, call svg_preflight, inspect its retained assets/reviews/*.png preview with read_image, and call svg_record_review with concrete observations. Only then reference the returned assets/svg/<id>.svg path in the planned article section; never hand-write unregistered asset references. These are deterministic controlled paths, not image-generation or visual-review models. Do not use generic write, edit, shell, workflow, Ralph, generic subagent, or goal-completion tools to mutate or complete the publication. Near completion, call review_publication for a fresh independent audit. Only finalize_publication may certify the current article and complete the Goal. When validation or review fails, use the returned findings in the next goal round.
+
+Preserve source uncertainty. Never invent citations, provenance, licences, quantitative results, or reviewer evidence.
 `.trim()
 
 const REVIEWER_PERSONA = `
@@ -87,6 +92,37 @@ const JSON_OUTPUT = {
   schema: { type: 'json' },
   render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
 }
+
+// DSH Web presets register their model-facing tools in the per-agent scope
+// after this bundle mounts at the host scope. Keep a global execution guard so
+// a future preset cannot bypass the publication boundary merely by exposing a
+// new generic tool. The selected read tools are observational only; every
+// canonical mutation and Goal completion remains a domain-tool operation.
+const ROOT_TOOL_ALLOWLIST = new Set([
+  'read',
+  'read_image',
+  'grep',
+  'glob',
+  'web_search',
+  'ask_user_question',
+  'mcp__web__search',
+  'mcp__web__search_images',
+  'mcp__web__open',
+  'mcp__web__find',
+  'initialize_publication',
+  'plan_visuals',
+  'resume_publication',
+  'publication_status',
+  'commit_chunk',
+  'revise_chunk',
+  'review_publication',
+  'finalize_publication',
+  'svg_check',
+  'svg_submit',
+  'svg_preflight',
+  'svg_record_review',
+  'mermaid_submit',
+])
 
 function positiveInteger(value, name, fallback) {
   const resolved = value === undefined ? fallback : value
@@ -136,10 +172,9 @@ export function apply(ctx) {
     text: POLICY,
   })
 
-  ctx.tools.guard(exec => {
-    if (exec.name !== 'write' && exec.name !== 'edit') return undefined
-    return 'Generic filesystem mutation is disabled in the LongMDWriter profile; use publication domain tools.'
-  })
+  ctx.tools.guard(exec => (ROOT_TOOL_ALLOWLIST.has(exec.name)
+    ? undefined
+    : `Tool "${exec.name}" is unavailable in the LongMDWriter profile; use publication domain tools or the approved read-only tools.`))
 
   registerJsonTool(ctx, {
     name: 'initialize_publication',
@@ -329,6 +364,17 @@ export function apply(ctx) {
       readAssetManifest,
       appendVisualPreflight,
       appendVisualReview,
+    },
+  )
+
+  applyMermaid(
+    definition => registerJsonTool(ctx, definition),
+    {
+      workspace: workspaceFromExecution,
+      registerAsset,
+      resolveVisualPlan,
+      readAssetManifest,
+      readRegisteredAsset,
     },
   )
 }

@@ -191,6 +191,36 @@ test('registerAsset requires provenance, licence, and non-empty bytes', async t 
   )
 })
 
+test('registerAsset requires every derivative to bind an existing parent hash', async t => {
+  const workspace = await fixture(t)
+  const parent = await registerAsset(workspace, assetInput())
+  const derivative = {
+    id: 'svg-preview',
+    source: 'tool',
+    path: 'assets/reviews/svg-preview.png',
+    caption: 'Preview',
+    alt_text: 'A preview.',
+    provenance: 'derived:test',
+    licence: 'generated_internal',
+    used_in: [],
+    bytes: Buffer.from([1]),
+  }
+  await assert.rejects(
+    registerAsset(workspace, {
+      ...derivative,
+      derivative_of: { asset_id: 'missing', asset_sha256: parent.sha256, purpose: 'test' },
+    }),
+    /parent is not registered/,
+  )
+  await assert.rejects(
+    registerAsset(workspace, {
+      ...derivative,
+      derivative_of: { asset_id: parent.entry.id, asset_sha256: '0'.repeat(64), purpose: 'test' },
+    }),
+    /parent hash does not match/,
+  )
+})
+
 test('binds immutable visual plans to SVG assets and hash-bound preflight and review receipts', async t => {
   const workspace = await fixture(t)
   const visualContract = await setVisualContract(workspace, {

@@ -5,24 +5,34 @@
 # version gets a new namespace rather than opening these logs in place.
 - id: session-persistence-jsonl
   config:
-    root: !!js dshHomePath('sessions-longwriter/dsh-0.1.0-rc.6')
-
-# Long-form writing benefits from a larger verbatim recent tail while DSH owns
-# the full event log and automatic compaction.
-- id: compaction-basic
-  config:
-    thresholdRatio: 0.75
-    retainRatio: 0.20
-    maxTokens: 8192
-    compactionRetries: 1
-    maxOverflowRetries: 1
-    auto: true
+    root: !!js dshHomePath('sessions-longwriter/dsh-0.1.1-rc.2')
 
 # Keep the model-facing tool protocol in native mode so Code Mode cannot route
 # around the publication mutation boundary.
 - id: tools
   config:
     mode: native
+
+# Optional repository search. Install dsh-bing-search separately and set this
+# variable to its absolute executable path. Keeping the entry disabled when the
+# variable is absent preserves a portable bundle and avoids a hard-coded host
+# path. Leave it unset when the same MCP server is mounted elsewhere.
+- insert:
+    - id: longwriter-mcp-web
+      name: '@deepseek-ai/dsh-mcp-client'
+      disabled: !!js "!process.env.LONGWRITER_DSH_SEARCH_BIN"
+      config:
+        serverName: web
+        transport: stdio
+        command: !!js process.env.LONGWRITER_DSH_SEARCH_BIN ?? ''
+        args: []
+        toolCallTimeoutMs: 30000
+        failOnStartupError: true
+        reconnect:
+          enabled: true
+          initialDelayMs: 500
+          maxDelayMs: 30000
+          maxAttempts: 10
 
 # Domain completion is evaluator-gated. Do not expose model-controlled goal
 # completion or generic orchestration surfaces in this dedicated profile.

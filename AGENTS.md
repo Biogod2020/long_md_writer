@@ -15,10 +15,15 @@
   and geometry preflight in `svg/metrics.js` / `svg/preflight.js`, retained
   preview/review workflow in `svg/workflow.js`, controlled registration in
   `svg/submit.js`, and its narrow tool entrypoint in `svg/index.js`.
+- The Mermaid module follows the same boundary: `mermaid/core.js` bounds safe
+  source, `mermaid/renderer.js` runs the pinned local renderer,
+  `mermaid/submit.js` retains the `.mmd` source and registers its hash-bound
+  SVG derivative, and `mermaid/index.js` exposes only `mermaid_submit`.
 - Canonical manuscript mutations happen only through domain tools
   (`commit_chunk`, `revise_chunk`), never through generic file writes.
 - Asset additions and visual receipts are append-only through `registerAsset`
-  plus approved tools (`svg_submit`, `svg_preflight`, `svg_record_review`);
+  plus approved tools (`mermaid_submit`, `svg_submit`, `svg_preflight`,
+  `svg_record_review`);
   never hand-write the manifest, replace an asset, or reference one out of plan.
 
 ## Change rules
@@ -33,11 +38,11 @@
 4. Do not weaken deterministic validation, asset provenance checks, hash
    binding, visual-plan/revision-chain binding, CoreText geometry evidence,
    path containment, or the review-gated completion contract.
-5. Preserve the DSH version pin (`0.1.0-rc.6`) and the compatibility seam;
+5. Preserve the DSH version pin (`0.1.1-rc.2`) and the compatibility seam;
    read `dsh-native/DSH_COMPATIBILITY.md` before any upgrade. Upstream changes
    must be absorbed through `lib/dsh-compat.js`; do not add new direct use of
    version-sensitive DSH APIs elsewhere.
-6. Add deterministic tests for every store, validator, gate, or SVG change;
+6. Add deterministic tests for every store, validator, gate, or visual change;
    they must not need credentials or a DSH service. Update
    `test/plugin-contract.test.js` for tool changes. Before submitting, run from
    `dsh-native/`: `pnpm run check:imports`, `pnpm run test:dsh-contract`, and `pnpm test`.
@@ -47,6 +52,10 @@
 8. When a tool or runtime capability changes, update README and
    architecture document in the same change so retired workflows are not
    described as current.
+9. Leave manuscript context management native to DSH. Immediately before
+   every `commit_chunk` or `revise_chunk`, read the complete current
+   `article.md` from beginning to end in that turn; enforce this as agent
+   policy, not with a second memory, summary, or context-tracking component.
 
 ## Comparison baseline
 

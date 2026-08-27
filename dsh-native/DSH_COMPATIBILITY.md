@@ -5,12 +5,17 @@
 LongMDWriter pins the verified public preview explicitly:
 
 ```text
-@deepseek-ai/dsh CLI:   0.1.0-rc.6
-@deepseek-ai/dsh-tools: 0.1.0-rc.6
-public seam contract inspected at: 47f943859bef60e4160492346772ded9b24f765a
+@deepseek-ai/dsh CLI:   0.1.1-rc.2
+@deepseek-ai/dsh-tools: 0.1.1-rc.2
+public seam contract inspected at: b150a551b8d465e31e418e1b2eaf5e79bbb7d28e
 ```
 
 The CI workflow installs the exact CLI, installs this bundle into a fresh DSH Web profile, and verifies the composed configuration through `--dump-config`. Do not use caret, tilde, `latest`, or `next` for production deployment. Commit the generated package-manager lockfile in the deployment profile.
+
+For this standalone bundle's local verification graph, explicit development
+dependencies pin the complete DSH peer family to `0.1.1-rc.2`. That prevents a
+stale peer auto-install from silently mixing preview generations. The actual
+DSH Web host supplies its matching package family from the exact CLI release.
 
 ## Public seams consumed
 
@@ -50,12 +55,33 @@ run.dispose()
 
 A missing seam fails plugin activation or the relevant call with a version-specific diagnostic instead of silently degrading.
 
+## Native interaction reused without an adapter
+
+The Web `standard` agent preset already mounts
+`@deepseek-ai/dsh-tool-ask-user`, and the Web bundle already mounts the local
+attachment store plus image composer UI. LongMDWriter only allows
+`ask_user_question` through its execution guard and instructs the root agent to
+inspect submitted image blocks. It does not import those packages or call their
+services directly, so this is profile composition rather than a new
+version-sensitive LongMDWriter seam.
+
+For the pinned release, durable composer attachments are raster images only:
+PNG, JPEG, WebP, and GIF. Non-image publication inputs remain ordinary
+workspace files under `inputs/`. If a later DSH version adds general file
+attachments or LongMDWriter must programmatically import an attachment as a
+canonical asset, put that new API use behind `lib/dsh-compat.js` and extend the
+real profile contract test before adopting it.
+
+Mermaid rendering is independent of DSH and is pinned separately to
+`@mermaid-js/mermaid-cli@11.16.0` and `puppeteer@25.9.0`. It uses the documented
+CLI process boundary rather than Mermaid's unstable programmatic Node API.
+
 ## Session-format isolation
 
 DSH persistence refuses session logs whose format it cannot faithfully reconstruct and currently provides no general migration chain. This bundle therefore changes the storage namespace whenever the pinned DSH runtime changes:
 
 ```text
-sessions-longwriter/dsh-0.1.0-rc.6/
+sessions-longwriter/dsh-0.1.1-rc.2/
 sessions-longwriter/dsh-<next-runtime-version>/
 ```
 

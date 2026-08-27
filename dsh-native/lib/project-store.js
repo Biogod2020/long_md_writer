@@ -459,6 +459,14 @@ export async function registerAsset(workspace, input) {
     if (await exists(target)) {
       throw new Error(`asset file already exists: ${rel}`)
     }
+    if (derivativeOf !== undefined) {
+      if (derivativeOf.asset_id === id) throw new Error('asset derivative_of must not reference itself')
+      const parent = findAssetById(manifest, derivativeOf.asset_id)
+      if (!parent) throw new Error(`asset derivative parent is not registered: ${derivativeOf.asset_id}`)
+      if (parent.sha256 !== derivativeOf.asset_sha256) {
+        throw new Error(`asset derivative parent hash does not match the manifest: ${derivativeOf.asset_id}`)
+      }
+    }
     if (visualPlanId !== undefined) {
       const plan = await resolveVisualPlan(root, visualPlanId)
       if (!rel.startsWith('assets/svg/') || !rel.endsWith('.svg')) {
