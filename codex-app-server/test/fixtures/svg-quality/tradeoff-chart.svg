@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#ffffff"/>
+  <text x="480" y="60" text-anchor="middle" font-family="Helvetica" font-size="28" font-weight="700" fill="#0f172a">Method C leads within the latency budget</text>
+  <text x="480" y="91" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">Synthetic data · upper left is better</text>
+  <line x1="140" y1="450" x2="870" y2="450" stroke="#334155" stroke-width="3"/>
+  <line x1="140" y1="450" x2="140" y2="140" stroke="#334155" stroke-width="3"/>
+  <line x1="140" y1="370" x2="870" y2="370" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="140" y1="290" x2="870" y2="290" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="140" y1="210" x2="870" y2="210" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="505" y="516" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#0f172a">Latency (ms)</text>
+  <text transform="translate(58 295) rotate(-90)" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#0f172a">Throughput (items/s)</text>
+  <text x="140" y="478" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">20</text>
+  <text x="360" y="478" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">40</text>
+  <text x="580" y="478" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">60</text>
+  <text x="800" y="478" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">80</text>
+  <text x="118" y="455" text-anchor="end" font-family="Helvetica" font-size="16" fill="#475569">0</text>
+  <text x="118" y="375" text-anchor="end" font-family="Helvetica" font-size="16" fill="#475569">50</text>
+  <text x="118" y="295" text-anchor="end" font-family="Helvetica" font-size="16" fill="#475569">100</text>
+  <text x="118" y="215" text-anchor="end" font-family="Helvetica" font-size="16" fill="#475569">150</text>
+  <text x="580" y="125" text-anchor="middle" font-family="Helvetica" font-size="16" font-weight="700" fill="#9a3412">60 ms budget</text>
+  <line x1="580" y1="137" x2="580" y2="450" stroke="#d97706" stroke-width="3" stroke-dasharray="10 8"/>
+  <circle cx="270" cy="362" r="10" fill="#64748b"/>
+  <text x="290" y="357" font-family="Helvetica" font-size="16" fill="#334155">Method A</text>
+  <circle cx="407" cy="306" r="10" fill="#64748b"/>
+  <text x="427" y="278" font-family="Helvetica" font-size="16" fill="#334155">Method B</text>
+  <circle cx="500" cy="222" r="24" fill="none" stroke="#2563eb" stroke-width="3"/>
+  <circle cx="500" cy="222" r="10" fill="#2563eb"/>
+  <text x="472" y="190" text-anchor="end" font-family="Helvetica" font-size="20" font-weight="700" fill="#1d4ed8">Method C</text>
+  <circle cx="746" cy="182" r="11" fill="#ffffff" stroke="#d97706" stroke-width="3"/>
+  <text x="769" y="187" font-family="Helvetica" font-size="16" font-weight="700" fill="#9a3412">Method D · over budget</text>
+</svg>

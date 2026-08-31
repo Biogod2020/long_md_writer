@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "codex_binary": "codex",
+  "codex_cli_version": "0.151.0",
+  "model_catalog": "muse-model-catalog.json",
+  "model_provider": "iworld",
+  "model": "muse-spark-1.2",
+  "reasoning_effort": "xhigh",
+  "reviewer_reasoning_effort": "xhigh",
+  "provider": {
+    "name": "iWorld Muse 1.2",
+    "base_url": "https://iworld.cc.cd/llm/v1",
+    "env_key": "IWORLD_API_KEY",
+    "wire_api": "responses"
+  },
+  "sandbox": "read-only",
+  "approval_policy": "never",
+  "approvals_reviewer": "auto_review",
+  "max_turns": 256,
+  "thread_name": "LongMDWriter — ECG Chapter 2",
+  "svg_workers": {
+    "max_concurrent": 2,
+    "max_attempts": 8,
+    "stagnation_limit": 2,
+    "max_edits_per_attempt": 24,
+    "max_preflights_per_attempt": 3,
+    "shell_steer_after_commands": 12,
+    "max_jobs_per_plan": 3
+  },
+  "search_bridge": {
+    "command": "uv",
+    "project": "../../dsh-bing-search",
+    "runner": "../scripts/search-tool.py",
+    "timeout_ms": 60000,
+    "max_output_bytes": 2000000
+  },
+  "research_gate": {
+    "minimum_successful_calls": 6,
+    "required_tools": [
+      "longwriter_search",
+      "longwriter_search_images",
+      "longwriter_open"
+    ]
+  }
+}

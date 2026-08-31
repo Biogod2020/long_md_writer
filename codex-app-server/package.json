@@ -1,0 +1,51 @@
+{
+  "name": "long-md-writer-codex-app-server",
+  "version": "0.2.0",
+  "description": "Verifiable long-form publication workflow hosted by Codex App Server",
+  "type": "module",
+  "main": "app-server/host.js",
+  "bin": {
+    "longwriter": "cli.js",
+    "longwriter-svg": "svg/cli.js"
+  },
+  "files": [
+    "cli.js",
+    "app-server/*.js",
+    "config/*.json",
+    "lib/*.js",
+    "mermaid/*.js",
+    "image/*.js",
+    "svg/*.js",
+    "svg/*.swift",
+    "scripts/*.js",
+    "scripts/*.py",
+    "skills/svg-illustrator",
+    "python/*.py",
+    "README.md",
+    "examples/*.json"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.17.1",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@xmldom/xmldom": "^0.9.11",
+    "puppeteer": "25.9.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "check:syntax": "node --check cli.js && node --check scripts/smoke-provider.js && node --check scripts/smoke-resume.js && node --check scripts/smoke-search.js && node --check scripts/svg-quality-benchmark.js && node --check app-server/json-rpc-client.js && node --check app-server/run-recorder.js && node --check app-server/policy.js && node --check app-server/publication-tools.js && node --check app-server/search-tools.js && node --check app-server/svg-draft-editor.js && node --check app-server/svg-worker-tools.js && node --check app-server/svg-job-manager.js && node --check app-server/host.js && node --check lib/local-env.js && node --check lib/project-store.js && node --check lib/validator-runner.js && node --check mermaid/core.js && node --check mermaid/renderer.js && node --check mermaid/submit.js && node --check mermaid/index.js && node --check image/core.js && node --check image/submit.js && node --check image/index.js && node --check svg/core.js && node --check svg/design.js && node --check svg/metrics.js && node --check svg/preflight.js && node --check svg/renderer.js && node --check svg/submit.js && node --check svg/workflow.js && node --check svg/cli.js && node --check svg/index.js && PYTHONPYCACHEPREFIX=.python-cache python3 -m py_compile python/validate_publication.py scripts/search-tool.py",
+    "check:imports": "node -e \"Promise.all([import('./app-server/host.js'), import('./app-server/publication-tools.js'), import('./app-server/search-tools.js'), import('./app-server/svg-draft-editor.js'), import('./app-server/svg-worker-tools.js'), import('./app-server/svg-job-manager.js')]).then(([host, tools, search, draft, worker, jobs]) => { if (typeof host.LongWriterHost !== 'function' || typeof tools.PublicationToolRuntime !== 'function' || typeof search.SearchToolRuntime !== 'function' || typeof draft.SvgDraftEditor !== 'function' || typeof worker.SvgWorkerPreflight !== 'function' || typeof jobs.SvgJobManager !== 'function') process.exit(1) })\"",
+    "test:node": "node --test test/app-server-contract.test.js test/svg-draft-editor.test.js test/svg-worker-tools.test.js test/svg-job-manager.test.js test/local-env.test.js test/project-store.test.js test/mermaid-core.test.js test/mermaid-renderer.test.js test/mermaid-submit.test.js test/image-submit.test.js test/svg-core.test.js test/svg-submit.test.js test/svg-preflight.test.js test/svg-workflow.test.js test/svg-cli.test.js test/svg-renderer.test.js",
+    "test:python": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_validator.py'",
+    "test": "pnpm run check:syntax && pnpm run test:node && pnpm run test:python",
+    "test:app-server-contract": "node --test test/app-server-contract.test.js",
+    "smoke:provider": "node scripts/smoke-provider.js config/iworld-muse12.json",
+    "smoke:resume": "node scripts/smoke-resume.js config/iworld-muse12.json",
+    "smoke:search": "node scripts/smoke-search.js config/iworld-muse12.json",
+    "benchmark:svg-quality": "node scripts/svg-quality-benchmark.js"
+  }
+}

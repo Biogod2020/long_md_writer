@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs>
+    <marker id="blue-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="orange-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/>
+    </marker>
+  </defs>
+  <rect width="960" height="540" fill="#ffffff"/>
+  <text x="480" y="60" text-anchor="middle" font-family="Helvetica" font-size="28" font-weight="700" fill="#0f172a">A simplified mountain-catchment water cycle</text>
+  <text x="480" y="91" text-anchor="middle" font-family="Helvetica" font-size="16" fill="#475569">Phase changes aloft · gravity returns water</text>
+  <path d="M 500 440 L 720 214 L 930 440 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/>
+  <path d="M 668 268 L 720 214 L 773 271 L 745 263 L 720 279 L 696 261 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M 0 445 C 130 423 250 466 385 443 C 520 420 650 459 960 428 L 960 540 L 0 540 Z" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+  <path d="M 351 255 C 316 255 292 231 292 200 C 292 169 317 146 349 147 C 364 117 397 103 431 116 C 457 105 488 119 499 145 C 536 140 568 166 568 201 C 568 232 543 255 510 255 Z" fill="#f1f5f9" stroke="#64748b" stroke-width="3"/>
+  <text x="430" y="208" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#334155">Condensation</text>
+  <path d="M 185 438 C 190 350 244 292 326 244" fill="none" stroke="#d97706" stroke-width="4" stroke-dasharray="9 7" marker-end="url(#orange-arrow)"/>
+  <text x="175" y="334" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#9a3412">Evaporation</text>
+  <line x1="515" y1="255" x2="650" y2="350" stroke="#2563eb" stroke-width="4" stroke-dasharray="8 7" marker-end="url(#blue-arrow)"/>
+  <text x="672" y="305" font-family="Helvetica" font-size="20" font-weight="700" fill="#1e40af">Precipitation</text>
+  <path d="M 650 360 C 610 392 550 421 452 442" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#blue-arrow)"/>
+  <text x="600" y="432" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#1d4ed8">Runoff</text>
+  <text x="190" y="495" text-anchor="middle" font-family="Helvetica" font-size="20" font-weight="700" fill="#1d4ed8">Collection</text>
+</svg>

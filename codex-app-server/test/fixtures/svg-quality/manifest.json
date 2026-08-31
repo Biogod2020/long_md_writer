@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "figures": [
+    {
+      "id": "feedback-mechanism",
+      "file": "feedback-mechanism.svg",
+      "required_labels": ["Setpoint r(t)", "Controller", "Process", "Output y(t)", "Feedback measurement"],
+      "design_brief": {
+        "figure_type": "mechanism",
+        "publication_width": "double_column",
+        "scientific_claim": "Negative feedback forms e(t) = r(t) − y(t) and uses the controller to correct the process.",
+        "scientific_checks": [
+          "Output y(t) returns to the negative input of the summing junction.",
+          "The error e(t) drives the controller before the process.",
+          "A disturbance enters the process rather than the setpoint path."
+        ],
+        "reading_order": ["Setpoint r(t)", "Summing junction", "Controller", "Process", "Output y(t)", "Feedback measurement"]
+      }
+    },
+    {
+      "id": "retrieval-pipeline",
+      "file": "retrieval-pipeline.svg",
+      "required_labels": ["Documents", "Index", "Query", "Retrieve", "Evidence", "Generate", "Answer"],
+      "design_brief": {
+        "figure_type": "process",
+        "publication_width": "double_column",
+        "scientific_claim": "A retrieval pipeline indexes documents, retrieves evidence for a query, and sends both query and evidence to the generator.",
+        "scientific_checks": [
+          "Documents feed the index before retrieval.",
+          "The query and index both feed retrieval.",
+          "Both the retained query and retrieved evidence feed Generate before Answer."
+        ],
+        "reading_order": ["Offline preparation", "Documents", "Index", "Online serving", "Query", "Retrieve", "Evidence", "Generate"]
+      }
+    },
+    {
+      "id": "tradeoff-chart",
+      "file": "tradeoff-chart.svg",
+      "required_labels": ["Latency (ms)", "Throughput (items/s)", "60 ms budget", "Method C"],
+      "design_brief": {
+        "figure_type": "chart",
+        "publication_width": "double_column",
+        "scientific_claim": "In this synthetic benchmark, Method C has the highest throughput among methods within the 60 ms latency budget.",
+        "scientific_checks": [
+          "Both axes are named and include units.",
+          "The 60 ms latency budget is explicitly marked.",
+          "Method C is below the latency budget and above Methods A and B in throughput."
+        ],
+        "reading_order": ["Axes", "60 ms budget", "Methods A and B", "Method C", "Method D"]
+      }
+    },
+    {
+      "id": "water-cycle",
+      "file": "water-cycle.svg",
+      "required_labels": ["Evaporation", "Condensation", "Precipitation", "Runoff", "Collection"],
+      "design_brief": {
+        "figure_type": "spatial",
+        "publication_width": "double_column",
+        "scientific_claim": "In a simplified mountain catchment, surface water evaporates, condenses, precipitates onto highland, and returns by runoff.",
+        "scientific_checks": [
+          "Evaporation moves water from the surface toward the atmosphere.",
+          "Condensation occurs in the cloud before precipitation.",
+          "Precipitation lands on the mountain catchment and starts the runoff path.",
+          "Runoff returns water from the mountain to surface collection."
+        ],
+        "reading_order": ["Collection", "Evaporation", "Condensation", "Precipitation", "Runoff"]
+      }
+    }
+  ]
+}

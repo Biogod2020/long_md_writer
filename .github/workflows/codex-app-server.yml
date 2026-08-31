@@ -1,0 +1,78 @@
+name: Codex App Server compatibility
+
+on:
+  push:
+    branches: [master, "codex/**"]
+    paths:
+      - "AGENTS.md"
+      - "codex-app-server/**"
+      - "docs/CODEX_APP_SERVER_ARCHITECTURE.md"
+      - ".github/workflows/codex-app-server.yml"
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "codex-app-server/**"
+      - "docs/CODEX_APP_SERVER_ARCHITECTURE.md"
+      - ".github/workflows/codex-app-server.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  portable-domain:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codex-app-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.17.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check:imports
+      - run: pnpm run test:app-server-contract
+      - run: pnpm test
+
+  pinned-app-server:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: codex-app-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --global @openai/codex@0.151.0
+      - run: codex --version | grep -q "0.151.0"
+      - name: Generate the pinned experimental protocol schema
+        run: codex app-server generate-json-schema --experimental --out "$RUNNER_TEMP/app-server-schema"
+      - name: Complete an App Server initialize handshake
+        env:
+          CODEX_HOME: ${{ runner.temp }}/codex-home
+        run: >-
+          node --input-type=module -e
+          "import { CodexAppServerClient } from './app-server/json-rpc-client.js';
+          const client = new CodexAppServerClient({ cwd: process.cwd() });
+          await client.start(); const result = await client.initialize();
+          if (!result.userAgent.includes('/0.151.0 ')) process.exit(1);
+          await client.close();"
+
+  release-warning:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm view @openai/codex version
