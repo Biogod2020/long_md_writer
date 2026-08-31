@@ -13,8 +13,7 @@ plan_visuals
   -> mermaid_submit(dry_run=true)       optional exact render/gate check
   -> mermaid_submit                     retain source + register SVG derivative
   -> svg_preflight                      CoreText geometry + retained PNG
-  -> read_image                         human/model-visible inspection
-  -> svg_record_review                  hash-bound pass/fail receipt
+  -> inspect_visual                     one-image ephemeral independent review
   -> reference returned SVG in article.md
 ```
 
@@ -31,10 +30,11 @@ plan_visuals
   retains `assets/mermaid/mermaid-src-<hash>.mmd`, and registers
   `assets/svg/<id>.svg` with a `derivative_of` record bound to the source asset
   id and SHA-256.
-- `mermaid/index.js` exposes only `mermaid_submit` to DSH.
+- `mermaid/index.js` exposes only `mermaid_submit` to the App Server dynamic
+  domain-tool runtime.
 
-The rendered SVG then uses the existing `svg_preflight` and
-`svg_record_review` tools. SVG safety, geometry evidence, visual-plan binding,
+The rendered SVG then uses the existing `svg_preflight` and `inspect_visual`
+tools. SVG safety, geometry evidence, visual-plan binding,
 revision-chain rules, and final validation are not duplicated or weakened.
 
 ## Tool contract
@@ -58,7 +58,7 @@ Failures are explicit and non-mutating:
 
 An output is not ready for manuscript use merely because it rendered. It must
 also pass `svg_preflight`, visible preview inspection, and
-`svg_record_review`.
+`inspect_visual`.
 
 ## Maintenance rule
 

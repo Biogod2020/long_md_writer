@@ -1,100 +1,118 @@
-# LongMDWriter (Magnum Opus)
+# LongMDWriter
 
-A bounded long-form publication system that runs as a **DeepSeek Harness (DSH)**
-plugin. The current repository contains a single implementation: `dsh-native/`.
-
-## What it is
-
-A DSH-native publication loop. DSH owns conversation history, event
-persistence, compaction, crash recovery, tool execution, goal continuation,
-and child-agent lifecycle. The bundle owns only publication-domain policy and
-three canonical workspace records:
+LongMDWriter is a verifiable long-form Markdown publication system hosted by a
+single Codex App Server. Codex owns durable threads, history, compaction,
+clarification, recovery, and goals. LongMDWriter owns controlled publication
+tools and three canonical records:
 
 ```text
-project.json          structural truth (objective, sections, quality and visual contracts)
-article.md            the single canonical manuscript
-assets/manifest.json  asset provenance, preflight, and review evidence truth
+project.json
+article.md
+assets/manifest.json
 ```
 
-The loop: one durable root Session + one armed Goal. Each automatic Goal round
-commits at most one manuscript chunk via `commit_chunk` / `revise_chunk`.
-`finalize_publication` certifies completion only after deterministic validation
-and a fresh independent reviewer both pass. The model cannot self-certify.
+The root thread is read-only. It can modify the publication only through
+`commit_chunk`, `revise_chunk`, and controlled visual tools. Completion is
+possible only through `finalize_publication`, after deterministic validation
+and a fresh SHA-bound reviewer thread both pass.
 
-Current milestone: **M1 — Markdown-first**. The bundle uses DSH's native
-clarification UI, image attachments, history, and compaction; it adds no intake
-or manuscript-memory subsystem. The agent reads the complete `article.md`
-before every commit or revision. Visuals use either a Mermaid-to-SVG tool or a
-bespoke SVG lane, followed by the same CoreText preflight, retained PNG preview,
-and hash-bound review evidence. See `docs/MERMAID_MODULE.md` and
-`docs/SVG_MODULE.md`.
+The initialized project contract carries both minimum and maximum length,
+long-sentence limits, image-search requirements, and immutable visual count,
+coverage, and figure-numbering rules. Image discovery and every visual check
+leave provenance receipts in the existing manifest; no fourth workflow or
+memory record is introduced.
 
-The repository's optional web and image search is the `dsh-bing-search/` Git
-submodule. It is a separate MCP plugin: LongMDWriter permits its four
-`mcp__web__*` tools when mounted but does not embed a machine-specific install
-path. Set `LONGWRITER_DSH_SEARCH_BIN` to the installed executable's absolute
-path to activate the bundle's optional MCP slot.
+Visual plans additionally state figure type, final publication width,
+scientific claim/checks, and reading order. SVG candidates must pass CoreText-
+based print-scale, density, balance, contrast, overlap, and connector-clearance
+checks before a fresh one-image reviewer judges scientific and aesthetic
+quality.
+
+Bespoke SVGs can be delegated asynchronously. The root keeps writing while
+fresh ephemeral illustrator threads work in a bounded pool. The first candidate
+creates stable DOM ids; every revision must use the host's id-addressed
+`svg_edit` tool against the retained champion. Coordinated edits may be sent as
+one atomic batch and roll back together if any operation is invalid. Initial
+and revision workers get dedicated read-only preflight tools that return exact
+element ids and CoreText geometry; after a bounded amount of general shell work
+the host steers the same active turn back to edit, preflight, and delivery
+without revoking its read, network, or shell access. Locked passing checks cannot
+regress, duplicate candidates are rejected, and repeated failures switch to a
+simpler local layout edit instead of restarting from scratch.
+Each illustrator gets broad read access, network access, routine shell commands,
+and `on-request` approval with `auto_review` (the Codex “Approve for me” mode).
+Its generic writes are confined to a retained per-attempt scratch directory;
+canonical publication files and assets still change only through host-owned
+domain boundaries.
+Once a plan has been delegated, the root cannot fork that revision history with
+direct `svg_submit`; it must collect the job's retained, review-bound champion.
+Hidden text cannot satisfy a required label. Fragile mathematical typography
+uses visible tspan composition plus a visually equivalent `aria-label`, so
+subscripts and superscripts remain readable without weakening exact-label
+evidence. The final publication validator applies the same visibility and
+typographic-equivalence rule as SVG preflight.
 
 ## Quick start
 
-Pinned to DSH `0.1.1-rc.2`. Read `dsh-native/README.md` and
-`dsh-native/DSH_COMPATIBILITY.md` first.
+Requirements: Codex CLI `0.151.0`, Node.js 22+, Python 3.11+, pnpm, and a
+Responses-compatible provider credential.
 
 ```bash
-npm install --global @deepseek-ai/dsh@0.1.1-rc.2
-cd long_md_writer
-dsh plugin --profile web add ./dsh-native
-dsh --profile web --dump-config
-dsh --profile web
+cd codex-app-server
+pnpm install --frozen-lockfile
+pnpm test
+
+# Either export IWORLD_API_KEY or put it in ignored codex-app-server/.env.
+node cli.js start \
+  --run ../runs/my-publication \
+  --config config/iworld-muse12.json \
+  --task ../runs/my-publication/task.txt
 ```
 
-Open a Web session in the publication workspace and ask the root agent to
-create a publication. Include raster reference images in the first message;
-place other source files under `inputs/`. The agent infers what it can and uses
-one native `ask_user_question` batch only for unresolved material choices. It
-then calls `initialize_publication`, and the Goal Round Driver continues until
-`finalize_publication` certifies completion.
+Resume the exact thread after interruption:
 
-Directory layout:
-
-```text
-dsh-native/
-├── index.js                     # domain tool definitions and policy
-├── lib/
-│   ├── project-store.js         # atomic chunk store with injection guards
-│   ├── validator-runner.js      # subprocess bridge to the Python validator
-│   └── dsh-compat.js            # the only DSH-coupled adapter
-├── svg/                         # SVG gate, CoreText preflight, evidence workflow, DSH adapter
-├── mermaid/                     # bounded Mermaid, local renderer, source/SVG registration
-├── skills/svg-illustrator/      # portable SVG drawing workflow
-├── python/validate_publication.py  # deterministic acceptance authority
-├── test/                        # domain and plugin-contract tests
-├── cordis.patch.yml             # profile composition (session namespace, tool boundary, optional search)
-└── examples/project.example.json
+```bash
+node cli.js resume --run ../runs/my-publication --config config/iworld-muse12.json
 ```
+
+Every run retains `run.json`, `events.jsonl`, an isolated `.codex-home/`, and
+the canonical workspace. Provider keys remain environment-only; the optional
+local `.env` is Git-ignored and loaded without overriding an exported value.
+
+## Tool surface
+
+- publication: `initialize_publication`, `plan_visuals`,
+  `publication_status`, `commit_chunk`, `revise_chunk`,
+  `review_publication`, `finalize_publication`;
+- visuals: `mermaid_submit`, `svg_check`, `svg_submit`, `svg_preflight`,
+  `svg_delegate`, `svg_status`, `svg_wait`, `svg_collect`, `image_submit`,
+  `inspect_visual`;
+- optional search: the repository's `dsh-bing-search/` is mounted as a normal
+  service behind `longwriter_search`, `longwriter_search_images`,
+  `longwriter_open`, and `longwriter_find`; DSH itself is not used.
+
+See [the architecture](docs/CODEX_APP_SERVER_ARCHITECTURE.md),
+[Mermaid](docs/MERMAID_MODULE.md), and [SVG](docs/SVG_MODULE.md).
 
 ## Verification
 
 ```bash
-cd dsh-native
-node --test test/project-store.test.js
-python3 -m unittest discover -s test -p 'test_validator.py'
+cd codex-app-server
+pnpm run check:imports
+pnpm run test:app-server-contract
+pnpm test
+pnpm run benchmark:svg-quality -- --out /tmp/longwriter-svg-quality
+pnpm run smoke:provider  # sends a synthetic string to the configured provider
+pnpm run smoke:resume    # verifies thread, Goal, and tool recovery after restart
+pnpm run smoke:search    # performs one real public-web search
 ```
 
-CI (`.github/workflows/dsh-native.yml`) installs the pinned DSH release,
-composes the bundle into a real DSH Web profile, and boots the Web server.
+`inspect_visual` never returns image bytes to the durable root thread. The host
+opens one ephemeral read-only reviewer per retained PNG, sends exactly one
+`localImage`, validates and stores the hash-bound result, then returns text-only
+JSON. Final manuscript review receives those compact visual reports instead of
+an unbounded batch of images. Any reviewer tool use is immediately interrupted
+and rejected as evidence; the host allows at most two fresh-thread retries.
 
-## History and comparison baseline
-
-The Codex-era implementation (`src/orchestration/`, OpenAI Agents SDK + Codex
-five-stage pipeline) and the earlier LangGraph multi-agent implementation were
-removed from the working tree. Both remain in Git history.
-
-**All comparisons in this repository use the pre-Codex (LangGraph) version as
-the baseline** — i.e. "dsh vs codex-before" — per repository convention.
-
-Materials that are preserved and protected:
-
-- `inputs/` — source materials for publications
-- `assets/` — publication asset library
-- `conductor/` — historical development records (read-only archive)
+`inputs/` and `conductor/` are preserved source/history. Removed DSH,
+Agents-SDK, and LangGraph implementations remain in Git history only.
